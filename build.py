@@ -17,7 +17,6 @@ import convert
 import fetch
 from m2 import M2
 from mpq import Client, write_archive
-from survey import wdbc
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out")
 
@@ -54,6 +53,7 @@ UPGRADES = load_upgrades()
 # 3.3.5 CreatureDisplayInfo.dbc columns
 CDI_MODEL, CDI_EXTRA, CDI_SCALE, CDI_TEX, CDI_GEOSETS = 1, 3, 4, 6, 14
 GEOSET_NONE = 0xF  # a geoset variant no model has: hides the group
+KEEP = "keep"      # a picks.json skin that stays on the old model
 
 
 def mpq_path(path):
@@ -118,8 +118,9 @@ def retail_textures(r):
 def build(names):
     client = Client()
     cdi = Dbc(client.read("DBFilesClient\\CreatureDisplayInfo.dbc"))
-    model_rows, ms = wdbc(client.read("DBFilesClient\\CreatureModelData.dbc"))
-    old_model = {r[0]: norm(ms(r[2])) for r in model_rows}
+    cmd = Dbc(client.read("DBFilesClient\\CreatureModelData.dbc"))
+    old_model = {r[0]: norm(cmd.string(r[2])) for r in cmd.rows}
+    next_model_id = max(old_model) + 1
     rdisp, rmodel, rgeosets = retail_tables()
     files = {}
     report = []
@@ -129,8 +130,13 @@ def build(names):
         old, new, manual = UPGRADES[name]
         new_fid = fetch.fdid(new)
         old_mpq = mpq_path(old)
-        base = old_mpq[:-3]
         model_dir = old_mpq.rsplit("\\", 1)[0]
+        # Skins picked "keep" stay on the old model (molten giants: mountaingiant2 has no lava skin),
+        # so the new one goes next to it (<name>_hd.m2) with its own CreatureModelData row, and only
+        # the displays that change point at it.
+        side_by_side = KEEP in manual.values()
+        target = old_mpq[:-3] + "_hd.m2" if side_by_side else old_mpq
+        base = target[:-3]
 
         def texture_name(fid):
             path = mpq_path(fetch.name(fid))
@@ -148,7 +154,15 @@ def build(names):
             # a model the converter does not understand keeps its old look; the rest still build
             report.append(f"{name}: failed: {type(e).__name__}: {e}")
             continue
-        files[old_mpq] = m2
+        files[target] = m2
+        new_model = {}
+        if side_by_side:
+            for row in [r for r in cmd.rows if old_model.get(r[0]) == old]:
+                clone = list(row)
+                clone[0], clone[2] = next_model_id, cmd.add_string(target[:-3] + ".mdx")
+                cmd.rows.append(clone)
+                new_model[row[0]] = next_model_id
+                next_model_id += 1
         # Retail shows only the geoset groups a display picks (boar2's 101 is armour, drawn magenta
         # without its texture). Groups left unpicked get variant 15, which no model has, so 3.3.5
         # hides them whatever it does with 0.
@@ -174,7 +188,7 @@ def build(names):
                 paired[r[0]] = rr
                 learned[cdi.string(r[CDI_TEX]).lower()][(retail_textures(rr), rgeosets[r[0]])] += 1
         fallback = collections.Counter(t for c in learned.values() for t in c.elements())
-        unmapped = 0
+        unmapped = kept = 0
         uses_display_textures = any(11 <= t <= 13 for t, _, _ in M2(m2).textures())
         for r in rows:
             rr = paired.get(r[0])
@@ -183,7 +197,11 @@ def build(names):
                 tex, geo = retail_textures(rr), rgeosets[r[0]]
                 r[CDI_SCALE] = u32(float(rr["CreatureModelScale"]))
             elif manual:
-                look = manual.get(old_tex) or collections.Counter(manual.values()).most_common(1)[0][0]
+                look = manual.get(old_tex) or collections.Counter(
+                    v for v in manual.values() if v != KEEP).most_common(1)[0][0]
+                if look == KEEP:
+                    kept += 1
+                    continue
                 if isinstance(look, int):
                     tex, geo = retail_textures(rdisp[look]), rgeosets[look]
                 else:
@@ -206,11 +224,15 @@ def build(names):
                 else:
                     r[CDI_TEX + i] = 0
             r[CDI_GEOSETS] = fill(geo)
+            if side_by_side:
+                r[CDI_MODEL] = new_model[r[CDI_MODEL]]
         report.append(f"{name}: {old} <- {new}: {len(rows)} displays ({len(paired)} matched in retail"
-                      f"{f', {unmapped} on the most common skin' if unmapped else ''})")
+                      f"{f', {unmapped} on the most common skin' if unmapped else ''}"
+                      f"{f', {kept} keep the old model' if kept else ''})")
         report += [f"  {w}" for w in warnings]
 
     files["DBFilesClient\\CreatureDisplayInfo.dbc"] = cdi.bytes()
+    files["DBFilesClient\\CreatureModelData.dbc"] = cmd.bytes()
     os.makedirs(OUT, exist_ok=True)
     out = os.path.join(OUT, "patch-enUS-4.MPQ")
     write_archive(out, files)

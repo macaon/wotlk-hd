@@ -3,7 +3,8 @@
 usage: pick.py    then open out/pick.html, review, and save picks.json into this folder
 
 Each old model gets a row: include or not, and for every old skin the retail display whose look it
-takes (textures and geosets), pre-filled with the closest colour match. build.py reads picks.json.
+takes (textures and geosets), pre-filled with the closest colour match, or "keep old model" (molten
+giants have no lava mountaingiant2). build.py reads picks.json.
 An existing picks.json is loaded into the page, so choices can be revised later.
 """
 import base64
@@ -180,9 +181,11 @@ function render() {
       el("small", {}, `${m.old} \\u2192 ${m.new} \\u00b7 ${m.triangles[0]} \\u2192 ${m.triangles[1]} triangles \\u00b7 ${m.displays} displays`)));
     for (const s of m.skins) {
       const opts = el("div", { class: "opts" });
-      for (const o of m.options) {
+      const keep = { display: "keep", label: "keep old model", uses: 0, thumb: s.thumb };
+      for (const o of [...m.options, keep]) {
         const d = el("div", { class: "opt" + (p.skins[s.tex] === o.display ? " sel" : "") + (s.auto === o.display ? " auto" : ""),
-                              title: `retail display ${o.display}, ${o.uses} displays use this look` },
+                              title: o.display === "keep" ? "these displays keep the 3.3.5 model"
+                                                          : `retail display ${o.display}, ${o.uses} displays use this look` },
                      el("img", { src: o.thumb, alt: o.label }), o.label);
         d.onclick = () => { p.skins[s.tex] = o.display; [...opts.children].forEach(c => c.classList.remove("sel")); d.classList.add("sel"); remember(); };
         opts.append(d);

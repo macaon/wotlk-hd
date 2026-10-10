@@ -99,10 +99,13 @@ def mesh(client, path, cdi, row, textures):
             "stats": f"{m.count('vertices')} vertices, {len(tris) // 3} triangles, {m.count('bones')} bones"}
 
 
-def first_display(cdi, model_rows, old_path):
-    """A display of the old model to show: DISPLAYS' choice, else its first non-humanoid display."""
+def first_display(cdi, model_rows, old_path, new_rows, new_model_path):
+    """A display of the old model to show, preferring one the patch changed (some may keep the old
+    model): DISPLAYS' choice, else the first non-humanoid display."""
     models = {r[0] for r in model_rows if build.norm(r[1]) == old_path}
-    return next((r[0] for r in cdi.rows if r[build.CDI_MODEL] in models and not r[build.CDI_EXTRA]), None)
+    dids = [r[0] for r in cdi.rows if r[build.CDI_MODEL] in models and not r[build.CDI_EXTRA]]
+    moved = [d for d in dids if new_model_path.get(new_rows[d][build.CDI_MODEL]) != build.mpq_path(old_path)]
+    return (moved or dids or [None])[0]
 
 
 def main(names):
@@ -112,6 +115,8 @@ def main(names):
     new_cdi = build.Dbc(new.read("DBFilesClient\\CreatureDisplayInfo.dbc"))
     cmd = build.Dbc(old.read("DBFilesClient\\CreatureModelData.dbc"))
     model_rows = [(r[0], cmd.string(r[2])) for r in cmd.rows]
+    new_cmd = build.Dbc(new.read("DBFilesClient\\CreatureModelData.dbc"))
+    new_model_path = {r[0]: build.mpq_path(build.norm(new_cmd.string(r[2]))) for r in new_cmd.rows}
     old_rows = {r[0]: r for r in old_cdi.rows}
     new_rows = {r[0]: r for r in new_cdi.rows}
     data_dir = os.path.join(build.OUT, "compare")
@@ -120,14 +125,18 @@ def main(names):
     for name in names:
         old_path, new_path, _ = build.UPGRADES[name]
         path = build.mpq_path(old_path)
-        did = DISPLAYS.get(name) or first_display(old_cdi, model_rows, old_path)
-        if did is None or not new.read(path) or new.read(path) == old.read(path):
+        did = DISPLAYS.get(name) or first_display(old_cdi, model_rows, old_path, new_rows, new_model_path)
+        if did is None:
+            continue
+        # a display moved to <name>_hd.m2 when other skins keep the old model (build.py KEEP)
+        npath = new_model_path[new_rows[did][build.CDI_MODEL]]
+        if not new.read(npath) or new.read(npath) == old.read(path):
             continue  # not in the patch (refused by the converter)
         textures = {}
         try:
             creature = {"from": old_path, "to": new_path,
                         "old": mesh(old, path, old_cdi, old_rows[did], textures),
-                        "new": mesh(new, path, new_cdi, new_rows[did], textures)}
+                        "new": mesh(new, npath, new_cdi, new_rows[did], textures)}
         except (struct.error, KeyError, IndexError) as e:
             print(f"{name}: cannot show ({e})")
             continue

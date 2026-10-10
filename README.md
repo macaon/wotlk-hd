@@ -19,7 +19,9 @@ one client patch, `Data/patch-4.MPQ`. AzerothCore stays unchanged. Private use o
   model's displays went, kept at >= 1.5x skin triangles); `--unlinked` lists newer versions no
   old display points at (like dragonhawk2), for `build.py`'s MANUAL.
 - `pick.py`: writes `out/pick.html` to choose the unlinked upgrades and, per old skin, the retail
-  look it takes (pre-filled by colour histogram); save `picks.json` here for `build.py`.
+  look it takes (pre-filled by colour histogram) or "keep old model"; save `picks.json` here for
+  `build.py`. A model with kept skins is written next to the old one as `<name>_hd.m2` with its own
+  CreatureModelData row, and only the changed displays point at it.
 - `m2.py <file>`: model summary. `convert.py`: retail model -> 3.3.5. `build.py [name...]`:
   converts the `UPGRADES` list into `out/patch-enUS-4.MPQ`; copy that to `<WoW>/Data/enUS/`.
 
