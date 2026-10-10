@@ -6,8 +6,8 @@ Large-address-aware lets the 32-bit client use 4 GB instead of 2 GB, which the H
 
 FoV: the camera reads its default from a pi/2 constant at file offset 0x5E7588, the same spot
 WowFovChanger patches (https://github.com/fosley/WowFovChanger). Without an argument the value
-keeps the vertical view of the widely used 16:9 value 1.925 and widens it for the monitor's
-aspect ratio (gxResolution in WTF/Config.wtf).
+keeps the vertical view of 2.0 on 3440x1440 (picked by eye in game) and adjusts it for the
+monitor's aspect ratio (gxResolution in WTF/Config.wtf).
 """
 import math
 import os
@@ -19,7 +19,7 @@ WOW = os.environ.get("WOW_DIR", os.path.expanduser("~/Games/wotlk"))
 SIZE_12340 = 7704216
 FOV_OFFSET = 0x5E7588
 PI_2 = struct.pack("<f", math.pi / 2)
-FOV_16_9 = 1.925
+FOV_REF, ASPECT_REF = 2.0, 3440 / 1440  # calibration: looks right in game on 3440x1440
 LAA = 0x20
 
 
@@ -33,8 +33,8 @@ def aspect():
 
 
 def fov_for(a):
-    """Same vertical view as FOV_16_9 on 16:9, wider horizontally for wider screens."""
-    return 2 * math.atan(math.tan(FOV_16_9 / 2) * a / (16 / 9))
+    """Same vertical view as FOV_REF at ASPECT_REF, wider or narrower horizontally."""
+    return 2 * math.atan(math.tan(FOV_REF / 2) * a / ASPECT_REF)
 
 
 def patch(exe, fov):
@@ -61,5 +61,5 @@ def main():
 
 
 if __name__ == "__main__":
-    assert abs(fov_for(16 / 9) - FOV_16_9) < 1e-6
+    assert abs(fov_for(ASPECT_REF) - FOV_REF) < 1e-6
     main()
