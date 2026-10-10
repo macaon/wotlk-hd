@@ -269,7 +269,11 @@ def convert_model(data, model_name, texture_name, get_file):
 
     # Particle emitters: the 3.3.5 struct (476 bytes) with 16 bytes appended later (multi-texture
     # parameters); every field before them is unchanged (compared on shade.m2 in both versions).
+    # 3.3.5 files give every emitter an empty string (count 1, "\0") for its geometry and recursion
+    # model names; retail leaves them at count 0, offset 0, which 3.3.5 reads as the name "MD20...",
+    # so the emitter tries to spawn a model and draws nothing.
     n, off = m.arrays["particles"]
+    empty = b.add(b"\0") if n else 0
     emitters = b""
     for i in range(n):
         e = bytearray(d[off + i * PARTICLE_RETAIL:off + i * PARTICLE_RETAIL + PARTICLE_WOTLK])
@@ -280,6 +284,9 @@ def convert_model(data, model_name, texture_name, get_file):
         struct.pack_into("<I", e, 4, flags & PARTICLE_FLAGS)
         struct.pack_into("<H", e, 0x16, tex)
         e[0x28] = min(e[0x28], PARTICLE_BLEND_MAX)
+        for name_off in (0x18, 0x20):
+            if not struct.unpack_from("<I", e, name_off)[0]:
+                struct.pack_into("<II", e, name_off, 1, empty)
         emitters += e
     b.set_array(0x128, n, emitters)
 
@@ -359,6 +366,9 @@ def check(m2_bytes, skins):
     for i in range(n):
         bone, tex = struct.unpack_from("<HH", m.md20, off + i * PARTICLE_WOTLK + 0x14)
         assert bone < m.count("bones") and tex < m.count("textures"), f"emitter {i} bone/texture out of range"
+        for name_off in (0x18, 0x20):
+            c, o = struct.unpack_from("<II", m.md20, off + i * PARTICLE_WOTLK + name_off)
+            assert c and o, f"emitter {i} has no model name string (3.3.5 would read the header)"
     n_tex_lookup = m.count("texture_lookup")
     n_units = m.count("texture_unit_lookup")
     n_mat = m.count("materials")

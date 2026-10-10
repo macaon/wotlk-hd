@@ -53,7 +53,9 @@ Checked against 3.3.5's own files and Wow.exe 12340:
 - Retail skins index model vertices from a base offset in the header (0x2C, 3.3.5's boneCountMax);
   each LOD has its own range. Only the chosen skin's vertices are kept (gnoll2: 67697 -> 14823).
 - Particle emitters: 3.3.5's 476-byte struct plus 16 appended bytes (multi-texture parameters);
-  converted by truncating, newer flag bits masked. Ribbons are still dropped.
+  converted by truncating, newer flag bits masked. Their geometry/recursion model names must be
+  an empty string (count 1, "\0") as in 3.3.5 files: count 0 / offset 0 reads as "MD20...".
+  Ribbons are still dropped.
 - Limits: 64 bones per submesh (the 3.3.5 max), 65535 vertices. Bigger submeshes are split in
   triangle order with their own palettes (vertex bones are absolute; skin vertex bones index
   `bone_lookup[combo + i]`; checked on 3.3.5 and retail files).
