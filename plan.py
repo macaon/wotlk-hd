@@ -65,7 +65,8 @@ def main():
 
 def unlinked():
     """Old creature models without an upgrade whose name has a newer numbered version in retail
-    that retail displays use, ranked by how many old displays would change."""
+    that retail displays use, ranked by how many old displays would change.
+    [(old displays, old path, new path, old triangles, new triangles, retail displays)]"""
     import csv
     _, seen = survey.classify()
     planned = {u["old"] for u in json.load(open(OUT)).values()} if os.path.exists(OUT) else set()
@@ -91,10 +92,13 @@ def unlinked():
         new_tris = triangles(fetch.get(fid)) if fid else None
         if old_tris and new_tris and new_tris >= old_tris * MIN_GAIN:
             rows.append((n, old, new, old_tris, new_tris, uses))
-    for n, old, new, a, b, uses in rows:
-        print(f"{n:4} displays  {old:50} -> {new:50} {a:>6} -> {b:<6} (retail displays {uses})")
+    return rows
 
 
 if __name__ == "__main__":
     import sys
-    unlinked() if "--unlinked" in sys.argv else main()
+    if "--unlinked" in sys.argv:
+        for n, old, new, a, b, uses in unlinked():
+            print(f"{n:4} displays  {old:50} -> {new:50} {a:>6} -> {b:<6} (retail displays {uses})")
+    else:
+        main()

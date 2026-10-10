@@ -21,8 +21,9 @@ from survey import wdbc
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out")
 
-# old 3.3.5 model -> retail model: upgrades.json (plan.py) plus MANUAL, which wins. `textures` maps
-# an old skin texture name to the retail texture for displays retail didn't move to the new model.
+# old 3.3.5 model -> retail model: upgrades.json (plan.py), picks.json (pick.py) and MANUAL, later
+# ones winning. The third item maps an old skin texture name to the retail texture path, or to the
+# retail display id whose textures and geosets it takes, for displays retail didn't move.
 MANUAL = {
     # Retail only uses dragonhawk2 for new displays; colours matched by eye.
     "dragonhawk": ("creature/dragonhawk/dragonhawk.m2", "creature/dragonhawk2/dragonhawk2.m2", {
@@ -33,12 +34,18 @@ MANUAL = {
 
 
 def load_upgrades():
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "upgrades.json")
+    here = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(here, "upgrades.json")
     planned = json.load(open(path)) if os.path.exists(path) else {}
     upgrades = {name: (u["old"], u["new"], {}) for name, u in planned.items()}
-    manual_old = {old for old, _, _ in MANUAL.values()}
-    upgrades = {n: u for n, u in upgrades.items() if u[0] not in manual_old}
-    upgrades.update(MANUAL)
+    # picks.json (pick.py): unlinked upgrades, each old skin -> the retail display whose look it takes
+    path = os.path.join(here, "picks.json")
+    picked = json.load(open(path)) if os.path.exists(path) else {}
+    extra = {name: (p["old"], p["new"], p["skins"]) for name, p in picked.items() if p["include"]}
+    extra.update(MANUAL)
+    taken = {old for old, _, _ in extra.values()}
+    upgrades = {n: u for n, u in upgrades.items() if u[0] not in taken}
+    upgrades.update(extra)
     return upgrades
 
 
@@ -175,8 +182,12 @@ def build(names):
             if rr:
                 tex, geo = retail_textures(rr), rgeosets[r[0]]
                 r[CDI_SCALE] = u32(float(rr["CreatureModelScale"]))
-            elif old_tex in manual:
-                tex, geo = (fetch.fdid(manual[old_tex]), 0, 0), 0
+            elif manual:
+                look = manual.get(old_tex) or collections.Counter(manual.values()).most_common(1)[0][0]
+                if isinstance(look, int):
+                    tex, geo = retail_textures(rdisp[look]), rgeosets[look]
+                else:
+                    tex, geo = (fetch.fdid(look), 0, 0), 0
             elif learned.get(old_tex):
                 tex, geo = learned[old_tex].most_common(1)[0][0]
             elif fallback:
