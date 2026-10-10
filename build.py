@@ -8,6 +8,7 @@ the DBC in it.
 """
 import collections
 import csv
+import json
 import os
 import struct
 import sys
@@ -20,29 +21,9 @@ from survey import wdbc
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out")
 
-# old 3.3.5 model -> retail model. Display IDs carry over for most (survey.py); `textures` maps an
-# old skin texture name to the retail texture for displays retail didn't move to the new model.
-UPGRADES = {
-    "murloc": ("creature/murloc/murloc.m2", "creature/murloc2/murloc2.m2", {}),
-    "minespider": ("creature/minespider/minespider.m2", "creature/minespider2/minespider2.m2", {}),
-    "rat": ("creature/rat/rat.m2", "creature/rat2/rat2.m2", {}),
-    "frog": ("creature/frog/frog.m2", "creature/frog2/frog2.m2", {}),
-    "zombie": ("creature/zombie/zombie.m2", "creature/zombie2/zombie2.m2", {}),
-    "skeleton": ("creature/skeleton/skeleton.m2", "creature/scourgewarrior/scourgewarrior.m2", {}),
-    "larva": ("creature/larva/larva.m2", "creature/larva2/larva2.m2", {}),
-    "zombiearm": ("creature/zombie/zombiearm.m2", "creature/zombie2/zombie2.m2", {}),
-    "banshee": ("creature/banshee/banshee.m2", "creature/banshee2/banshee2.m2", {}),
-    "manawurm": ("creature/manawurm/manawurm.m2", "creature/manawurm2/manawurm2.m2", {}),
-    "crab": ("creature/crab/crab.m2", "creature/crab2/crab2.m2", {}),
-    "ghoul": ("creature/ghoul/ghoul.m2", "creature/ghoul2/ghoul2.m2", {}),
-    "gnoll": ("creature/gnoll/gnoll.m2", "creature/gnoll2/gnoll2.m2", {}),
-    "gnollmelee": ("creature/gnollmelee/gnollmelee.m2", "creature/gnoll2/gnoll2.m2", {}),
-    "gnollcaster": ("creature/gnollcaster/gnollcaster.m2", "creature/gnoll2/gnoll2.m2", {}),
-    "ent": ("creature/ent/ent.m2", "creature/ent2/ent2.m2", {}),
-    "rabbit": ("creature/rabbit/rabbit.m2", "creature/rabbit2/rabbit2.m2", {}),
-    "fleshgolem": ("creature/fleshgolem/fleshgolem.m2", "creature/fleshgolem2/fleshgolem2.m2", {}),
-    "spirithealer": ("creature/spirithealer/spirithealer.m2", "creature/spirithealer2/spirithealer2.m2", {}),
-    "horse": ("creature/horse/horse.m2", "creature/horse3/horse3.m2", {}),
+# old 3.3.5 model -> retail model: upgrades.json (plan.py) plus MANUAL, which wins. `textures` maps
+# an old skin texture name to the retail texture for displays retail didn't move to the new model.
+MANUAL = {
     # Retail only uses dragonhawk2 for new displays; colours matched by eye.
     "dragonhawk": ("creature/dragonhawk/dragonhawk.m2", "creature/dragonhawk2/dragonhawk2.m2", {
         f"dragonhawkskin{old}": f"creature/dragonhawk2/dragonhawk2_{new}.blp" for old, new in [
@@ -50,8 +31,22 @@ UPGRADES = {
             ("05", "red"), ("06", "black"), ("07", "black")]}),
 }
 
+
+def load_upgrades():
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "upgrades.json")
+    planned = json.load(open(path)) if os.path.exists(path) else {}
+    upgrades = {name: (u["old"], u["new"], {}) for name, u in planned.items()}
+    manual_old = {old for old, _, _ in MANUAL.values()}
+    upgrades = {n: u for n, u in upgrades.items() if u[0] not in manual_old}
+    upgrades.update(MANUAL)
+    return upgrades
+
+
+UPGRADES = load_upgrades()
+
 # 3.3.5 CreatureDisplayInfo.dbc columns
 CDI_MODEL, CDI_EXTRA, CDI_SCALE, CDI_TEX, CDI_GEOSETS = 1, 3, 4, 6, 14
+GEOSET_NONE = 0xF  # a geoset variant no model has: hides the group
 
 
 def mpq_path(path):
@@ -122,7 +117,8 @@ def build(names):
     files = {}
     report = []
 
-    for name in names:
+    for i, name in enumerate(names, 1):
+        print(f"[{i}/{len(names)}] {name}", file=sys.stderr, flush=True)
         old, new, manual = UPGRADES[name]
         new_fid = fetch.fdid(new)
         old_mpq = mpq_path(old)
@@ -141,10 +137,21 @@ def build(names):
         except convert.ConvertError as e:
             report.append(f"{name}: refused: {e}")
             continue
+        except (AssertionError, struct.error, OSError, IndexError, KeyError) as e:
+            # a model the converter does not understand keeps its old look; the rest still build
+            report.append(f"{name}: failed: {type(e).__name__}: {e}")
+            continue
         files[old_mpq] = m2
-        # Without a choice 3.3.5 draws every variant at once; variant 1 of each group is the base look.
-        groups = {g // 100 for g in convert.geoset_ids(skins[0]) if g}
-        default_geosets = sum(1 << (4 * (g - 1)) for g in groups if 1 <= g <= 8)
+        # Retail shows only the geoset groups a display picks (boar2's 101 is armour, drawn magenta
+        # without its texture). Groups left unpicked get variant 15, which no model has, so 3.3.5
+        # hides them whatever it does with 0.
+        groups = {g // 100 for g in convert.geoset_ids(skins[0]) if g and 1 <= g // 100 <= 8}
+
+        def fill(geo):
+            for g in groups:
+                if not (geo >> (4 * (g - 1))) & 0xF:
+                    geo |= GEOSET_NONE << (4 * (g - 1))
+            return geo
         for i, s in enumerate(skins):
             files[f"{base}{i:02d}.skin"] = s
         for (aid, sub), data in anims.items():
@@ -169,13 +176,13 @@ def build(names):
                 tex, geo = retail_textures(rr), rgeosets[r[0]]
                 r[CDI_SCALE] = u32(float(rr["CreatureModelScale"]))
             elif old_tex in manual:
-                tex, geo = (fetch.fdid(manual[old_tex]), 0, 0), default_geosets
+                tex, geo = (fetch.fdid(manual[old_tex]), 0, 0), 0
             elif learned.get(old_tex):
                 tex, geo = learned[old_tex].most_common(1)[0][0]
             elif fallback:
                 (tex, geo), unmapped = fallback.most_common(1)[0][0], unmapped + 1
             elif not uses_display_textures:
-                tex, geo = (0, 0, 0), default_geosets
+                tex, geo = (0, 0, 0), 0
             else:
                 report.append(f"{name}: display {r[0]} has no texture mapping")
                 continue
@@ -187,7 +194,7 @@ def build(names):
                     r[CDI_TEX + i] = cdi.add_string(tname[:-4])
                 else:
                     r[CDI_TEX + i] = 0
-            r[CDI_GEOSETS] = geo or default_geosets
+            r[CDI_GEOSETS] = fill(geo)
         report.append(f"{name}: {old} <- {new}: {len(rows)} displays ({len(paired)} matched in retail"
                       f"{f', {unmapped} on the most common skin' if unmapped else ''})")
         report += [f"  {w}" for w in warnings]

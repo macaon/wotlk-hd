@@ -2,6 +2,8 @@
 
 usage: compare.py [name ...]    upgrades from build.py (default: all), needs out/patch-enUS-4.MPQ
 
+Writes one data file per model to out/compare/, loaded when picked, so the page stays small.
+
 Old model, textures and display row come from the client; the converted ones from the patch. Bind
 pose, no animation. Both views share one camera and keep their in-game size.
 """
@@ -18,7 +20,7 @@ import build
 from m2 import M2
 from mpq import CHAIN, Client
 
-# A Ghostlands display to show for each upgrade.
+# Display to show per upgrade (Ghostlands ones); others use the model's first display.
 DISPLAYS = {"murloc": 3619, "minespider": 1087, "rat": 1141, "frog": 901,
             "zombie": 1200, "skeleton": 158, "larva": 9904, "dragonhawk": 17545,
             "zombiearm": 1197, "banshee": 10728, "manawurm": 15934, "crab": 999, "ghoul": 137,
@@ -40,12 +42,12 @@ def png(data):
 
 
 def visible(geoset, field):
-    """3.3.5 rule as build.py writes it: group n shows the variant in nibble n (variant 1 if unset)."""
+    """3.3.5 rule as build.py writes it: group n shows the variant in nibble n (none if unset)."""
     if not geoset:
         return True
     group, variant = divmod(geoset, 100)
     chosen = (field >> (4 * (group - 1))) & 0xF if 1 <= group <= 8 else 0
-    return variant == (chosen or 1)
+    return variant == chosen
 
 
 def mesh(client, path, cdi, row, textures):
@@ -97,28 +99,46 @@ def mesh(client, path, cdi, row, textures):
             "stats": f"{m.count('vertices')} vertices, {len(tris) // 3} triangles, {m.count('bones')} bones"}
 
 
+def first_display(cdi, model_rows, old_path):
+    """A display of the old model to show: DISPLAYS' choice, else its first non-humanoid display."""
+    models = {r[0] for r in model_rows if build.norm(r[1]) == old_path}
+    return next((r[0] for r in cdi.rows if r[build.CDI_MODEL] in models and not r[build.CDI_EXTRA]), None)
+
+
 def main(names):
     old = Client()
     new = Client(chain=[PATCH] + CHAIN)  # an absolute path wins over the Data/ join
     old_cdi = build.Dbc(old.read("DBFilesClient\\CreatureDisplayInfo.dbc"))
     new_cdi = build.Dbc(new.read("DBFilesClient\\CreatureDisplayInfo.dbc"))
+    cmd = build.Dbc(old.read("DBFilesClient\\CreatureModelData.dbc"))
+    model_rows = [(r[0], cmd.string(r[2])) for r in cmd.rows]
     old_rows = {r[0]: r for r in old_cdi.rows}
     new_rows = {r[0]: r for r in new_cdi.rows}
-    textures, creatures = {}, []
+    data_dir = os.path.join(build.OUT, "compare")
+    os.makedirs(data_dir, exist_ok=True)
+    index = []
     for name in names:
         old_path, new_path, _ = build.UPGRADES[name]
-        did = DISPLAYS[name]
         path = build.mpq_path(old_path)
-        creatures.append({
-            "name": f"{name} (display {did})", "from": old_path, "to": new_path,
-            "old": mesh(old, path, old_cdi, old_rows[did], textures),
-            "new": mesh(new, path, new_cdi, new_rows[did], textures),
-        })
-    html = PAGE.replace("/*DATA*/", json.dumps({"creatures": creatures, "textures": textures}))
+        did = DISPLAYS.get(name) or first_display(old_cdi, model_rows, old_path)
+        if did is None or not new.read(path) or new.read(path) == old.read(path):
+            continue  # not in the patch (refused by the converter)
+        textures = {}
+        try:
+            creature = {"from": old_path, "to": new_path,
+                        "old": mesh(old, path, old_cdi, old_rows[did], textures),
+                        "new": mesh(new, path, new_cdi, new_rows[did], textures)}
+        except (struct.error, KeyError, IndexError) as e:
+            print(f"{name}: cannot show ({e})")
+            continue
+        with open(os.path.join(data_dir, f"{name}.js"), "w") as f:
+            f.write(f"LOADED({json.dumps(name)}, {json.dumps({'creature': creature, 'textures': textures})});")
+        index.append({"name": name, "label": f"{name} (display {did})"})
+    html = PAGE.replace("/*DATA*/", json.dumps(index))
     out = os.path.join(build.OUT, "compare.html")
     with open(out, "w") as f:
         f.write(html)
-    print(f"wrote {out} ({os.path.getsize(out) // 1024} KiB)")
+    print(f"wrote {out}: {len(index)} models, data in {data_dir}/")
 
 
 PAGE = """<!doctype html>
@@ -143,7 +163,9 @@ canvas { display: block; width: 100%; height: calc(100% - 44px); }
 <script type="module">
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-const DATA = /*DATA*/;
+const INDEX = /*DATA*/;
+const cache = {};
+let textures = {};
 const canvas = document.getElementById("c");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(devicePixelRatio);
@@ -153,9 +175,9 @@ const controls = new OrbitControls(camera, canvas);
 const loader = new THREE.TextureLoader();
 const texCache = {};
 function tex(key) {
-  if (!key || !DATA.textures[key]) return null;
+  if (!key || !textures[key]) return null;
   if (!texCache[key]) {
-    const t = loader.load(DATA.textures[key]);
+    const t = loader.load(textures[key]);
     t.flipY = false; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace;
     texCache[key] = t;
   }
@@ -187,8 +209,19 @@ function scene(m) {
   return s;
 }
 let scenes = [];
-function show(i) {
-  const c = DATA.creatures[i];
+window.LOADED = (name, data) => { cache[name] = data; show(name); };
+function select(name) {
+  location.hash = name;
+  if (cache[name]) return show(name);
+  const s = document.createElement("script");
+  s.src = `compare/${name}.js`;
+  document.head.appendChild(s);
+}
+function show(name) {
+  if (name !== location.hash.slice(1)) return;  // a slower load for an earlier pick
+  textures = cache[name].textures;
+  for (const k in texCache) delete texCache[k];
+  const c = cache[name].creature;
   scenes = [scene(c.old), scene(c.new)];
   document.getElementById("a").textContent = `${c.from}: ${c.old.stats}`;
   document.getElementById("b").textContent = `${c.to}: ${c.new.stats}`;
@@ -201,11 +234,11 @@ function show(i) {
   controls.update();
 }
 const pick = document.getElementById("pick");
-DATA.creatures.forEach((c, i) => pick.add(new Option(c.name, i)));
-pick.onchange = () => { show(+pick.value); location.hash = DATA.creatures[pick.value].name.split(" ")[0]; };
-const start = Math.max(0, DATA.creatures.findIndex(c => c.name.startsWith(location.hash.slice(1) + " ")));
-pick.value = start;
-show(start);
+INDEX.forEach(c => pick.add(new Option(c.label, c.name)));
+pick.onchange = () => select(pick.value);
+const start = INDEX.find(c => c.name === location.hash.slice(1)) || INDEX[0];
+pick.value = start.name;
+select(start.name);
 function frame() {
   const w = canvas.clientWidth, h = canvas.clientHeight;
   if (canvas.width !== Math.floor(w * devicePixelRatio)) renderer.setSize(w, h, false);
@@ -222,5 +255,5 @@ frame();
 """
 
 if __name__ == "__main__":
-    names = sys.argv[1:] or list(DISPLAYS)
+    names = sys.argv[1:] or list(build.UPGRADES)
     main(names)

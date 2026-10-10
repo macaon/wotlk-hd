@@ -1,0 +1,1010 @@
+{
+ "airelemental": {
+  "displays": 29,
+  "new": "creature/airelemental2/airelemental2.m2",
+  "old": "creature/airelemental/airelemental.m2",
+  "triangles": [
+   1248,
+   2380
+  ]
+ },
+ "ancientoflore": {
+  "displays": 7,
+  "new": "creature/ancientoflore2/ancientoflore2.m2",
+  "old": "creature/ancientoflore/ancientoflore.m2",
+  "triangles": [
+   1429,
+   5889
+  ]
+ },
+ "ancientofwar": {
+  "displays": 6,
+  "new": "creature/ancientofwar2/ancientofwar2.m2",
+  "old": "creature/ancientofwar/ancientofwar.m2",
+  "triangles": [
+   1354,
+   6271
+  ]
+ },
+ "ancientprotector": {
+  "displays": 17,
+  "new": "creature/ancientprotector2/ancientprotector2.m2",
+  "old": "creature/ancientprotector/ancientprotector.m2",
+  "triangles": [
+   783,
+   5032
+  ]
+ },
+ "banshee": {
+  "displays": 23,
+  "new": "creature/banshee2/banshee2.m2",
+  "old": "creature/banshee/banshee.m2",
+  "triangles": [
+   1045,
+   4348
+  ]
+ },
+ "be_broom01": {
+  "displays": 1,
+  "new": "creature/broom/be_broom01.m2",
+  "old": "creature/broom/be_broom01.m2",
+  "triangles": [
+   122,
+   315
+  ]
+ },
+ "bear": {
+  "displays": 50,
+  "new": "creature/bear2/bear2.m2",
+  "old": "creature/bear/bear.m2",
+  "triangles": [
+   620,
+   2128
+  ]
+ },
+ "bearmount": {
+  "displays": 6,
+  "new": "creature/bearmount/bearmount.m2",
+  "old": "creature/bearmount/bearmount.m2",
+  "triangles": [
+   2942,
+   4548
+  ]
+ },
+ "boar": {
+  "displays": 35,
+  "new": "creature/boar2/boar2.m2",
+  "old": "creature/boar/boar.m2",
+  "triangles": [
+   504,
+   5040
+  ]
+ },
+ "bonespider": {
+  "displays": 7,
+  "new": "creature/bonespider2/bonespider2.m2",
+  "old": "creature/bonespider/bonespider.m2",
+  "triangles": [
+   1334,
+   4673
+  ]
+ },
+ "carrionbird": {
+  "displays": 19,
+  "new": "creature/vulture/vulture.m2",
+  "old": "creature/carrionbird/carrionbird.m2",
+  "triangles": [
+   622,
+   3944
+  ]
+ },
+ "cat": {
+  "displays": 11,
+  "new": "creature/cat2/cat2.m2",
+  "old": "creature/cat/cat.m2",
+  "triangles": [
+   362,
+   2358
+  ]
+ },
+ "chicken": {
+  "displays": 9,
+  "new": "creature/chicken2/chicken2.m2",
+  "old": "creature/chicken/chicken.m2",
+  "triangles": [
+   98,
+   796
+  ]
+ },
+ "crab": {
+  "displays": 26,
+  "new": "creature/crab2/crab2.m2",
+  "old": "creature/crab/crab.m2",
+  "triangles": [
+   642,
+   2292
+  ]
+ },
+ "darkhound": {
+  "displays": 23,
+  "new": "creature/darkhound2/darkhound2.m2",
+  "old": "creature/darkhound/darkhound.m2",
+  "triangles": [
+   525,
+   2878
+  ]
+ },
+ "diablofunsized": {
+  "displays": 1,
+  "new": "creature/diablo/diablofunsized.m2",
+  "old": "creature/diablo/diablofunsized.m2",
+  "triangles": [
+   792,
+   1582
+  ]
+ },
+ "diemetradon": {
+  "displays": 8,
+  "new": "creature/diemetradon2/diemetradon2.m2",
+  "old": "creature/diemetradon/diemetradon.m2",
+  "triangles": [
+   782,
+   5052
+  ]
+ },
+ "doomguard": {
+  "displays": 16,
+  "new": "creature/doomguard2/doomguard2.m2",
+  "old": "creature/doomguard/doomguard.m2",
+  "triangles": [
+   1097,
+   4202
+  ]
+ },
+ "draeneitotem_earth": {
+  "displays": 4,
+  "new": "world/expansion06/doodads/dranaei/7dr_shaman_totem03.m2",
+  "old": "creature/spells/draeneitotem_earth.m2",
+  "triangles": [
+   414,
+   1490
+  ]
+ },
+ "druidbear": {
+  "displays": 7,
+  "new": "creature/druidbear2/druidbear2.m2",
+  "old": "creature/druidbear/druidbear.m2",
+  "triangles": [
+   1070,
+   2764
+  ]
+ },
+ "druidbeartauren": {
+  "displays": 5,
+  "new": "creature/druidbear2/druidbeartauren2.m2",
+  "old": "creature/druidbear/druidbeartauren.m2",
+  "triangles": [
+   1264,
+   2968
+  ]
+ },
+ "druidcat": {
+  "displays": 5,
+  "new": "creature/druidcat2/druidcat2.m2",
+  "old": "creature/druidcat/druidcat.m2",
+  "triangles": [
+   1188,
+   2933
+  ]
+ },
+ "druidcattauren": {
+  "displays": 5,
+  "new": "creature/druidcat2/druidcattauren2.m2",
+  "old": "creature/druidcattauren/druidcattauren.m2",
+  "triangles": [
+   1354,
+   3388
+  ]
+ },
+ "druidowlbear": {
+  "displays": 2,
+  "new": "creature/druidowlbear2/druidowlbear2.m2",
+  "old": "creature/druidowlbear/druidowlbear.m2",
+  "triangles": [
+   1032,
+   4788
+  ]
+ },
+ "druidowlbeartauren": {
+  "displays": 2,
+  "new": "creature/druidowlbear2/druidowlbeartauren2.m2",
+  "old": "creature/druidowlbear/druidowlbeartauren.m2",
+  "triangles": [
+   980,
+   4622
+  ]
+ },
+ "dryad": {
+  "displays": 17,
+  "new": "creature/dryad3/dryad3.m2",
+  "old": "creature/dryad/dryad.m2",
+  "triangles": [
+   1070,
+   9900
+  ]
+ },
+ "eagle": {
+  "displays": 14,
+  "new": "creature/eagle2/eagle2.m2",
+  "old": "creature/eagle/eagle.m2",
+  "triangles": [
+   632,
+   1510
+  ]
+ },
+ "elementalearth": {
+  "displays": 61,
+  "new": "creature/elementalearth2/elementalearth2.m2",
+  "old": "creature/elementalearth/elementalearth.m2",
+  "triangles": [
+   1608,
+   5805
+  ]
+ },
+ "ent": {
+  "displays": 43,
+  "new": "creature/ent2/ent2.m2",
+  "old": "creature/ent/ent.m2",
+  "triangles": [
+   1652,
+   8274
+  ]
+ },
+ "facelessone": {
+  "displays": 13,
+  "new": "creature/facelessone2/facelessone2.m2",
+  "old": "creature/facelessone/facelessone.m2",
+  "triangles": [
+   1762,
+   9288
+  ]
+ },
+ "faeriedragon": {
+  "displays": 9,
+  "new": "creature/faeriedragon2/faeriedragon2.m2",
+  "old": "creature/faeriedragon/faeriedragon.m2",
+  "triangles": [
+   778,
+   1609
+  ]
+ },
+ "felguard": {
+  "displays": 20,
+  "new": "creature/felguard2/felguard2.m2",
+  "old": "creature/felguard/felguard.m2",
+  "triangles": [
+   1136,
+   4401
+  ]
+ },
+ "felhound": {
+  "displays": 10,
+  "new": "creature/felhound2/felhound2.m2",
+  "old": "creature/felhound/felhound.m2",
+  "triangles": [
+   843,
+   3895
+  ]
+ },
+ "fireelemental": {
+  "displays": 15,
+  "new": "creature/fireelemental2/fireelemental2.m2",
+  "old": "creature/fireelemental/fireelemental.m2",
+  "triangles": [
+   874,
+   5227
+  ]
+ },
+ "fleshgolem": {
+  "displays": 39,
+  "new": "creature/fleshgolem2/fleshgolem2.m2",
+  "old": "creature/fleshgolem/fleshgolem.m2",
+  "triangles": [
+   980,
+   9319
+  ]
+ },
+ "frog": {
+  "displays": 15,
+  "new": "creature/frog2/frog2.m2",
+  "old": "creature/frog/frog.m2",
+  "triangles": [
+   226,
+   880
+  ]
+ },
+ "ghoul": {
+  "displays": 34,
+  "new": "creature/ghoul2/ghoul2.m2",
+  "old": "creature/ghoul/ghoul.m2",
+  "triangles": [
+   920,
+   11280
+  ]
+ },
+ "giantspider": {
+  "displays": 10,
+  "new": "creature/giantspider2/giantspider2.m2",
+  "old": "creature/giantspider/giantspider.m2",
+  "triangles": [
+   2029,
+   5700
+  ]
+ },
+ "gnoll": {
+  "displays": 22,
+  "new": "creature/gnoll2/gnoll2.m2",
+  "old": "creature/gnoll/gnoll.m2",
+  "triangles": [
+   564,
+   19108
+  ]
+ },
+ "gnollcaster": {
+  "displays": 15,
+  "new": "creature/gnoll2/gnoll2.m2",
+  "old": "creature/gnollcaster/gnollcaster.m2",
+  "triangles": [
+   924,
+   19108
+  ]
+ },
+ "gnollmelee": {
+  "displays": 20,
+  "new": "creature/gnoll2/gnoll2.m2",
+  "old": "creature/gnollmelee/gnollmelee.m2",
+  "triangles": [
+   746,
+   19108
+  ]
+ },
+ "golemharvest": {
+  "displays": 10,
+  "new": "creature/harvestgolem2/harvestgolem2.m2",
+  "old": "creature/golemharvest/golemharvest.m2",
+  "triangles": [
+   760,
+   15256
+  ]
+ },
+ "golemstone": {
+  "displays": 52,
+  "new": "creature/golemstone2/golemstone2.m2",
+  "old": "creature/golemstone/golemstone.m2",
+  "triangles": [
+   866,
+   6326
+  ]
+ },
+ "gorilla": {
+  "displays": 23,
+  "new": "creature/gorilla2/gorilla2.m2",
+  "old": "creature/gorilla/gorilla.m2",
+  "triangles": [
+   894,
+   3886
+  ]
+ },
+ "grell": {
+  "displays": 19,
+  "new": "creature/grell2/grell2.m2",
+  "old": "creature/grell/grell.m2",
+  "triangles": [
+   594,
+   1962
+  ]
+ },
+ "halfbodyofkathune": {
+  "displays": 1,
+  "new": "creature/halfbodyofkathune/halfbodyofkathune.m2",
+  "old": "creature/halfbodyofkathune/halfbodyofkathune.m2",
+  "triangles": [
+   1424,
+   2366
+  ]
+ },
+ "hammerhead": {
+  "displays": 12,
+  "new": "creature/shark2/shark2.m2",
+  "old": "creature/shark/hammerhead.m2",
+  "triangles": [
+   662,
+   2836
+  ]
+ },
+ "horse": {
+  "displays": 15,
+  "new": "creature/horse3/horse3.m2",
+  "old": "creature/horse/horse.m2",
+  "triangles": [
+   762,
+   4202
+  ]
+ },
+ "humanfemalekid": {
+  "displays": 7,
+  "new": "creature/humanfemalekid2/humanfemalekid2.m2",
+  "old": "creature/humanfemalekid/humanfemalekid.m2",
+  "triangles": [
+   765,
+   5274
+  ]
+ },
+ "humanmalekid": {
+  "displays": 11,
+  "new": "creature/humanmalekid2/humanmalekid2.m2",
+  "old": "creature/humanmalekid/humanmalekid.m2",
+  "triangles": [
+   672,
+   4404
+  ]
+ },
+ "hyena": {
+  "displays": 20,
+  "new": "creature/hyena2/hyena2.m2",
+  "old": "creature/hyena/hyena.m2",
+  "triangles": [
+   536,
+   1970
+  ]
+ },
+ "imp": {
+  "displays": 7,
+  "new": "creature/imp2/imp2.m2",
+  "old": "creature/imp/imp.m2",
+  "triangles": [
+   622,
+   2192
+  ]
+ },
+ "kalecgos": {
+  "displays": 3,
+  "new": "creature/kalecgos2/kalecgos2.m2",
+  "old": "creature/kalecgos/kalecgos.m2",
+  "triangles": [
+   2028,
+   10586
+  ]
+ },
+ "keeperofthegrove": {
+  "displays": 20,
+  "new": "creature/keeperofthegrove2/keeperofthegrove2.m2",
+  "old": "creature/keeperofthegrove/keeperofthegrove.m2",
+  "triangles": [
+   1089,
+   6824
+  ]
+ },
+ "kobold": {
+  "displays": 13,
+  "new": "creature/kobold2/kobold2.m2",
+  "old": "creature/kobold/kobold.m2",
+  "triangles": [
+   564,
+   4677
+  ]
+ },
+ "kodobeast": {
+  "displays": 17,
+  "new": "creature/kodobeast2/kodobeast2.m2",
+  "old": "creature/kodobeast/kodobeast.m2",
+  "triangles": [
+   878,
+   2930
+  ]
+ },
+ "krakken": {
+  "displays": 4,
+  "new": "creature/krakken2/krakken2.m2",
+  "old": "creature/krakken/krakken.m2",
+  "triangles": [
+   2086,
+   8212
+  ]
+ },
+ "ladyalexstrasa": {
+  "displays": 2,
+  "new": "creature/ladyalexstrasza/ladyalexstrasza.m2",
+  "old": "creature/alexstrasza/ladyalexstrasa.m2",
+  "triangles": [
+   4044,
+   17650
+  ]
+ },
+ "ladysylvanaswindrunner": {
+  "displays": 2,
+  "new": "creature/sylvanas/sylvanas.m2",
+  "old": "creature/ladysylvanaswindrunner/ladysylvanaswindrunner.m2",
+  "triangles": [
+   5112,
+   9741
+  ]
+ },
+ "ladyvashj": {
+  "displays": 2,
+  "new": "creature/athissa/athissa.m2",
+  "old": "creature/ladyvashj/ladyvashj.m2",
+  "triangles": [
+   3940,
+   9998
+  ]
+ },
+ "larva": {
+  "displays": 18,
+  "new": "creature/larva2/larva2.m2",
+  "old": "creature/larva/larva.m2",
+  "triangles": [
+   364,
+   1152
+  ]
+ },
+ "lobstrok": {
+  "displays": 24,
+  "new": "creature/lobstrok2/lobstrok2.m2",
+  "old": "creature/lobstrok/lobstrok.m2",
+  "triangles": [
+   1032,
+   3556
+  ]
+ },
+ "manawurm": {
+  "displays": 14,
+  "new": "creature/manawurm2/manawurm2.m2",
+  "old": "creature/manawurm/manawurm.m2",
+  "triangles": [
+   928,
+   2074
+  ]
+ },
+ "medivh": {
+  "displays": 2,
+  "new": "creature/medivh2/medivh2.m2",
+  "old": "creature/medivh/medivh.m2",
+  "triangles": [
+   1499,
+   9039
+  ]
+ },
+ "miev": {
+  "displays": 2,
+  "new": "creature/maiev/maiev.m2",
+  "old": "creature/miev/miev.m2",
+  "triangles": [
+   2850,
+   5388
+  ]
+ },
+ "minespider": {
+  "displays": 30,
+  "new": "creature/minespider2/minespider2.m2",
+  "old": "creature/minespider/minespider.m2",
+  "triangles": [
+   516,
+   3398
+  ]
+ },
+ "murloc": {
+  "displays": 57,
+  "new": "creature/murloc2/murloc2.m2",
+  "old": "creature/murloc/murloc.m2",
+  "triangles": [
+   778,
+   1519
+  ]
+ },
+ "northrendghoul": {
+  "displays": 19,
+  "new": "creature/northrendghoul2/northrendghoul2.m2",
+  "old": "creature/northrendghoul/northrendghoul.m2",
+  "triangles": [
+   1644,
+   12158
+  ]
+ },
+ "northrendghoulspiked": {
+  "displays": 2,
+  "new": "creature/northrendghoul2spiked/northrendghoul2spiked.m2",
+  "old": "creature/northrendghoul/northrendghoulspiked.m2",
+  "triangles": [
+   1874,
+   12618
+  ]
+ },
+ "pig": {
+  "displays": 5,
+  "new": "creature/babypig/babypig.m2",
+  "old": "creature/pig/pig.m2",
+  "triangles": [
+   360,
+   1294
+  ]
+ },
+ "pitlord": {
+  "displays": 8,
+  "new": "creature/pitlord2/pitlord2.m2",
+  "old": "creature/pitlord/pitlord.m2",
+  "triangles": [
+   2961,
+   6417
+  ]
+ },
+ "prariedog": {
+  "displays": 2,
+  "new": "creature/prairiedog/prairiedog.m2",
+  "old": "creature/prariedog/prariedog.m2",
+  "triangles": [
+   114,
+   876
+  ]
+ },
+ "quillboar": {
+  "displays": 19,
+  "new": "creature/quillboar2/quillboar2.m2",
+  "old": "creature/quillboar/quillboar.m2",
+  "triangles": [
+   832,
+   12936
+  ]
+ },
+ "quillboarcaster": {
+  "displays": 11,
+  "new": "creature/quillboar2/quillboar2.m2",
+  "old": "creature/quillboar/quillboarcaster.m2",
+  "triangles": [
+   762,
+   12936
+  ]
+ },
+ "quillboarwarrior": {
+  "displays": 11,
+  "new": "creature/quillboar2/quillboar2.m2",
+  "old": "creature/quillboar/quillboarwarrior.m2",
+  "triangles": [
+   1184,
+   12936
+  ]
+ },
+ "rabbit": {
+  "displays": 22,
+  "new": "creature/rabbit2/rabbit2.m2",
+  "old": "creature/rabbit/rabbit.m2",
+  "triangles": [
+   107,
+   1124
+  ]
+ },
+ "rabbitgold": {
+  "displays": 1,
+  "new": "creature/rabbit2/rabbitgold2.m2",
+  "old": "creature/rabbit/rabbitgold.m2",
+  "triangles": [
+   103,
+   1124
+  ]
+ },
+ "ram": {
+  "displays": 13,
+  "new": "creature/ram2/ram2.m2",
+  "old": "creature/ram/ram.m2",
+  "triangles": [
+   1168,
+   3978
+  ]
+ },
+ "rat": {
+  "displays": 10,
+  "new": "creature/rat2/rat2.m2",
+  "old": "creature/rat/rat.m2",
+  "triangles": [
+   212,
+   576
+  ]
+ },
+ "ridingkodo": {
+  "displays": 15,
+  "new": "creature/kodobeast2mount/kodobeast2mount.m2",
+  "old": "creature/kodobeast/ridingkodo.m2",
+  "triangles": [
+   880,
+   3036
+  ]
+ },
+ "ridingphoenix": {
+  "displays": 1,
+  "new": "creature/ridingphoenix/ridingphoenix.m2",
+  "old": "creature/ridingphoenix/ridingphoenix.m2",
+  "triangles": [
+   1413,
+   2769
+  ]
+ },
+ "rocketchicken": {
+  "displays": 1,
+  "new": "creature/rocketchicken2/rocketchicken2.m2",
+  "old": "creature/rocketchicken/rocketchicken.m2",
+  "triangles": [
+   310,
+   1650
+  ]
+ },
+ "satyr": {
+  "displays": 59,
+  "new": "creature/satyr2/satyr2.m2",
+  "old": "creature/satyr/satyr.m2",
+  "triangles": [
+   998,
+   5330
+  ]
+ },
+ "sealion": {
+  "displays": 2,
+  "new": "creature/sealion2/sealion2.m2",
+  "old": "creature/sealion/sealion.m2",
+  "triangles": [
+   698,
+   2116
+  ]
+ },
+ "seavrykulmale": {
+  "displays": 6,
+  "new": "creature/kvaldir/kvaldir.m2",
+  "old": "creature/seavrykulmale/seavrykulmale.m2",
+  "triangles": [
+   3721,
+   11581
+  ]
+ },
+ "seavrykulmale_a": {
+  "displays": 6,
+  "new": "creature/kvaldir/kvaldir.m2",
+  "old": "creature/seavrykulmale/seavrykulmale_a.m2",
+  "triangles": [
+   3721,
+   11581
+  ]
+ },
+ "shark": {
+  "displays": 16,
+  "new": "creature/shark2/shark2.m2",
+  "old": "creature/shark/shark.m2",
+  "triangles": [
+   630,
+   2836
+  ]
+ },
+ "sheep": {
+  "displays": 5,
+  "new": "creature/sheep2/sheep2.m2",
+  "old": "creature/sheep/sheep.m2",
+  "triangles": [
+   230,
+   1076
+  ]
+ },
+ "silithidscarab": {
+  "displays": 34,
+  "new": "creature/silithscarab2/silithidscarab2.m2",
+  "old": "creature/silithidscarab/silithidscarab.m2",
+  "triangles": [
+   734,
+   3322
+  ]
+ },
+ "skeleton": {
+  "displays": 13,
+  "new": "creature/scourgewarrior/scourgewarrior.m2",
+  "old": "creature/skeleton/skeleton.m2",
+  "triangles": [
+   886,
+   10112
+  ]
+ },
+ "spirithealer": {
+  "displays": 4,
+  "new": "creature/spirithealer2/spirithealer2.m2",
+  "old": "creature/spirithealer/spirithealer.m2",
+  "triangles": [
+   1381,
+   8520
+  ]
+ },
+ "squirrel": {
+  "displays": 8,
+  "new": "creature/squirrel2/squirrel2.m2",
+  "old": "creature/squirrel/squirrel.m2",
+  "triangles": [
+   138,
+   764
+  ]
+ },
+ "succubus": {
+  "displays": 21,
+  "new": "creature/succubus2/succubus2.m2",
+  "old": "creature/succubus/succubus.m2",
+  "triangles": [
+   2338,
+   8330
+  ]
+ },
+ "tallstrider": {
+  "displays": 18,
+  "new": "creature/tallstrider2/tallstrider2.m2",
+  "old": "creature/tallstrider/tallstrider.m2",
+  "triangles": [
+   540,
+   2330
+  ]
+ },
+ "tarantula": {
+  "displays": 17,
+  "new": "creature/tarantula2/tarantula2.m2",
+  "old": "creature/tarantula/tarantula.m2",
+  "triangles": [
+   768,
+   4576
+  ]
+ },
+ "threshadon": {
+  "displays": 15,
+  "new": "creature/threshadon2/threshadon2.m2",
+  "old": "creature/threshadon/threshadon.m2",
+  "triangles": [
+   732,
+   2252
+  ]
+ },
+ "thunderlizard": {
+  "displays": 21,
+  "new": "creature/thunderlizard2/thunderlizard2.m2",
+  "old": "creature/thunderlizard/thunderlizard.m2",
+  "triangles": [
+   786,
+   4348
+  ]
+ },
+ "titanfemale": {
+  "displays": 6,
+  "new": "creature/titanfemale2/titanfemale2.m2",
+  "old": "creature/titanfemale/titanfemale.m2",
+  "triangles": [
+   1286,
+   3786
+  ]
+ },
+ "troglodyte": {
+  "displays": 29,
+  "new": "creature/troglodyte2/troglodyte2.m2",
+  "old": "creature/troglodyte/troglodyte.m2",
+  "triangles": [
+   665,
+   5112
+  ]
+ },
+ "trolldire": {
+  "displays": 19,
+  "new": "creature/trolldire2/trolldire2.m2",
+  "old": "creature/trolldire/trolldire.m2",
+  "triangles": [
+   1306,
+   9881
+  ]
+ },
+ "turtle": {
+  "displays": 9,
+  "new": "creature/babyturtle/babyturtle.m2",
+  "old": "creature/turtle/turtle.m2",
+  "triangles": [
+   362,
+   640
+  ]
+ },
+ "valkier": {
+  "displays": 2,
+  "new": "creature/valkier2/valkier2.m2",
+  "old": "creature/valkier/valkier.m2",
+  "triangles": [
+   3242,
+   4872
+  ]
+ },
+ "valkierdark": {
+  "displays": 4,
+  "new": "creature/valkier2_dark/valkier2_dark.m2",
+  "old": "creature/valkierdark/valkierdark.m2",
+  "triangles": [
+   3242,
+   4872
+  ]
+ },
+ "velen": {
+  "displays": 3,
+  "new": "creature/velen2/velen2.m2",
+  "old": "creature/velen/velen.m2",
+  "triangles": [
+   2434,
+   5340
+  ]
+ },
+ "voidterror": {
+  "displays": 5,
+  "new": "creature/voidterror2/voidterror2.m2",
+  "old": "creature/voidterror/voidterror.m2",
+  "triangles": [
+   2894,
+   8708
+  ]
+ },
+ "voidwalker": {
+  "displays": 5,
+  "new": "creature/voidwalker2/voidwalker2.m2",
+  "old": "creature/voidwalker/voidwalker.m2",
+  "triangles": [
+   894,
+   3994
+  ]
+ },
+ "waterelemental": {
+  "displays": 26,
+  "new": "creature/waterelemental2/waterelemental2.m2",
+  "old": "creature/waterelemental/waterelemental.m2",
+  "triangles": [
+   781,
+   4483
+  ]
+ },
+ "wendigo": {
+  "displays": 18,
+  "new": "creature/wendigo2/wendigo2.m2",
+  "old": "creature/wendigo/wendigo.m2",
+  "triangles": [
+   944,
+   6506
+  ]
+ },
+ "windserpent": {
+  "displays": 24,
+  "new": "creature/windserpent2/windserpent2.m2",
+  "old": "creature/windserpent/windserpent.m2",
+  "triangles": [
+   750,
+   2684
+  ]
+ },
+ "zombie": {
+  "displays": 17,
+  "new": "creature/zombie2/zombie2.m2",
+  "old": "creature/zombie/zombie.m2",
+  "triangles": [
+   925,
+   4203
+  ]
+ },
+ "zombiearm": {
+  "displays": 16,
+  "new": "creature/zombie2/zombie2.m2",
+  "old": "creature/zombie/zombiearm.m2",
+  "triangles": [
+   733,
+   4203
+  ]
+ },
+ "zombiesword": {
+  "displays": 2,
+  "new": "creature/zombie2/zombie2.m2",
+  "old": "creature/zombie/zombiesword.m2",
+  "triangles": [
+   947,
+   4203
+  ]
+ }
+}

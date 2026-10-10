@@ -103,27 +103,33 @@ def convert_skin(data, vertex_bones, bone_lookup):
         if combo + bones > len(bone_lookup):
             raise ConvertError("submesh bone range outside the bone lookup")
         tris = [indices[i:i + 3] for i in range(istart, istart + icount, 3)]
-        if bones <= MAX_BONES_PER_SUBMESH:
-            groups = [(tris, None)]
+        # Retail skin vertex palette indices can be stale (boar2: most point at the wrong bone), so
+        # they are always recomputed from the model vertices' bones: the submesh's own palette when
+        # it holds them all and fits, otherwise new palettes, splitting in triangle order.
+        window = list(bone_lookup[combo:combo + bones])
+        need = {b for t in tris for v in t for b in vertex_bones(lookup[v])}
+        if bones <= MAX_BONES_PER_SUBMESH and need <= set(window):
+            groups = [(tris, window, combo)]
         else:
             groups = []
             palette, cur = [], []
             for t in tris:
-                need = {b for v in t for b in vertex_bones(lookup[v])}
-                if len(set(palette) | need) > MAX_BONES_PER_SUBMESH and cur:
-                    groups.append((cur, palette))
+                tneed = {b for v in t for b in vertex_bones(lookup[v])}
+                if len(set(palette) | tneed) > MAX_BONES_PER_SUBMESH and cur:
+                    groups.append((cur, palette, None))
                     palette, cur = [], []
-                palette += sorted(need - set(palette))
+                palette += sorted(tneed - set(palette))
                 cur.append(t)
-            groups.append((cur, palette))
+            groups.append((cur, palette, None))
         pieces.append([])
-        for group_tris, palette in groups:
-            if palette is None:
-                g_combo, g_bones = combo, bones
-            else:
-                g_combo, g_bones = len(bone_lookup), len(palette)
+        for group_tris, palette, g_combo in groups:
+            if g_combo is None:
+                g_combo = len(bone_lookup)
                 bone_lookup += palette
-                slot = {b: i for i, b in enumerate(palette)}
+            g_bones = len(palette)
+            slot = {}
+            for i, b in enumerate(palette):
+                slot.setdefault(b, i)
             local = {}
             vstart = len(out_lookup)
             for t in group_tris:
@@ -131,11 +137,8 @@ def convert_skin(data, vertex_bones, bone_lookup):
                     if v not in local:
                         local[v] = len(out_lookup)
                         out_lookup.append(lookup[v])
-                        if palette is None:
-                            out_props += data[ob + v * 4:ob + v * 4 + 4]
-                        else:
-                            w = vertex_bones(lookup[v], slots=True)
-                            out_props += bytes(slot[b] if b is not None else 0 for b in w)
+                        w = vertex_bones(lookup[v], slots=True)
+                        out_props += bytes(slot[b] if b is not None else 0 for b in w)
                     out_idx.append(local[v])
             g_istart = len(out_idx) - len(group_tris) * 3
             if len(out_lookup) > 0xFFFF:

@@ -15,6 +15,9 @@ one client patch, `Data/patch-4.MPQ`. AzerothCore stays unchanged. Private use o
 - `fetch.py <fdid|path>`: retail files from wago.tools by FileDataID, cached in `cache/files/`.
 - `compare.py [name...]`: writes `out/compare.html`, old and converted models side by side.
 - `experiment.py`: A/B variants of a model under new display ids (90001+) for testing in game.
+- `plan.py [--unlinked]`: picks upgrades into `upgrades.json` (retail target where most of a
+  model's displays went, kept at >= 1.5x skin triangles); `--unlinked` lists newer versions no
+  old display points at (like dragonhawk2), for `build.py`'s MANUAL.
 - `m2.py <file>`: model summary. `convert.py`: retail model -> 3.3.5. `build.py [name...]`:
   converts the `UPGRADES` list into `out/patch-enUS-4.MPQ`; copy that to `<WoW>/Data/enUS/`.
 
@@ -50,7 +53,12 @@ Checked against 3.3.5's own files and Wow.exe 12340:
 - Cameras: 3.3.5 has `fov` after the type (100 bytes); later versions moved it into a track at the end
   (116 bytes). Values carry over 1:1; retail portrait far clip is 100x.
 - Geosets: 3.3.5's `CreatureGeosetData` is one nibble per group (`0x1111` -> 101, 201, 301, 401);
-  retail lists the same per display in `CreatureDisplayInfoGeosetData`.
+  retail lists the same per display in `CreatureDisplayInfoGeosetData`, and shows only the groups
+  a display lists (boar2's 101 needs a texture display 193 lacks). Unlisted groups get variant 15,
+  which no model has, so 3.3.5 hides them.
+- Retail skin vertex palette indices can be stale (boar2); they are always rebuilt from the model
+  vertices' bones.
+- Targets under `character/` (naga) are customizable models; they belong to the humanoid track.
 - Retail skins index model vertices from a base offset in the header (0x2C, 3.3.5's boneCountMax);
   each LOD has its own range. Only the chosen skin's vertices are kept (gnoll2: 67697 -> 14823).
 - Particle emitters: 3.3.5's 476-byte struct plus 16 appended bytes (multi-texture parameters);
@@ -68,7 +76,8 @@ Checked against 3.3.5's own files and Wow.exe 12340:
 ## Plan
 
 0. **Setup** (done): large-address-aware, FoV, survey.
-   **First models** (built, untested in game): Ghostlands' murloc, spiders, rat, frog, zombie,
+   **Whole game** (built 2026-10-10): 110 of 112 planned upgrades convert (Lady Sylvanas uses a
+   .skel, Lady Vashj misses an .anim); 283 MB patch. **Ghostlands set** (tested in game): Ghostlands' murloc, spiders, rat, frog, zombie,
    skeleton, larva, dragonhawk (-> dragonhawk2, colours matched by eye), banshee, mana wyrm,
    crab, ghoul, gnolls, ent, rabbit, flesh golem, spirit healer, horse.
 1. **Data** (done): retail tables as CSV and files by FileDataID from wago.tools.

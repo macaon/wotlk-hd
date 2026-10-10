@@ -46,7 +46,8 @@ def family(path):
     return re.sub(r"\d+$", "", path.rsplit("/", 1)[-1].rsplit(".", 1)[0])
 
 
-def main():
+def classify():
+    """(display count, [(display, kind, old model path, retail model path or None)]), kinds as above."""
     c = Client()
     disp, _ = wdbc(c.read("DBFilesClient\\CreatureDisplayInfo.dbc"))
     model_rows, ms = wdbc(c.read("DBFilesClient\\CreatureModelData.dbc"))
@@ -82,9 +83,7 @@ def main():
         if kind is None:
             targets[old_path][new_path] += 1
 
-    kinds = collections.Counter()
-    by_model = collections.defaultdict(set)  # old model path -> kinds of its displays
-    examples = collections.defaultdict(list)
+    out = []
     for did, kind, old_path, new_path, old_box, new_box in seen:
         if kind is None:
             if old_path.startswith("character/"):
@@ -99,12 +98,23 @@ def main():
                 kind = "updated"
             else:
                 kind = "same"
+        out.append((did, kind, old_path, new_path))
+    return len(disp), out
+
+
+def main():
+    n_disp, seen = classify()
+    kinds = collections.Counter()
+    by_model = collections.defaultdict(set)  # old model path -> kinds of its displays
+    examples = collections.defaultdict(list)
+    for did, kind, old_path, new_path in seen:
+        if kind not in ("humanoid", "gone"):
             by_model[old_path].add(kind)
             if len(examples[kind]) < 25:
                 examples[kind].append(f"{did}: {old_path} -> {new_path}")
         kinds[kind] += 1
 
-    print(f"{len(disp)} WotLK displays")
+    print(f"{n_disp} WotLK displays")
     for k, n in kinds.most_common():
         print(f"  {k:10} {n}")
     upgraded = sum(1 for ks in by_model.values() if ks & {"new-model", "updated"})
