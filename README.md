@@ -72,7 +72,8 @@ Checked against 3.3.5's own files and Wow.exe 12340:
   z*0.04238648); 3.3.5 takes a float, the negated z (checked on arcanegolem/manafiend). Ribbons
   are still dropped. Mana wyrm particles only play in its death animation. Head/tail cell tracks
   whose keys are all past rows x cols are wrapped (voidwalker2: cell 1 on a 1x1 texture drew flat
-  squares in 3.3.5).
+  squares in 3.3.5, or so it seemed: the squares later turned out to come and go with the scene,
+  unconverted 3.3.5 effects too, which points at the -opengl renderer; the wrap is kept as harmless).
 - Limits: 64 bones per submesh (the 3.3.5 max), 65535 vertices. Bigger submeshes are split in
   triangle order with their own palettes (vertex bones are absolute; skin vertex bones index
   `bone_lookup[combo + i]`; checked on 3.3.5 and retail files).
