@@ -7,6 +7,7 @@ own files and Wow.exe (12340); see README.md "Converter notes".
 Submeshes over 64 bones are split; vertices the chosen skin does not use are dropped. Refused
 (ConvertError) rather than half-converted: .skel-based models and skins over 65535 vertices.
 """
+import math
 import struct
 
 from m2 import M2
@@ -35,6 +36,7 @@ CAMERA_RETAIL, CAMERA_WOTLK = 116, 100
 PARTICLE_RETAIL, PARTICLE_WOTLK = 492, 476
 PARTICLE_FLAGS = 0x007FFFFF       # 3.3.5 files use bits below 0x80000; 0x800000+ are newer
 PARTICLE_MULTITEXTURE = 0x10000000
+PARTICLE_COMPRESSED_GRAVITY = 0x00800000  # gravity keys are packed vectors, not floats
 PARTICLE_BLEND_MAX = 4
 FAR_CLIP_WOTLK = 27.777779  # retail portrait cameras store 100x this
 
@@ -275,6 +277,12 @@ def convert_model(data, model_name, texture_name, get_file):
     n, off = m.arrays["particles"]
     empty = b.add(b"\0") if n else 0
     emitters = b""
+    decoded = set()
+    for i in range(n):
+        flags, = struct.unpack_from("<I", d, off + i * PARTICLE_RETAIL + 4)
+        if flags & PARTICLE_COMPRESSED_GRAVITY:
+            if not decompress_gravity(d, off + i * PARTICLE_RETAIL + 0x84, decoded):
+                warnings.append(f"emitter {i}: gravity keys in .anim files left as they are")
     for i in range(n):
         e = bytearray(d[off + i * PARTICLE_RETAIL:off + i * PARTICLE_RETAIL + PARTICLE_WOTLK])
         flags, = struct.unpack_from("<I", e, 4)
@@ -318,6 +326,38 @@ def convert_model(data, model_name, texture_name, get_file):
         warnings.append(f"split submeshes over {MAX_BONES_PER_SUBMESH} bones")
     struct.pack_into("<I", d, 0x44, len(skins))
     return bytes(d), skins, anims, warnings
+
+
+def decompress_gravity(d, track_off, done):
+    """Rewrite a gravity track's compressed vectors as 3.3.5's floats, in place. False if some
+    keys live outside the model (external .anim data).
+
+    With PARTICLE_COMPRESSED_GRAVITY each key is (int8 x, int8 y, int16 z): a unit direction from
+    x/128, y/128 and the implied z, scaled by z * 0.04238648 (a negative scale flips the direction).
+    3.3.5 has only a downward float: the vector's z, negated. Checked against arcanegolem and
+    manafiend, whose 3.3.5 files hold the same emitters with float gravity (0.694 vs -0.678).
+    """
+    _, _, _, _, nv, ov = struct.unpack_from("<HhIIII", d, track_off)
+    inside = True
+    for s in range(nv):
+        n, p = struct.unpack_from("<II", d, ov + s * 8)
+        if not n:
+            continue
+        if p + n * 4 > len(d) or p == 0:
+            inside = False
+            continue
+        if p in done:
+            continue
+        done.add(p)
+        for k in range(n):
+            x, y, z = struct.unpack_from("<bbh", d, p + k * 4)
+            fx, fy = x / 128, y / 128
+            fz = math.sqrt(max(0.0, 1 - fx * fx - fy * fy))
+            scale = z * 0.04238648
+            if scale < 0:
+                fz, scale = -fz, -scale
+            struct.pack_into("<f", d, p + k * 4, -fz * scale)
+    return inside
 
 
 def compact_vertices(b, skin):

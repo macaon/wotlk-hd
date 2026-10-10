@@ -14,6 +14,7 @@ one client patch, `Data/patch-4.MPQ`. AzerothCore stays unchanged. Private use o
 - `mpq.py`: reads the client's MPQ chain and writes MPQs via StormLib (`~/Git/ref/StormLib/build`).
 - `fetch.py <fdid|path>`: retail files from wago.tools by FileDataID, cached in `cache/files/`.
 - `compare.py [name...]`: writes `out/compare.html`, old and converted models side by side.
+- `experiment.py`: A/B variants of a model under new display ids (90001+) for testing in game.
 - `m2.py <file>`: model summary. `convert.py`: retail model -> 3.3.5. `build.py [name...]`:
   converts the `UPGRADES` list into `out/patch-enUS-4.MPQ`; copy that to `<WoW>/Data/enUS/`.
 
@@ -55,7 +56,9 @@ Checked against 3.3.5's own files and Wow.exe 12340:
 - Particle emitters: 3.3.5's 476-byte struct plus 16 appended bytes (multi-texture parameters);
   converted by truncating, newer flag bits masked. Their geometry/recursion model names must be
   an empty string (count 1, "\0") as in 3.3.5 files: count 0 / offset 0 reads as "MD20...".
-  Ribbons are still dropped.
+  With emitter flag 0x800000 the gravity keys are packed vectors (int8 x, int8 y, int16 z, scale
+  z*0.04238648); 3.3.5 takes a float, the negated z (checked on arcanegolem/manafiend). Ribbons
+  are still dropped. Mana wyrm particles only play in its death animation.
 - Limits: 64 bones per submesh (the 3.3.5 max), 65535 vertices. Bigger submeshes are split in
   triangle order with their own palettes (vertex bones are absolute; skin vertex bones index
   `bone_lookup[combo + i]`; checked on 3.3.5 and retail files).
