@@ -29,6 +29,11 @@ UPGRADES = {
     "zombie": ("creature/zombie/zombie.m2", "creature/zombie2/zombie2.m2", {}),
     "skeleton": ("creature/skeleton/skeleton.m2", "creature/scourgewarrior/scourgewarrior.m2", {}),
     "larva": ("creature/larva/larva.m2", "creature/larva2/larva2.m2", {}),
+    # Retail only uses dragonhawk2 for new displays; colours matched by eye.
+    "dragonhawk": ("creature/dragonhawk/dragonhawk.m2", "creature/dragonhawk2/dragonhawk2.m2", {
+        f"dragonhawkskin{old}": f"creature/dragonhawk2/dragonhawk2_{new}.blp" for old, new in [
+            ("", "orange"), ("01", "orange"), ("02", "green"), ("03", "pink"), ("04", "cyan"),
+            ("05", "red"), ("06", "black"), ("07", "black")]}),
 }
 
 # 3.3.5 CreatureDisplayInfo.dbc columns

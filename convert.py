@@ -4,8 +4,8 @@ The MD20 header and most structs are unchanged since 3.3.5 (see m2.py), so this 
 out of its chunk and fixes what 3.3.5 reads differently. Everything was checked against 3.3.5's
 own files and Wow.exe (12340); see README.md "Converter notes".
 
-Refused (ConvertError) rather than half-converted: a submesh using more than 64 bones,
-.skel-based models, and more than 65535 vertices.
+Submeshes over 64 bones are split. Refused (ConvertError) rather than half-converted: .skel-based
+models and more than 65535 vertices.
 """
 import struct
 
@@ -71,18 +71,75 @@ def convert_shader(shader, tex_count):
     return 0, min(tex_count, 2), COORD_T1_T2
 
 
-def convert_skin(data, bone_lookup_len):
-    """A retail .skin as a 3.3.5 one (48-byte header). Returns bytes."""
+def convert_skin(data, vertex_bones, bone_lookup):
+    """A retail .skin as a 3.3.5 one (48-byte header). Returns bytes.
+
+    vertex_bones(v) -> set of bones model vertex v is weighted to (absolute bone indices);
+    vertex_bones(v, slots=True) -> its 4 influence slots, None where the weight is 0.
+    bone_lookup: the model's bone lookup table; palettes of split submeshes are appended to it.
+
+    A submesh over MAX_BONES_PER_SUBMESH is split, in triangle order, into submeshes that each fit.
+    Skin vertices store bone indices relative to their submesh's palette (bone_lookup[combo + i]),
+    so split submeshes get their own vertex copies, and each batch is repeated per piece.
+    """
     if data[:4] != b"SKIN":
         raise ConvertError("not a skin")
     nv, ov, ni, oi, nb, ob, ns, os_, nt, ot = struct.unpack_from("<10I", data, 4)
-    subs = [bytearray(data[os_ + i * 48:os_ + i * 48 + 48]) for i in range(ns)]
-    for s in subs:
-        bones, combo = struct.unpack_from("<HH", s, 12)
-        if bones > MAX_BONES_PER_SUBMESH:
-            raise ConvertError(f"submesh uses {bones} bones (3.3.5 max {MAX_BONES_PER_SUBMESH})")
-        if combo + bones > bone_lookup_len:
+    lookup = struct.unpack_from(f"<{nv}H", data, ov)
+    indices = struct.unpack_from(f"<{ni}H", data, oi)
+    out_lookup, out_props, out_idx, out_subs = [], bytearray(), [], []
+    pieces = []  # per old submesh: indices of its new submeshes
+    for j in range(ns):
+        sub = data[os_ + j * 48:os_ + j * 48 + 48]
+        level, = struct.unpack_from("<H", sub, 2)
+        istart, icount, bones, combo = struct.unpack_from("<HHHH", sub, 8)
+        istart += level << 16
+        if combo + bones > len(bone_lookup):
             raise ConvertError("submesh bone range outside the bone lookup")
+        tris = [indices[i:i + 3] for i in range(istart, istart + icount, 3)]
+        if bones <= MAX_BONES_PER_SUBMESH:
+            groups = [(tris, None)]
+        else:
+            groups = []
+            palette, cur = [], []
+            for t in tris:
+                need = {b for v in t for b in vertex_bones(lookup[v])}
+                if len(set(palette) | need) > MAX_BONES_PER_SUBMESH and cur:
+                    groups.append((cur, palette))
+                    palette, cur = [], []
+                palette += sorted(need - set(palette))
+                cur.append(t)
+            groups.append((cur, palette))
+        pieces.append([])
+        for group_tris, palette in groups:
+            if palette is None:
+                g_combo, g_bones = combo, bones
+            else:
+                g_combo, g_bones = len(bone_lookup), len(palette)
+                bone_lookup += palette
+                slot = {b: i for i, b in enumerate(palette)}
+            local = {}
+            vstart = len(out_lookup)
+            for t in group_tris:
+                for v in t:
+                    if v not in local:
+                        local[v] = len(out_lookup)
+                        out_lookup.append(lookup[v])
+                        if palette is None:
+                            out_props += data[ob + v * 4:ob + v * 4 + 4]
+                        else:
+                            w = vertex_bones(lookup[v], slots=True)
+                            out_props += bytes(slot[b] if b is not None else 0 for b in w)
+                    out_idx.append(local[v])
+            g_istart = len(out_idx) - len(group_tris) * 3
+            if len(out_lookup) > 0xFFFF:
+                raise ConvertError("more than 65535 skin vertices after splitting")
+            s2 = bytearray(sub)
+            struct.pack_into("<HHHHHHH", s2, 2, g_istart >> 16, vstart, len(out_lookup) - vstart,
+                             g_istart & 0xFFFF, len(group_tris) * 3, g_bones, g_combo)
+            pieces[-1].append(len(out_subs))
+            out_subs.append(bytes(s2))
+
     batches = []
     for i in range(nt):
         b = bytearray(data[ot + i * 24:ot + i * 24 + 24])
@@ -91,11 +148,13 @@ def convert_skin(data, bone_lookup_len):
         struct.pack_into("<BbH", b, 0, flags & BATCH_FLAGS, prio, shader)
         struct.pack_into("<H", b, 14, tcount)
         struct.pack_into("<H", b, 18, coord)
-        batches.append(bytes(b))
+        for piece in pieces[sub]:
+            struct.pack_into("<H", b, 4, piece)
+            batches.append(bytes(b))
 
-    parts = [data[ov:ov + nv * 2], data[oi:oi + ni * 2], data[ob:ob + nb * 4],
-             b"".join(subs), b"".join(batches)]
-    counts = [nv, ni, nb, ns, nt]
+    parts = [struct.pack(f"<{len(out_lookup)}H", *out_lookup), struct.pack(f"<{len(out_idx)}H", *out_idx),
+             bytes(out_props), b"".join(out_subs), b"".join(batches)]
+    counts = [len(out_lookup), len(out_idx), len(out_lookup), len(out_subs), len(batches)]
     out = bytearray(48)
     header = [b"SKIN"]
     pos = 48
@@ -215,7 +274,23 @@ def convert_model(data, model_name, texture_name, get_file):
     sfid = m.u32s("SFID")
     if not sfid:
         raise ConvertError("no skins")
-    skins = [convert_skin(get_file(sfid[0]), m.count("bone_lookup"))]
+    n, off = m.arrays["bone_lookup"]
+    bone_lookup = list(struct.unpack_from(f"<{n}H", d, off))
+    _, voff = m.arrays["vertices"]
+
+    def vertex_bones(v, slots=False):
+        w = d[voff + v * 48 + 12:voff + v * 48 + 16]
+        b = d[voff + v * 48 + 16:voff + v * 48 + 20]
+        if slots:
+            return [b[k] if w[k] else None for k in range(4)]
+        return {b[k] for k in range(4) if w[k]}
+
+    skins = [convert_skin(get_file(sfid[0]), vertex_bones, bone_lookup)]
+    if len(bone_lookup) > n:
+        if len(bone_lookup) > 0xFFFF:
+            raise ConvertError("bone lookup too large after splitting")
+        b.set_array(0x78, len(bone_lookup), struct.pack(f"<{len(bone_lookup)}H", *bone_lookup))
+        warnings.append(f"split submeshes over {MAX_BONES_PER_SUBMESH} bones")
     struct.pack_into("<I", d, 0x44, len(skins))
     return bytes(d), skins, anims, warnings
 
@@ -242,11 +317,28 @@ def check(m2_bytes, skins):
     n_units = m.count("texture_unit_lookup")
     n_mat = m.count("materials")
     n_verts = m.count("vertices")
+    d = m.md20
+    nl, ol = m.arrays["bone_lookup"]
+    bone_lookup = struct.unpack_from(f"<{nl}H", d, ol)
+    _, voff = m.arrays["vertices"]
     for s in skins:
         nv, ov, ni, oi, nb, ob, ns, os_, nt, ot = struct.unpack_from("<10I", s, 4)
         lookup = struct.unpack_from(f"<{nv}H", s, ov)
+        indices = struct.unpack_from(f"<{ni}H", s, oi)
         assert max(lookup, default=0) < n_verts, "skin vertex outside the model"
-        assert max(struct.unpack_from(f"<{ni}H", s, oi), default=0) < nv, "index outside the skin"
+        assert max(indices, default=0) < nv, "index outside the skin"
+        for j in range(ns):
+            level, vs, vc, istart, icount, bones, combo = struct.unpack_from("<7H", s, os_ + j * 48 + 2)
+            istart += level << 16
+            assert bones <= MAX_BONES_PER_SUBMESH, f"submesh {j} uses {bones} bones"
+            assert all(vs <= t < vs + vc for t in indices[istart:istart + icount]), f"submesh {j} indexes outside its vertices"
+            for i in range(vs, vs + vc):
+                g = voff + lookup[i] * 48
+                for k in range(4):
+                    if d[g + 12 + k]:
+                        p = s[ob + i * 4 + k]
+                        assert p < bones and bone_lookup[combo + p] == d[g + 16 + k], \
+                            f"submesh {j} vertex {i}: palette does not give the vertex's bone"
         for i in range(nt):
             flags, prio, shader, sub, geo, color, mat, layer, tcount, tcombo, coord = \
                 struct.unpack_from("<BbHHHhHHHHH", s, ot + i * 24)

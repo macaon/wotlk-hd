@@ -50,8 +50,10 @@ Checked against 3.3.5's own files and Wow.exe 12340:
   (116 bytes). Values carry over 1:1; retail portrait far clip is 100x.
 - Geosets: 3.3.5's `CreatureGeosetData` is one nibble per group (`0x1111` -> 101, 201, 301, 401);
   retail lists the same per display in `CreatureDisplayInfoGeosetData`.
-- Limits: 64 bones per submesh (the 3.3.5 max), 65535 vertices. `dragonhawk2` (239 bones per
-  submesh) needs submeshes split; `gnoll2` (67697 vertices) a lower LOD.
+- Limits: 64 bones per submesh (the 3.3.5 max), 65535 vertices. Bigger submeshes are split in
+  triangle order with their own palettes (vertex bones are absolute; skin vertex bones index
+  `bone_lookup[combo + i]`; checked on 3.3.5 and retail files). `gnoll2` (67697 vertices) needs a
+  lower LOD.
 - Some upgrades are not reachable through display IDs: retail's new `dragonhawk2` is only used by
   new displays, so old ones need a manual old -> new model entry.
 
@@ -59,7 +61,7 @@ Checked against 3.3.5's own files and Wow.exe 12340:
 
 0. **Setup** (done): large-address-aware, FoV, survey.
    **First models** (built, untested in game): Ghostlands' murloc, spiders, rat, frog, zombie,
-   skeleton, larva.
+   skeleton, larva, dragonhawk (-> dragonhawk2, colours matched by eye).
 1. **Data** (done): retail tables as CSV and files by FileDataID from wago.tools.
 2. **Converter**: unpack chunked `MD21` into an `MD20` v264 layout and resolve FileDataIDs to names;
    remap shaders, blend modes, particles and animation IDs that 3.3.5 lacks; pick a lighter LOD
