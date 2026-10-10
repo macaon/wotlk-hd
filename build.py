@@ -14,6 +14,7 @@ import sys
 
 import convert
 import fetch
+from m2 import M2
 from mpq import Client, write_archive
 from survey import wdbc
 
@@ -29,6 +30,19 @@ UPGRADES = {
     "zombie": ("creature/zombie/zombie.m2", "creature/zombie2/zombie2.m2", {}),
     "skeleton": ("creature/skeleton/skeleton.m2", "creature/scourgewarrior/scourgewarrior.m2", {}),
     "larva": ("creature/larva/larva.m2", "creature/larva2/larva2.m2", {}),
+    "zombiearm": ("creature/zombie/zombiearm.m2", "creature/zombie2/zombie2.m2", {}),
+    "banshee": ("creature/banshee/banshee.m2", "creature/banshee2/banshee2.m2", {}),
+    "manawurm": ("creature/manawurm/manawurm.m2", "creature/manawurm2/manawurm2.m2", {}),
+    "crab": ("creature/crab/crab.m2", "creature/crab2/crab2.m2", {}),
+    "ghoul": ("creature/ghoul/ghoul.m2", "creature/ghoul2/ghoul2.m2", {}),
+    "gnoll": ("creature/gnoll/gnoll.m2", "creature/gnoll2/gnoll2.m2", {}),
+    "gnollmelee": ("creature/gnollmelee/gnollmelee.m2", "creature/gnoll2/gnoll2.m2", {}),
+    "gnollcaster": ("creature/gnollcaster/gnollcaster.m2", "creature/gnoll2/gnoll2.m2", {}),
+    "ent": ("creature/ent/ent.m2", "creature/ent2/ent2.m2", {}),
+    "rabbit": ("creature/rabbit/rabbit.m2", "creature/rabbit2/rabbit2.m2", {}),
+    "fleshgolem": ("creature/fleshgolem/fleshgolem.m2", "creature/fleshgolem2/fleshgolem2.m2", {}),
+    "spirithealer": ("creature/spirithealer/spirithealer.m2", "creature/spirithealer2/spirithealer2.m2", {}),
+    "horse": ("creature/horse/horse.m2", "creature/horse3/horse3.m2", {}),
     # Retail only uses dragonhawk2 for new displays; colours matched by eye.
     "dragonhawk": ("creature/dragonhawk/dragonhawk.m2", "creature/dragonhawk2/dragonhawk2.m2", {
         f"dragonhawkskin{old}": f"creature/dragonhawk2/dragonhawk2_{new}.blp" for old, new in [
@@ -89,7 +103,9 @@ def retail_tables():
     # geosets 101, 201, 301 and 401. Retail lists them as rows (GeosetIndex = group - 1).
     geosets = collections.Counter()
     for r in csv.DictReader(open(os.path.join(fetch.CACHE, "CreatureDisplayInfoGeosetData.csv"))):
-        geosets[int(r["CreatureDisplayInfoID"])] |= int(r["GeosetValue"]) << (4 * int(r["GeosetIndex"]))
+        group, value = int(r["GeosetIndex"]), int(r["GeosetValue"])
+        if group < 8 and value < 16:  # 3.3.5 has 8 nibbles; later groups cannot be chosen
+            geosets[int(r["CreatureDisplayInfoID"])] |= value << (4 * group)
     return disp, model, geosets
 
 
@@ -145,6 +161,7 @@ def build(names):
                 learned[cdi.string(r[CDI_TEX]).lower()][(retail_textures(rr), rgeosets[r[0]])] += 1
         fallback = collections.Counter(t for c in learned.values() for t in c.elements())
         unmapped = 0
+        uses_display_textures = any(11 <= t <= 13 for t, _, _ in M2(m2).textures())
         for r in rows:
             rr = paired.get(r[0])
             old_tex = cdi.string(r[CDI_TEX]).lower()
@@ -157,6 +174,8 @@ def build(names):
                 tex, geo = learned[old_tex].most_common(1)[0][0]
             elif fallback:
                 (tex, geo), unmapped = fallback.most_common(1)[0][0], unmapped + 1
+            elif not uses_display_textures:
+                tex, geo = (0, 0, 0), default_geosets
             else:
                 report.append(f"{name}: display {r[0]} has no texture mapping")
                 continue

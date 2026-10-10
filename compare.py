@@ -20,7 +20,10 @@ from mpq import CHAIN, Client
 
 # A Ghostlands display to show for each upgrade.
 DISPLAYS = {"murloc": 3619, "minespider": 1087, "rat": 1141, "frog": 901,
-            "zombie": 1200, "skeleton": 158, "larva": 9904, "dragonhawk": 17545}
+            "zombie": 1200, "skeleton": 158, "larva": 9904, "dragonhawk": 17545,
+            "zombiearm": 1197, "banshee": 10728, "manawurm": 15934, "crab": 999, "ghoul": 137,
+            "gnoll": 848, "gnollmelee": 10851, "gnollcaster": 10854, "ent": 15588, "rabbit": 328,
+            "fleshgolem": 15962, "spirithealer": 5233, "horse": 229}
 PATCH = os.path.join(build.OUT, "patch-enUS-4.MPQ")
 
 

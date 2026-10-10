@@ -4,8 +4,8 @@ The MD20 header and most structs are unchanged since 3.3.5 (see m2.py), so this 
 out of its chunk and fixes what 3.3.5 reads differently. Everything was checked against 3.3.5's
 own files and Wow.exe (12340); see README.md "Converter notes".
 
-Submeshes over 64 bones are split. Refused (ConvertError) rather than half-converted: .skel-based
-models and more than 65535 vertices.
+Submeshes over 64 bones are split; vertices the chosen skin does not use are dropped. Refused
+(ConvertError) rather than half-converted: .skel-based models and skins over 65535 vertices.
 """
 import struct
 
@@ -32,6 +32,10 @@ COORD_T1_ENV, COORD_T1_T2 = 0, 2
 TABLE_SHADERS_WOTLK = 3
 
 CAMERA_RETAIL, CAMERA_WOTLK = 116, 100
+PARTICLE_RETAIL, PARTICLE_WOTLK = 492, 476
+PARTICLE_FLAGS = 0x007FFFFF       # 3.3.5 files use bits below 0x80000; 0x800000+ are newer
+PARTICLE_MULTITEXTURE = 0x10000000
+PARTICLE_BLEND_MAX = 4
 FAR_CLIP_WOTLK = 27.777779  # retail portrait cameras store 100x this
 
 
@@ -199,8 +203,6 @@ def convert_model(data, model_name, texture_name, get_file):
     warnings = []
     if "SKID" in m.chunks:
         raise ConvertError("uses a .skel skeleton file (not handled yet)")
-    if m.count("vertices") > 0xFFFF:
-        raise ConvertError(f"{m.count('vertices')} vertices (3.3.5 indexes at most 65535)")
     b = Blob(m.md20)
     d = b.d
     struct.pack_into("<I", d, 4, VERSION_WOTLK)
@@ -265,18 +267,34 @@ def convert_model(data, model_name, texture_name, get_file):
         cams += struct.pack("<Ifff", ctype, fov, min(far, FAR_CLIP_WOTLK), near) + c[12:96]
     b.set_array(0x110, n, cams)
 
-    if m.count("particles") or m.count("ribbons"):
-        # ponytail: emitters dropped (their structs grew after 3.3.5); convert them when a model needs its effects
-        warnings.append(f"dropped {m.count('particles')} particle and {m.count('ribbons')} ribbon emitters")
+    # Particle emitters: the 3.3.5 struct (476 bytes) with 16 bytes appended later (multi-texture
+    # parameters); every field before them is unchanged (compared on shade.m2 in both versions).
+    n, off = m.arrays["particles"]
+    emitters = b""
+    for i in range(n):
+        e = bytearray(d[off + i * PARTICLE_RETAIL:off + i * PARTICLE_RETAIL + PARTICLE_WOTLK])
+        flags, = struct.unpack_from("<I", e, 4)
+        tex, = struct.unpack_from("<H", e, 0x16)
+        if flags & PARTICLE_MULTITEXTURE:
+            tex &= 0x1F  # three 5-bit texture indices; 3.3.5 takes one
+        struct.pack_into("<I", e, 4, flags & PARTICLE_FLAGS)
+        struct.pack_into("<H", e, 0x16, tex)
+        e[0x28] = min(e[0x28], PARTICLE_BLEND_MAX)
+        emitters += e
+    b.set_array(0x128, n, emitters)
+
+    if m.count("ribbons"):
+        # ponytail: ribbon emitters dropped until a model needs one (struct not compared yet)
+        warnings.append(f"dropped {m.count('ribbons')} ribbon emitters")
         struct.pack_into("<II", d, 0x120, 0, 0)
-        struct.pack_into("<II", d, 0x128, 0, 0)
 
     sfid = m.u32s("SFID")
     if not sfid:
         raise ConvertError("no skins")
+    skin = compact_vertices(b, get_file(sfid[0]))
     n, off = m.arrays["bone_lookup"]
     bone_lookup = list(struct.unpack_from(f"<{n}H", d, off))
-    _, voff = m.arrays["vertices"]
+    _, voff = struct.unpack_from("<II", d, 0x3C)
 
     def vertex_bones(v, slots=False):
         w = d[voff + v * 48 + 12:voff + v * 48 + 16]
@@ -285,7 +303,7 @@ def convert_model(data, model_name, texture_name, get_file):
             return [b[k] if w[k] else None for k in range(4)]
         return {b[k] for k in range(4) if w[k]}
 
-    skins = [convert_skin(get_file(sfid[0]), vertex_bones, bone_lookup)]
+    skins = [convert_skin(skin, vertex_bones, bone_lookup)]
     if len(bone_lookup) > n:
         if len(bone_lookup) > 0xFFFF:
             raise ConvertError("bone lookup too large after splitting")
@@ -293,6 +311,30 @@ def convert_model(data, model_name, texture_name, get_file):
         warnings.append(f"split submeshes over {MAX_BONES_PER_SUBMESH} bones")
     struct.pack_into("<I", d, 0x44, len(skins))
     return bytes(d), skins, anims, warnings
+
+
+def compact_vertices(b, skin):
+    """Keep only the model vertices this skin uses; returns the skin with its lookup remapped.
+
+    Retail skins index model vertices from a base offset in the header (0x2C, where 3.3.5 has
+    boneCountMax): each LOD uses its own range, so one skin's vertices fit 3.3.5's u16 limit
+    even when the whole model (gnoll2: 67697) does not.
+    """
+    nv, ov = struct.unpack_from("<II", skin, 4)
+    base, = struct.unpack_from("<I", skin, 0x2C)
+    used = [base + v for v in struct.unpack_from(f"<{nv}H", skin, ov)]
+    order = sorted(set(used))
+    if len(order) > 0xFFFF:
+        raise ConvertError(f"skin uses {len(order)} vertices (3.3.5 indexes at most 65535)")
+    n, off = struct.unpack_from("<II", b.d, 0x3C)
+    if order[-1] >= n:
+        raise ConvertError("skin references vertices outside the model")
+    new_index = {v: i for i, v in enumerate(order)}
+    b.set_array(0x3C, len(order), b"".join(bytes(b.d[off + v * 48:off + v * 48 + 48]) for v in order))
+    out = bytearray(skin)
+    struct.pack_into(f"<{nv}H", out, ov, *(new_index[v] for v in used))
+    struct.pack_into("<I", out, 0x2C, 0)
+    return bytes(out)
 
 
 def first_track_value(d, track_off):
@@ -313,6 +355,10 @@ def check(m2_bytes, skins):
         assert not n or 0 < off < size, f"{name} offset outside the file"
     for t, _, name in m.textures():
         assert t != 0 or name, "hardcoded texture without a name"
+    n, off = m.arrays["particles"]
+    for i in range(n):
+        bone, tex = struct.unpack_from("<HH", m.md20, off + i * PARTICLE_WOTLK + 0x14)
+        assert bone < m.count("bones") and tex < m.count("textures"), f"emitter {i} bone/texture out of range"
     n_tex_lookup = m.count("texture_lookup")
     n_units = m.count("texture_unit_lookup")
     n_mat = m.count("materials")
