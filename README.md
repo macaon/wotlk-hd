@@ -70,7 +70,9 @@ Checked against 3.3.5's own files and Wow.exe 12340:
   an empty string (count 1, "\0") as in 3.3.5 files: count 0 / offset 0 reads as "MD20...".
   With emitter flag 0x800000 the gravity keys are packed vectors (int8 x, int8 y, int16 z, scale
   z*0.04238648); 3.3.5 takes a float, the negated z (checked on arcanegolem/manafiend). Ribbons
-  are still dropped. Mana wyrm particles only play in its death animation.
+  are still dropped. Mana wyrm particles only play in its death animation. Head/tail cell tracks
+  whose keys are all past rows x cols are wrapped (voidwalker2: cell 1 on a 1x1 texture drew flat
+  squares in 3.3.5).
 - Limits: 64 bones per submesh (the 3.3.5 max), 65535 vertices. Bigger submeshes are split in
   triangle order with their own palettes (vertex bones are absolute; skin vertex bones index
   `bone_lookup[combo + i]`; checked on 3.3.5 and retail files).

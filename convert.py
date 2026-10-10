@@ -287,6 +287,8 @@ def convert_model(data, model_name, texture_name, get_file):
             if not decompress_gravity(d, off + i * PARTICLE_RETAIL + 0x84, decoded):
                 warnings.append(f"emitter {i}: gravity keys in .anim files left as they are")
     for i in range(n):
+        wrap_cells(d, off + i * PARTICLE_RETAIL, decoded)
+    for i in range(n):
         e = bytearray(d[off + i * PARTICLE_RETAIL:off + i * PARTICLE_RETAIL + PARTICLE_WOTLK])
         flags, = struct.unpack_from("<I", e, 4)
         tex, = struct.unpack_from("<H", e, 0x16)
@@ -329,6 +331,23 @@ def convert_model(data, model_name, texture_name, get_file):
         warnings.append(f"split submeshes over {MAX_BONES_PER_SUBMESH} bones")
     struct.pack_into("<I", d, 0x44, len(skins))
     return bytes(d), skins, anims, warnings
+
+
+def wrap_cells(d, emitter, done):
+    """Bring head/tail cell tracks that only name cells past the texture's rows x cols back into
+    range, in place. voidwalker2 keys cell 1 on a 1x1 texture, which retail wraps to cell 0 and
+    3.3.5 draws from outside the texture (flat squares). Tracks with some valid keys (shade: 0..16
+    on 4x4, 16 being the end of life) are left alone."""
+    rows, cols = struct.unpack_from("<HH", d, emitter + 0x30)
+    cells = max(rows, 1) * max(cols, 1)
+    for track in (0x13C, 0x14C):
+        _, _, nv, ov = struct.unpack_from("<4I", d, emitter + track)
+        if not nv or ov in done:
+            continue
+        values = struct.unpack_from(f"<{nv}H", d, ov)
+        if min(values) >= cells:
+            done.add(ov)
+            struct.pack_into(f"<{nv}H", d, ov, *(v % cells for v in values))
 
 
 def decompress_gravity(d, track_off, done):
