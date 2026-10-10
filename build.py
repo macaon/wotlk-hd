@@ -23,11 +23,9 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out")
 # old skin texture name to the retail texture for displays retail didn't move to the new model.
 UPGRADES = {
     "murloc": ("creature/murloc/murloc.m2", "creature/murloc2/murloc2.m2", {}),
-    "felbat": ("creature/felbat/felbat.m2", "creature/felbat/felbat.m2", {}),
     "minespider": ("creature/minespider/minespider.m2", "creature/minespider2/minespider2.m2", {}),
     "rat": ("creature/rat/rat.m2", "creature/rat2/rat2.m2", {}),
     "frog": ("creature/frog/frog.m2", "creature/frog2/frog2.m2", {}),
-    "snake": ("creature/snake/snake.m2", "creature/snake/snake.m2", {}),
     "zombie": ("creature/zombie/zombie.m2", "creature/zombie2/zombie2.m2", {}),
     "skeleton": ("creature/skeleton/skeleton.m2", "creature/scourgewarrior/scourgewarrior.m2", {}),
     "larva": ("creature/larva/larva.m2", "creature/larva2/larva2.m2", {}),
