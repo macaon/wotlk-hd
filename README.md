@@ -80,6 +80,36 @@ Checked against 3.3.5's own files and Wow.exe 12340:
 - Some upgrades are not reachable through display IDs: retail's new `dragonhawk2` is only used by
   new displays, so old ones need a manual old -> new model entry.
 
+## Character models (research)
+
+Retail HD player models (`character/<race>/<sex>/<race><sex>_hd.m2`) keep bones and animations
+in a `.skel` file (chunks SKL1, SKS1, SKB1, SKA1, AFID, BFID; no parent skeleton for blood elves)
+and hold every customization option in one mesh (bloodelfmale_hd: 253k vertices, 3.3.5 allows
+65535), so a conversion keeps only the geosets 3.3.5 can choose.
+
+The character texture is composited by Wow.exe 12340, `CCharacterComponent::Initialize` at
+0x4f1a20: a square texture of `1 << level` pixels, level clamped to 6..9 (512 at most). The region
+table is built at startup by 0x9c8f30 into 0xb6b928 (x, y, w, h in units of 512) and shifted down
+for lower levels into 0xb6b888; the size is at 0xb6b5fc (19 references).
+
+| region | 3.3.5 (512) | retail layout 2 at half scale (1024x512) |
+|---|---|---|
+| ArmUpper | 0,0,256,128 | 0,0,256,128 |
+| ArmLower | 0,128,256,128 | 0,128,256,128 |
+| Hand | 0,256,256,64 | 0,256,256,64 |
+| FaceUpper | 0,320,256,64 | 512,0,512,512 |
+| FaceLower | 0,384,256,128 | 512,0,512,512 |
+| TorsoUpper | 256,0,256,128 | 256,0,256,128 |
+| TorsoLower | 256,128,256,64 | 256,128,256,64 |
+| LegUpper | 256,192,256,128 | 256,192,256,128 |
+| LegLower | 256,320,256,128 | 256,320,256,128 |
+| Foot | 256,448,256,64 | 256,448,256,64 |
+
+Retail (CharComponentTextureLayouts/Sections) layout 1 is exactly the 3.3.5 one at 1024x1024;
+layout 2 (2048x1024) is the HD one; HD skin and face files are 1024x512, i.e. layout 2 at half
+scale. So HD models at native texture resolution need a 1024x512 composite with that table. The
+table is global: every character model, old or HD, is composited with it.
+
 ## Plan
 
 0. **Setup** (done): large-address-aware, FoV, survey.
