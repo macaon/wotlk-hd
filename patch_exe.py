@@ -113,6 +113,11 @@ INDEX_CAVES = {  # count load, then start | level << 16, keeping the scratch reg
     "edx": "0fb74e0a" "50" "0fb74602" "c1e010" "0fb75608" "0bd0" "58",
 }
 SHIFT_SITE, SHIFT_BYTES = 0x4F1B7A, "b909000000"
+# CM2Model::SetGeometryVisible (0x82c7c0) compares the submesh id as a u32, level included: with
+# level set (starts past 65535) a geoset never matched a hide/show range and stayed visible (robes,
+# cuffs and bulky belts on naked characters). mov eax,[ebp-4]; mov eax,[eax+edx] -> add edx,[ebp-4];
+# movzx eax,word [edx] (edx is reloaded at the loop head and rewritten before its next use).
+ID_SITE, ID_BYTES, ID_PATCH = 0x82C7EA, "8b45fc8b0410", "0355fc0fb702"
 
 
 class Pe:
@@ -175,6 +180,7 @@ def character_patches(put, cave=CAVE):
         + b"\xb9\x28\x00\x00\x00\xf3\xa5\x5f\x5e\xc3", bytes.fromhex("b800010000"))
     put(LEVEL_SITE, b"\xb8" + struct.pack("<I", LEVEL) + b"\x90" * 7, bytes.fromhex(LEVEL_BYTES))
     put(SHIFT_SITE, b"\xb9" + struct.pack("<I", LEVEL), bytes.fromhex(SHIFT_BYTES))
+    put(ID_SITE, bytes.fromhex(ID_PATCH), bytes.fromhex(ID_BYTES))
     for site, original in SIZE_SITES.items():
         original = bytes.fromhex(original)
         at = cave + len(code)
