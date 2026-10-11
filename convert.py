@@ -419,7 +419,11 @@ def convert_model(data, model_name, texture_name, get_file):
     sfid = m.u32s("SFID")
     if not sfid:
         raise ConvertError("no skins")
-    skin = compact_vertices(b, get_file(sfid[0]))
+    skin = get_file(sfid[0])
+    if skin_agreement(d, skin) < 0.9:
+        # retail palettes are recomputed below, which would hide a skin from another export
+        raise ConvertError("skin does not match the model's vertices (files from different builds?)")
+    skin = compact_vertices(b, skin)
     n, off = m.arrays["bone_lookup"]
     bone_lookup = list(struct.unpack_from(f"<{n}H", d, off))
     _, voff = struct.unpack_from("<II", d, 0x3C)
@@ -505,6 +509,24 @@ def decompress_gravity(d, track_off, done):
                 fz, scale = -fz, -scale
             struct.pack_into("<f", d, p + k * 4, -fz * scale)
     return inside
+
+
+def skin_agreement(d, skin):
+    """Share of skin vertices whose first palette bone (skin) is their model vertex's bone (m2)."""
+    nv, ov, ni, oi, nb, ob, ns, os_ = struct.unpack_from("<8I", skin, 4)
+    look = struct.unpack_from(f"<{nv}H", skin, ov)
+    base, = struct.unpack_from("<I", skin, 0x2C)
+    nl, ol = struct.unpack_from("<II", d, 0x78)
+    _, voff = struct.unpack_from("<II", d, 0x3C)
+    bone_lookup = struct.unpack_from(f"<{nl}H", d, ol)
+    ok = total = 0
+    for j in range(ns):
+        _, _, vs, vc, _, _, _, combo = struct.unpack_from("<8H", skin, os_ + j * 48)
+        for i in range(vs, vs + vc):
+            p = combo + skin[ob + i * 4]
+            total += 1
+            ok += p < nl and bone_lookup[p] == d[voff + (look[i] + base) * 48 + 16]
+    return ok / total if total else 1.0
 
 
 def compact_vertices(b, skin):
