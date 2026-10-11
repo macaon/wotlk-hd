@@ -1,6 +1,6 @@
 """A/B test models in game: variants of one converted model under new display IDs.
 
-usage: experiment.py    writes out/patch-enUS-5.MPQ (copy to <WoW>/Data/enUS/, needs patch-enUS-4)
+usage: experiment.py    writes out/patch-5.MPQ and out/patch-enUS-5.MPQ (install.py 5, needs patch-enUS-4)
 
 Each variant gets its own model file, CreatureModelData row and CreatureDisplayInfo row (90001+),
 so `.morph target <id>` shows them one after another. The server accepts any display id.
@@ -15,9 +15,9 @@ import struct
 import build
 import convert
 import fetch
-from mpq import CHAIN, Client, write_archive
+from mpq import CHAIN, Client
 
-PATCH4 = os.path.join(build.OUT, "patch-enUS-4.MPQ")
+PATCHES = list(build.patch_paths(4))
 FIRST_ID = 90001
 OLD = "Creature\\Gargoyle\\Gargoyle.m2"
 NEW = "creature/gargoyle2/gargoyle2.m2"
@@ -54,7 +54,7 @@ def only_geosets(skin, keep_ids=(0,)):
 
 
 def main():
-    client = Client(chain=[PATCH4] + CHAIN)
+    client = Client(chain=PATCHES + CHAIN)
     data = fetch.get(fetch.fdid(NEW))
     name = lambda f: build.mpq_path(fetch.name(f))
     conv, skins, anims, _ = convert.convert_model(data, "Gargoyle", name, fetch.get)
@@ -86,10 +86,8 @@ def main():
         report.append(f".morph target {did}   {label}")
     files["DBFilesClient\\CreatureDisplayInfo.dbc"] = cdi.bytes()
     files["DBFilesClient\\CreatureModelData.dbc"] = cmd.bytes()
-    out = os.path.join(build.OUT, "patch-enUS-5.MPQ")
-    write_archive(out, files)
+    print(build.write_patch(5, files))
     print("\n".join(report))
-    print(f"wrote {out}")
 
 
 if __name__ == "__main__":

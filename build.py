@@ -2,9 +2,10 @@
 
 usage: build.py [name ...]    only the named upgrades (default: all in UPGRADES)
 
-Writes out/patch-enUS-4.MPQ. Install by copying it to <WoW>/Data/enUS/. A locale patch numbered
-past the client's own wins whichever way 3.3.5 orders base and locale patches, which matters for
-the DBC in it.
+Writes out/patch-4.MPQ (models, textures) and out/patch-enUS-4.MPQ (DBCs); install.py copies them
+to <WoW>/Data/ and <WoW>/Data/enUS/. The split matters: Blizzard's Data/patch-3.MPQ holds 3.x
+updates of many models and outranks every locale patch for them (463 of our files were hidden that
+way, the HD blood elves among them), while DBCs are overridden from the locale patches.
 """
 import collections
 import csv
@@ -59,6 +60,21 @@ BROKEN = set()
 CDI_MODEL, CDI_EXTRA, CDI_SCALE, CDI_TEX, CDI_GEOSETS = 1, 3, 4, 6, 14
 GEOSET_NONE = 0xF  # a geoset variant no model has: hides the group
 KEEP = "keep"      # a picks.json skin that stays on the old model
+
+
+def patch_paths(n):
+    """(base patch, locale patch) build outputs for patch number n."""
+    return os.path.join(OUT, f"patch-{n}.MPQ"), os.path.join(OUT, f"patch-enUS-{n}.MPQ")
+
+
+def write_patch(n, files):
+    """DBCs into the locale patch, everything else into the base patch (see the module doc)."""
+    os.makedirs(OUT, exist_ok=True)
+    base, locale = patch_paths(n)
+    write_archive(locale, {k: v for k, v in files.items() if k.lower().startswith("dbfilesclient\\")})
+    write_archive(base, {k: v for k, v in files.items() if not k.lower().startswith("dbfilesclient\\")})
+    return f"wrote {base} and {locale}: {len(files)} files, " \
+           f"{(os.path.getsize(base) + os.path.getsize(locale)) // 1024} KiB"
 
 
 def mpq_path(path):
@@ -242,11 +258,8 @@ def build(names):
 
     files["DBFilesClient\\CreatureDisplayInfo.dbc"] = cdi.bytes()
     files["DBFilesClient\\CreatureModelData.dbc"] = cmd.bytes()
-    os.makedirs(OUT, exist_ok=True)
-    out = os.path.join(OUT, "patch-enUS-4.MPQ")
-    write_archive(out, files)
     print("\n".join(report))
-    print(f"wrote {out}: {len(files)} files, {os.path.getsize(out) // 1024} KiB")
+    print(write_patch(4, files))
 
 
 if __name__ == "__main__":

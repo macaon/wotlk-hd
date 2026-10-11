@@ -1,6 +1,6 @@
 """Put original 3.3.5 models back over patch-enUS-4, to find which upgrade misbehaves in game.
 
-usage: revert.py <old model path> ...    writes out/patch-enUS-5.MPQ (copy to <WoW>/Data/enUS/)
+usage: revert.py <old model path> ...    writes out/patch-5.MPQ and out/patch-enUS-5.MPQ (install.py 5)
 
 e.g. revert.py creature/felbat/felbat.m2. The DBCs are patch-enUS-4's with those models' display
 and model rows restored; the model, its skins and .anim files come from the client's own archives.
@@ -10,13 +10,13 @@ import struct
 import sys
 
 import build
-from mpq import CHAIN, Client, write_archive
+from mpq import CHAIN, Client
 
-PATCH4 = os.path.join(build.OUT, "patch-enUS-4.MPQ")
+PATCHES = list(build.patch_paths(4))
 
 
 def main(paths):
-    original, patched = Client(), Client(chain=[PATCH4] + CHAIN)
+    original, patched = Client(), Client(chain=PATCHES + CHAIN)
     files = {}
     tables = {}
     for name in ("CreatureDisplayInfo", "CreatureModelData"):
@@ -50,9 +50,7 @@ def main(paths):
         print(f"{path}: {len(models)} model rows, {len(names)} files")
     files["DBFilesClient\\CreatureDisplayInfo.dbc"] = cdi.bytes()
     files["DBFilesClient\\CreatureModelData.dbc"] = cmd.bytes()
-    out = os.path.join(build.OUT, "patch-enUS-5.MPQ")
-    write_archive(out, files)
-    print(f"wrote {out}")
+    print(build.write_patch(5, files))
 
 
 if __name__ == "__main__":

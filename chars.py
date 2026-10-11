@@ -1,6 +1,6 @@
 """HD player character models: retail's customizable models for 3.3.5, with Wow-hdchar.exe.
 
-usage: chars.py    writes out/patch-enUS-6.MPQ (copy to <WoW>/Data/enUS/; needs Wow-hdchar.exe)
+usage: chars.py    writes out/patch-6.MPQ and out/patch-enUS-6.MPQ (install.py; needs Wow-hdchar.exe)
 
 Wow-hdchar.exe composites characters as 1024x512 in retail's HD layout (patch_exe.py), so the HD
 models' UVs and retail's HD skin, face and underwear textures fit unchanged. The models come in
@@ -27,7 +27,7 @@ import blp
 import build
 import convert
 import fetch
-from mpq import Client, write_archive
+from mpq import Client
 
 # race id, retail folder/prefix, 3.3.5 path prefix, HD model per sex
 RACES = [
@@ -161,10 +161,8 @@ def main():
                 continue
             char_sections(cs, race, race_dir, sex, files, report)
     files["DBFilesClient\\CharSections.dbc"] = cs.bytes()
-    out = os.path.join(build.OUT, "patch-enUS-6.MPQ")
-    write_archive(out, files)
     print("\n".join(report))
-    print(f"wrote {out}: {len(files)} files, {os.path.getsize(out) // 1024} KiB")
+    print(build.write_patch(6, files))
 
 
 if __name__ == "__main__":

@@ -26,7 +26,7 @@ DISPLAYS = {"murloc": 3619, "minespider": 1087, "rat": 1141, "frog": 901,
             "zombiearm": 1197, "banshee": 10728, "manawurm": 15934, "crab": 999, "ghoul": 137,
             "gnoll": 848, "gnollmelee": 10851, "gnollcaster": 10854, "ent": 15588, "rabbit": 328,
             "fleshgolem": 15962, "spirithealer": 5233, "horse": 229}
-PATCH = os.path.join(build.OUT, "patch-enUS-4.MPQ")
+PATCHES = list(build.patch_paths(4))
 
 
 def b64(arr, fmt):
@@ -113,7 +113,7 @@ def first_display(cdi, model_rows, old_path, new_rows, new_model_path):
 
 def main(names):
     old = Client()
-    new = Client(chain=[PATCH] + CHAIN)  # an absolute path wins over the Data/ join
+    new = Client(chain=PATCHES + CHAIN)  # an absolute path wins over the Data/ join
     old_cdi = build.Dbc(old.read("DBFilesClient\\CreatureDisplayInfo.dbc"))
     new_cdi = build.Dbc(new.read("DBFilesClient\\CreatureDisplayInfo.dbc"))
     cmd = build.Dbc(old.read("DBFilesClient\\CreatureModelData.dbc"))
