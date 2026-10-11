@@ -137,11 +137,22 @@ HD characters keep full detail.
 ## Client extension (client/)
 
 `client/dinput8.dll` is our code inside the client: Wow.exe imports DINPUT8.dll, so a dinput8.dll
-next to it is loaded first and forwards DirectInput8Create to the system one. Hooks for what byte
-patches cannot do cleanly go here (byte patches broke world objects when a submesh field turned
-out to be used at run time). Build with `client/build.sh` (Zig's toolchain, unpacked into cache/:
+next to it is loaded first and forwards DirectInput8Create to the system one. At load it applies
+the character patches (1024x512 character textures, 32-bit index starts) to Wow-hd.exe in memory,
+from `client/patches.h`, which `patch_exe.py --emit-header` generates from the same tables as
+Wow-hdchar.exe; each site only if its original bytes are there, all or nothing. Large-address-aware
+and FoV stay in Wow-hd.exe (LAA must be in the exe header). Build with `client/build.sh` (Zig's toolchain, unpacked into cache/:
 ziglang.org zig-linux-x86_64-0.13.0); copy the DLL next to Wow.exe; under Wine/Proton set
 `WINEDLLOVERRIDES=dinput8=n,b`. It writes wotlk-hd.log next to the exe.
+
+## To fix later
+
+- Blood elf eye glow colour: retail's plain glow (1701) shows cyan rather than fel green.
+- Humanoid NPCs on HD character models need retail's HD baked textures (CreatureDisplayInfoExtra).
+- Per-face skeleton shapes (.bone files, 20 per race and sex) are not applied: every face uses the
+  default shape.
+- Helmets are sized for 3.3.5's heads; check fit and hair/ear hiding per race.
+- Higher-res armour textures: retail's versions fit the 1024x512 regions; 2048x1024 for more.
 
 ## Plan
 

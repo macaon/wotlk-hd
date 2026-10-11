@@ -2,6 +2,8 @@
 
 usage: patch_exe.py [fov]                 writes Wow-hd.exe next to Wow.exe
        patch_exe.py --characters [fov]    writes Wow-hdchar.exe: the above plus HD character textures
+       patch_exe.py --emit-header         writes client/patches.h: those character patches for
+                                          dinput8.dll, which applies them to a Wow-hd.exe in memory
 
 Large-address-aware lets the 32-bit client use 4 GB instead of 2 GB, which the HD models need.
 
@@ -160,53 +162,82 @@ def jmp(src, dst):
     return b"\xe9" + struct.pack("<i", dst - (src + 5))
 
 
-def patch_characters(exe):
-    """The composite as 1024x512 in retail's HD layout (see REGIONS)."""
-    pe = Pe(exe)
-    cave = pe.add_section(b".hdchar", 0x1000)
+CAVE = 0xDFD000  # first page past the stock image: Wow-hdchar.exe's .hdchar section, the DLL's VirtualAlloc
+
+
+def character_patches(put, cave=CAVE):
+    """The composite as 1024x512 in retail's HD layout (see REGIONS) and 32-bit index starts:
+    put(va, new bytes, expected original bytes) for each site; returns the code cave for `cave`."""
     table = b"".join(struct.pack("<4i", *r) for r in REGIONS)
     code = bytearray(table)
     # region initializer: copy the table (push esi/edi; mov esi; mov edi; mov ecx,40; rep movsd)
-    pe.write(REGION_INIT, b"\x56\x57\xbe" + struct.pack("<I", cave) + b"\xbf" + struct.pack("<I", REGION_TABLE)
-             + b"\xb9\x28\x00\x00\x00\xf3\xa5\x5f\x5e\xc3", expect=bytes.fromhex("b800010000"))
-    pe.write(LEVEL_SITE, b"\xb8" + struct.pack("<I", LEVEL) + b"\x90" * 7, expect=bytes.fromhex(LEVEL_BYTES))
-    pe.write(SHIFT_SITE, b"\xb9" + struct.pack("<I", LEVEL), expect=bytes.fromhex(SHIFT_BYTES))
+    put(REGION_INIT, b"\x56\x57\xbe" + struct.pack("<I", cave) + b"\xbf" + struct.pack("<I", REGION_TABLE)
+        + b"\xb9\x28\x00\x00\x00\xf3\xa5\x5f\x5e\xc3", bytes.fromhex("b800010000"))
+    put(LEVEL_SITE, b"\xb8" + struct.pack("<I", LEVEL) + b"\x90" * 7, bytes.fromhex(LEVEL_BYTES))
+    put(SHIFT_SITE, b"\xb9" + struct.pack("<I", LEVEL), bytes.fromhex(SHIFT_BYTES))
     for site, original in SIZE_SITES.items():
         original = bytes.fromhex(original)
         at = cave + len(code)
         body = original[:-2] + b"\x68" + struct.pack("<I", COMPOSITE_H) + b"\x68" + struct.pack("<I", COMPOSITE_W)
         code += body + jmp(at + len(body), site + len(original))
-        pe.write(site, jmp(site, at) + b"\x90" * (len(original) - 5), expect=original)
+        put(site, jmp(site, at) + b"\x90" * (len(original) - 5), original)
     for site, skip, cont in DXT_SITES:
         at = cave + len(code)
         body = bytearray(b"\x89\x45\xe4\x85\xc0\x0f\x8e")  # mov [ebp-0x1c],eax; test; jle skip
         body += struct.pack("<i", skip - (at + len(body) + 4))
         body += b"\x50\xd1\xf8\x75\x01\x40\x89\x45\xec\x58"  # push; sar 1; jnz; inc; mov [ebp-0x14]; pop
         code += body + jmp(at + len(body), cont)
-        pe.write(site, jmp(site, at) + b"\x90" * 3, expect=bytes.fromhex(DXT_BYTES))
+        put(site, jmp(site, at) + b"\x90" * 3, bytes.fromhex(DXT_BYTES))
     for site, original, reg in INDEX_SITES:
         at = cave + len(code)
         body = b"\x9c" + bytes.fromhex(INDEX_CAVES[reg]) + b"\x9d"  # pushfd ... popfd
         code += body + jmp(at + len(body), site + 8)
-        pe.write(site, jmp(site, at) + b"\x90" * 3, expect=bytes.fromhex(original))
-    for site, original, cave_body in REBUILD_SITES:
+        put(site, jmp(site, at) + b"\x90" * 3, bytes.fromhex(original))
+    for site, original, cave_body in REBUILD_SITES + STORE_SITES:
+        original = bytes.fromhex(original)
         at = cave + len(code)
         body = b"\x9c" + bytes.fromhex(cave_body) + b"\x9d"
-        code += body + jmp(at + len(body), site + len(bytes.fromhex(original)))
-        pe.write(site, jmp(site, at) + b"\x90" * (len(bytes.fromhex(original)) - 5),
-                 expect=bytes.fromhex(original))
-    for site, original, cave_body in STORE_SITES:
-        at = cave + len(code)
-        body = b"\x9c" + bytes.fromhex(cave_body) + b"\x9d"
-        code += body + jmp(at + len(body), site + 7)
-        pe.write(site, jmp(site, at) + b"\x90" * 2, expect=bytes.fromhex(original))
+        code += body + jmp(at + len(body), site + len(original))
+        put(site, jmp(site, at) + b"\x90" * (len(original) - 5), original)
     assert len(code) <= 0x1000
+    return bytes(code)
+
+
+def patch_characters(exe):
+    """Wow-hdchar.exe: character_patches written into the exe, the cave as a new section."""
+    pe = Pe(exe)
+    cave = pe.add_section(b".hdchar", 0x1000)
+    assert cave == CAVE, f"cave at {cave:#x}, the DLL's patches.h expects {CAVE:#x}"
+    code = character_patches(lambda va, data, expect: pe.write(va, data, expect=expect), cave)
     pe.d[pe.offset(cave):pe.offset(cave) + len(code)] = code
     return bytes(pe.d)
 
 
+def emit_header(path):
+    """client/patches.h: character_patches as data for dinput8.dll, which applies them in memory."""
+    sites = []
+    code = character_patches(lambda va, data, expect: sites.append((va, expect, data)))
+    c_bytes = lambda b: ", ".join(f"0x{x:02x}" for x in b)
+    lines = ["/* Generated by patch_exe.py --emit-header; do not edit. */",
+             f"#define HD_CAVE 0x{CAVE:08X}u",
+             f"static const unsigned char hd_cave[] = {{{c_bytes(code)}}};",
+             "struct hd_site { unsigned va, orig_len, patch_len; const unsigned char *orig, *patch; };"]
+    for i, (va, orig, new) in enumerate(sites):  # orig may be shorter: REGION_INIT checks 5 bytes
+        lines.append(f"static const unsigned char hd_o{i}[] = {{{c_bytes(orig)}}};")
+        lines.append(f"static const unsigned char hd_p{i}[] = {{{c_bytes(new)}}};")
+    lines.append("static const struct hd_site hd_sites[] = {")
+    for i, (va, orig, new) in enumerate(sites):
+        lines.append(f"    {{0x{va:08X}u, {len(orig)}u, {len(new)}u, hd_o{i}, hd_p{i}}},")
+    lines.append("};")
+    open(path, "w").write("\n".join(lines) + "\n")
+    print(f"wrote {path}: {len(sites)} sites, {len(code)} cave bytes")
+
+
 def main():
     args = sys.argv[1:]
+    if "--emit-header" in args:
+        emit_header(os.path.join(os.path.dirname(os.path.abspath(__file__)), "client", "patches.h"))
+        return
     characters = "--characters" in args
     args = [a for a in args if a != "--characters"]
     fov = float(args[0]) if args else fov_for(aspect())
