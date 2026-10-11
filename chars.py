@@ -20,6 +20,7 @@ through convert.py (their skeletons are .skel files); then:
   textures (classic layout) are left out.
 """
 import collections
+import io
 import os
 import struct
 
@@ -28,6 +29,7 @@ import build
 import convert
 import fetch
 from mpq import Client
+from PIL import Image
 
 # race id, retail folder/prefix, 3.3.5 path prefix, HD model per sex
 RACES = [
@@ -51,6 +53,8 @@ EYE_TYPE, JEWELRY_TYPE = 19, 20
 CS_RACE, CS_SEX, CS_SECTION, CS_TEX, CS_VARIATION, CS_COLOR = 1, 2, 3, 4, 8, 9
 SKIN, FACE, FACIAL_HAIR, HAIR, UNDERWEAR = range(5)
 CHR_DISPLAY = 4  # ChrRaces: male display, then female
+COMPOSITE, THROAT_BOX = (1024, 512), (0, 320, 256, 512)  # patch_exe.py's composite, face lower region
+THROAT_RACES = {6}  # races whose HD mesh samples the face lower block (tauren throat)
 CMD_SCALE = 4    # CreatureModelData: ModelScale
 
 
@@ -224,6 +228,23 @@ def char_sections(cs, race, race_dir, sex, files, report):
             if path:
                 return path
         return None
+    skins = {r[CS_COLOR]: original.string(old_rows[r[0]][CS_TEX]) for r in cs.rows
+             if r[CS_RACE] == race and r[CS_SEX] == sex and r[CS_SECTION] == SKIN and r[CS_VARIATION] == 0}
+
+    def throat(color):
+        """The face lower region's texture (patch_exe.REGIONS): the HD skin's block under the
+        hands, which retail's tauren sample for the throat; "" for races that do not."""
+        if race not in THROAT_RACES or color not in skins:
+            return ""
+        path = build.mpq_path(f"{prefix}throat{color:02d}_hd.blp")
+        if path not in files:
+            fid = fetch.fdid(skins[color].lower().replace("\\", "/")[:-4] + "_hd.blp")
+            if not fid:
+                return ""
+            im = Image.open(io.BytesIO(fetch.get(fid)))
+            im.load()
+            files[path] = blp.encode(im.convert("RGBA").resize(COMPOSITE).crop(THROAT_BOX))
+        return path
     changed = collections.Counter()
     for r in cs.rows:
         if r[CS_RACE] != race or r[CS_SEX] != sex:
@@ -231,11 +252,11 @@ def char_sections(cs, race, race_dir, sex, files, report):
         names = [original.string(t) if t else "" for t in old_rows[r[0]][CS_TEX:CS_TEX + 3]]
         if r[CS_SECTION] == SKIN:  # the extra (tauren fur) is drawn directly, not composited
             want = [hd_of(names[0]), skin_extra(names[0]) if names[1] else None, None]
-        elif r[CS_SECTION] == FACE:
+        elif r[CS_SECTION] == FACE:  # upper: the HD face sheet; lower: the throat block (tauren)
             face = hd_of(names[1] or names[0])
-            want = [face, face, None]
-        elif r[CS_SECTION] == FACIAL_HAIR:  # HD facial hair is one full-face texture (tauren), or geometry
-            want = [hd_of(names[0]) or "", "", ""]
+            want = [throat(r[CS_COLOR]) if face else None, face, None]
+        elif r[CS_SECTION] == FACIAL_HAIR:  # HD facial hair is one full-face sheet (face upper), or geometry
+            want = ["", hd_of(names[0]) or "", ""]
         elif r[CS_SECTION] == HAIR and race_dir == "tauren":  # the "hair" texture is the horns
             colors = HORN_TEXTURES[sex]
             want = [hd(f"character/tauren/taurenhorns_{colors[r[CS_COLOR]] if r[CS_COLOR] < len(colors) else colors[0]}.blp",

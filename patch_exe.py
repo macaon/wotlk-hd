@@ -65,8 +65,11 @@ REGIONS = [  # x, y, w, h in 3.3.5's region order
     (0, 0, 256, 128), (0, 128, 256, 128), (0, 256, 256, 64),            # arm upper, lower, hand
     (256, 0, 256, 128), (256, 128, 256, 64), (256, 192, 256, 128),      # torso upper, lower, leg upper
     (256, 320, 256, 128), (256, 448, 256, 64),                          # leg lower, foot
-    (512, 0, 512, 512), (512, 0, 512, 512),                             # face upper, face lower
+    (512, 0, 512, 512), (0, 320, 256, 192),                             # face upper, face lower
 ]
+# Face upper takes retail's whole HD face sheet. Face lower keeps 3.3.5's own spot (its face upper
+# and lower, 0,320 and 0,384), grown to the block below the hands: retail's tauren draw the throat
+# from there, so chars.py puts a skin patch in it (a blank region left their throat black).
 REGION_INIT, REGION_TABLE = 0x9C8F30, 0xB6B928  # static initializer filling the table; the table
 # Each site loads the size and pushes it twice as (height, width) for a texture create, free or
 # dirty rect; the detour pushes 512 and 1024 instead. Bytes: from the load through both pushes.
