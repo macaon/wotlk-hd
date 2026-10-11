@@ -68,6 +68,8 @@ def tauren_geosets(sid, allowed):
         return sid - 2399 if sid - 2399 in allowed else None
     if 100 < sid < 300:
         return sid + 1 if sid + 1 in allowed else None
+    if sid == 3201:  # the cap closing the back of the face (3202) above the neck
+        return 0
     if sid in TAUREN_NOSE_RINGS:
         return tuple(k for k in TAUREN_NOSE_RINGS[sid] if k in allowed) or None
     return NotImplemented
