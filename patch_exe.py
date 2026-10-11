@@ -159,7 +159,7 @@ class Pe:
 
 
 def jmp(src, dst):
-    return b"\xe9" + struct.pack("<i", dst - (src + 5))
+    return b"\xe9" + struct.pack("<I", (dst - (src + 5)) & 0xFFFFFFFF)
 
 
 CAVE = 0xDFD000  # first page past the stock image: Wow-hdchar.exe's .hdchar section
@@ -184,7 +184,7 @@ def character_patches(put, cave=CAVE):
     for site, skip, cont in DXT_SITES:
         at = cave + len(code)
         body = bytearray(b"\x89\x45\xe4\x85\xc0\x0f\x8e")  # mov [ebp-0x1c],eax; test; jle skip
-        body += struct.pack("<i", skip - (at + len(body) + 4))
+        body += struct.pack("<I", (skip - (at + len(body) + 4)) & 0xFFFFFFFF)
         body += b"\x50\xd1\xf8\x75\x01\x40\x89\x45\xec\x58"  # push; sar 1; jnz; inc; mov [ebp-0x14]; pop
         code += body + jmp(at + len(body), cont)
         put(site, jmp(site, at) + b"\x90" * 3, bytes.fromhex(DXT_BYTES))

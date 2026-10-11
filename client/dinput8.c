@@ -75,11 +75,11 @@ static void apply_character_patches(void) {
         wlog("character patches: no memory for the cave (%lu), none applied", GetLastError());
         return;
     }
-    int shift = (int)((UINT_PTR)cave - HD_CAVE);
+    unsigned shift = (unsigned)(UINT_PTR)cave - HD_CAVE;  /* addresses and rel32 both wrap mod 2^32 */
     memcpy(cave, hd_cave, sizeof(hd_cave));
     for (i = 0; i < sizeof(hd_fixes) / sizeof(hd_fixes[0]); i++)
         if (hd_fixes[i].site == ~0u)
-            *(int *)(cave + hd_fixes[i].offset) += hd_fixes[i].sign * shift;
+            *(unsigned *)(cave + hd_fixes[i].offset) += hd_fixes[i].sign > 0 ? shift : 0u - shift;
     for (i = 0; i < n; i++) {
         DWORD old;
         unsigned j;
@@ -88,7 +88,7 @@ static void apply_character_patches(void) {
         memcpy(at, hd_sites[i].patch, hd_sites[i].patch_len);
         for (j = 0; j < sizeof(hd_fixes) / sizeof(hd_fixes[0]); j++)
             if (hd_fixes[j].site == i)
-                *(int *)(at + hd_fixes[j].offset) += hd_fixes[j].sign * shift;
+                *(unsigned *)(at + hd_fixes[j].offset) += hd_fixes[j].sign > 0 ? shift : 0u - shift;
         VirtualProtect(at, hd_sites[i].patch_len, old, &old);
     }
     FlushInstructionCache(GetCurrentProcess(), NULL, 0);
