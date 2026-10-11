@@ -116,10 +116,11 @@ that create, free or mark dirty the composite as (size, size) and for the two DX
 (which assumed as many block rows as columns). The blitter copies regions 1:1 from a source mip
 chosen by width and never resamples, so source textures must match their region size.
 
-Known issue: gargoyle2 (Stonewing Slayer, display 7533) garbled into screen-wide triangles and
-crashed the client (0x8204ae, bone matrix copy in batch rendering) whenever it came into view, but
-not on a morphed player; every static check passes on it. Left out of picks.json; revert.py found
-it in game (reverting models over the patch until the crash stopped).
+Fixed: gargoyle2 (Stonewing Slayer) garbled into screen-wide triangles and crashed the client
+(0x8204ae, bone matrix copy) when in view, and boar2's triangles joined the wrong vertices. Both
+were files from mixed builds: wago.tools without a build mixes products (tables from the 12.1.5
+PTR, boar2.m2 from another export than its skins). fetch.py pins one build; the check that
+catches it: each skin vertex's palette bone (skin) must be its model vertex's bone (m2).
 
 ## Plan
 
@@ -140,8 +141,8 @@ it in game (reverting models over the patch until the crash stopped).
 4. **Later**: world doodads and textures through the same pipeline; HD character models for
    humanoid NPCs; ReShade (works with `-opengl`).
 
-5. **Revisit**: gargoyle2 for the Stonewing Slayer (crash when in view, see Known issue above);
-   boar2 (triangles do not match its vertices as read); Lady Vashj (missing .anim); retail
-   animations with ids past 3.3.5's 505.
+5. **Revisit**: gargoyle2 in game on live data (Stonewing Slayer; or a recoloured felbat2 if it
+   still looks wrong for the NPC); Anduin and Lady Vashj (missing .anim files); retail animations
+   with ids past 3.3.5's 505.
 
 Risks: newer models can look flat with 3.3.5 shaders; memory in a 32-bit client.

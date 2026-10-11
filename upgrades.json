@@ -84,6 +84,15 @@
    3346
   ]
  },
+ "battlestandard_frostwolf_a_01": {
+  "displays": 1,
+  "new": "creature/spells/battlestandard_frostwolf_a_01.m2",
+  "old": "creature/spells/battlestandard_frostwolf_a_01.m2",
+  "triangles": [
+   282,
+   426
+  ]
+ },
  "be_broom01": {
   "displays": 1,
   "new": "creature/broom/be_broom01.m2",
@@ -781,6 +790,18 @@
    1519
   ]
  },
+ "nagalord2": {
+  "displays": 1,
+  "new": "creature/nagalord2/nagalord2.m2",
+  "old": "creature/nagalordmale/nagalordmale.m2",
+  "only": [
+   21174
+  ],
+  "triangles": [
+   2340,
+   6183
+  ]
+ },
  "nightbane2": {
   "displays": 1,
   "new": "creature/nightbane2/nightbane2.m2",
@@ -1207,6 +1228,15 @@
   "triangles": [
    750,
    2684
+  ]
+ },
+ "woodendummy": {
+  "displays": 7,
+  "new": "creature/object/woodendummy.m2",
+  "old": "creature/object/woodendummy.m2",
+  "triangles": [
+   173,
+   511
   ]
  },
  "yseradragon": {
