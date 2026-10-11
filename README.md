@@ -153,7 +153,12 @@ HD characters keep full detail.
 4. **Later**: world doodads and textures through the same pipeline; HD character models for
    humanoid NPCs; ReShade (works with `-opengl`).
 
-5. **Revisit**: gargoyle2 still crashes the client on live data (left out of picks.json; the
+5. **Open (HD characters)**: body draws right; submeshes starting past index 65535 (face,
+   torso, hands, feet, belt, eye glow at level 1) still draw garbage on Wow-hdchar.exe, so some
+   path besides the three patched draw calls after 0x8203b0 uses the u16 start (candidates read
+   submesh +8 elsewhere, or index data copied at skin load). Fallback if not found: order those
+   always-drawn submeshes first so the 65535 limit falls on alternative hair styles instead.
+6. **Revisit**: gargoyle2 still crashes the client on live data (left out of picks.json; the
    mixed builds were not its cause); a recoloured felbat2 for the Stonewing Slayer instead; Anduin and Lady Vashj (missing .anim files); retail animations
    with ids past 3.3.5's 505.
 
