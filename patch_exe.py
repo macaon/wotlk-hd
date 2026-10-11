@@ -93,6 +93,16 @@ INDEX_SITES = [(0x8205D9, "0fb7560a0fb77608", "esi"), (0x820662, "0fb7560a0fb776
 # detour stores start | level << 16. (site, original bytes, cave body)
 # Every cave keeps the flags (pushfd/popfd): 0x820b9c sits between a cmp and the je that uses it,
 # and an earlier version without them switched skinning paths and broke world objects.
+# The real limit: when a skin's GPU index buffer is built (FUN_008360a0) the client copies each
+# submesh's triangles from its u16 start in the file (level ignored) and writes the submesh's new
+# start in its own buffer back as u16 (truncated past 65535). These two detours read start | level
+# << 16 and keep the new start's high word in the copy's level field, which the draw detours add.
+REBUILD_SITES = [
+    # movzx ebx,[ebx+ecx+8]; add edx,ecx  ->  ebx = start | level << 16
+    (0x83619F, "0fb75c0b0803d1", "50" "0fb7440b02" "c1e010" "0fb75c0b08" "0bd8" "58" "03d1"),
+    # mov [edx+8],bx; movzx edx,[edx+0xa]  ->  also level = start >> 16
+    (0x836240, "66895a080fb7520a", "66895a08" "53" "c1eb10" "66895a02" "5b" "0fb7520a"),
+]
 STORE_SITES = [
     (0x820B9C, "0fb750088955d4", "0fb75008" "50" "0fb74002" "c1e010" "0bd0" "58" "8955d4"),
 ]
@@ -179,6 +189,12 @@ def patch_characters(exe):
         body = b"\x9c" + bytes.fromhex(INDEX_CAVES[reg]) + b"\x9d"  # pushfd ... popfd
         code += body + jmp(at + len(body), site + 8)
         pe.write(site, jmp(site, at) + b"\x90" * 3, expect=bytes.fromhex(original))
+    for site, original, cave_body in REBUILD_SITES:
+        at = cave + len(code)
+        body = b"\x9c" + bytes.fromhex(cave_body) + b"\x9d"
+        code += body + jmp(at + len(body), site + len(bytes.fromhex(original)))
+        pe.write(site, jmp(site, at) + b"\x90" * (len(bytes.fromhex(original)) - 5),
+                 expect=bytes.fromhex(original))
     for site, original, cave_body in STORE_SITES:
         at = cave + len(code)
         body = b"\x9c" + bytes.fromhex(cave_body) + b"\x9d"
