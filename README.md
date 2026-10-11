@@ -131,8 +131,17 @@ showed the old model until this split); DBCs override from the locale patch.
 adds), so a skin's triangles must start below index 65536. Models past it (gargoyle2,
 dragonspawn, crypt fiend, nerubian priest, vrykul female at 69k-113k indices) drew garbage and
 crashed; the converter now leaves out undrawn submeshes and takes the most detailed retail LOD that
-fits (arakkoa has none). Wow-hdchar.exe adds level in the three draw paths after 0x8203b0, so the
-HD characters keep full detail.
+fits (arakkoa has none). For HD characters the client patches (dinput8.dll, or Wow-hdchar.exe) use
+level everywhere it matters: the skin's index buffer rebuild (0x8360a0, the real limit), the draw
+paths after 0x8203b0, and SetGeometryVisible (0x82c7c0), which read id and level as one u32 and
+left every late geoset visible. So the HD characters keep full detail.
+
+Tauren: retail splits 3.3.5's hair style (horns and hair in one geoset) into Horn Style, Foremane
+and Hair, and its facial style into Facial Hair and Hair; chars.py maps them from retail's
+ChrCustomizationChoice order (which follows 3.3.5's), a retail horn shared by several styles is
+drawn once per style. Retail builds the race's size into the HD mesh, so chars.py sets 3.3.5's
+display 59 (x1.35) and model 60 (x1.25) scales to 1. Those DBCs come from the creature patch:
+run chars.py after build.py.
 
 ## Client extension (client/)
 
@@ -173,11 +182,7 @@ ziglang.org zig-linux-x86_64-0.13.0); copy the DLL next to Wow.exe; under Wine/P
 4. **Later**: world doodads and textures through the same pipeline; HD character models for
    humanoid NPCs; ReShade (works with `-opengl`).
 
-5. **Open (HD characters)**: body draws right; submeshes starting past index 65535 (face,
-   torso, hands, feet, belt, eye glow at level 1) still draw garbage on Wow-hdchar.exe, so some
-   path besides the three patched draw calls after 0x8203b0 uses the u16 start (candidates read
-   submesh +8 elsewhere, or index data copied at skin load). Fallback if not found: order those
-   always-drawn submeshes first so the 65535 limit falls on alternative hair styles instead.
+5. **HD characters**: blood elves and tauren done; the other races next.
 6. **Revisit**: gargoyle2 still crashes the client on live data (left out of picks.json; the
    mixed builds were not its cause); a recoloured felbat2 for the Stonewing Slayer instead; Anduin and Lady Vashj (missing .anim files); retail animations
    with ids past 3.3.5's 505.

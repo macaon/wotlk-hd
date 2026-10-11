@@ -8,6 +8,7 @@ Submeshes over 64 bones are split; vertices the chosen skin does not use are dro
 (ConvertError) rather than half-converted: .skel-based models and skins over 65535 vertices.
 """
 import math
+import collections
 import struct
 
 from m2 import ARRAYS, FLAG_COMBINER_COMBOS, HEADER_SIZE, M2
@@ -209,7 +210,9 @@ def select_geosets(skin, geoset_map, index_limit=0xFFFF, optional=None, dropped=
     the HD blood elves (113k drawn indices) and gargoyle2 (70k) drew garbage past it.
     index_limit=None writes starts past it with level, for Wow-hdchar.exe (patch_exe.py).
     optional(id): submeshes that go last and are left out (their ids added to `dropped`) when
-    they would start past index_limit, rather than failing (alternative hair styles)."""
+    they would start past index_limit, rather than failing (alternative hair styles).
+    geoset_map may return a tuple of ids: the submesh is drawn once per id (a retail horn shared by
+    several 3.3.5 hair styles)."""
     nv, ov, ni, oi, nb, ob, ns, os_, nt, ot = struct.unpack_from("<10I", skin, 4)
     lookup = struct.unpack_from(f"<{nv}H", skin, ov)
     indices = struct.unpack_from(f"<{ni}H", skin, oi)
@@ -219,15 +222,16 @@ def select_geosets(skin, geoset_map, index_limit=0xFFFF, optional=None, dropped=
     for j, s in enumerate(subs):
         new_id = geoset_map(struct.unpack_from("<H", s, 0)[0]) if geoset_map else struct.unpack_from("<H", s, 0)[0]
         if new_id is not None:
-            struct.pack_into("<H", s, 0, new_id)
-            keep[j] = True
-    drawn = sorted({struct.unpack_from("<H", b, 4)[0] for b in batches} & set(keep))
+            keep[j] = new_id if isinstance(new_id, tuple) else (new_id,)
+    used = {struct.unpack_from("<H", b, 4)[0] for b in batches}
+    drawn = [(j, sid) for j in sorted(used & set(keep)) for sid in keep[j]]
     if optional:
-        drawn.sort(key=lambda j: (bool(optional(struct.unpack_from("<H", subs[j], 0)[0])), j))
-    new_sub = {}
+        drawn.sort(key=lambda js: (bool(optional(js[1])), js[0]))
+    new_sub = collections.defaultdict(list)
     out_idx, out_subs = [], []
-    for j in drawn:
-        s = subs[j]
+    for j, sid in drawn:
+        s = bytearray(subs[j])
+        struct.pack_into("<H", s, 0, sid)
         level, = struct.unpack_from("<H", s, 2)
         start, count = struct.unpack_from("<HH", s, 8)
         start += level << 16
@@ -241,13 +245,13 @@ def select_geosets(skin, geoset_map, index_limit=0xFFFF, optional=None, dropped=
         struct.pack_into("<H", s, 2, len(out_idx) >> 16)
         struct.pack_into("<H", s, 8, len(out_idx) & 0xFFFF)
         out_idx += indices[start:start + count]
-        new_sub[j] = len(out_subs)
+        new_sub[j].append(len(out_subs))
         out_subs.append(bytes(s))
     out_batches = []
     for b in batches:
         sub, = struct.unpack_from("<H", b, 4)
-        if sub in new_sub:
-            struct.pack_into("<H", b, 4, new_sub[sub])
+        for n in new_sub.get(sub, ()):
+            struct.pack_into("<H", b, 4, n)
             out_batches.append(bytes(b))
     return pack_skin(lookup, out_idx, bytes(skin[ob:ob + nv * 4]), out_subs, out_batches)
 
