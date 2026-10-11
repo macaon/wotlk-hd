@@ -10,7 +10,7 @@ Submeshes over 64 bones are split; vertices the chosen skin does not use are dro
 import math
 import struct
 
-from m2 import ARRAYS, M2
+from m2 import ARRAYS, FLAG_COMBINER_COMBOS, HEADER_SIZE, M2
 
 VERSION_WOTLK = 264
 MAX_BONES_PER_SUBMESH = 64  # the most any 3.3.5 creature skin uses (boneCountMax)
@@ -222,6 +222,90 @@ SKEL_ARRAYS = {b"SKS1": [(0, 0x14), (8, 0x1C), (16, 0x24)],   # global loops, se
                b"SKA1": [(0, 0xF0), (8, 0xF8)]}                # attachments, attachment lookup
 BONE_SIZE, ATTACHMENT_SIZE, SEQUENCE_SIZE = 88, 40, 64
 BONE_TRACKS, ATTACHMENT_TRACKS = (16, 36, 56), (20,)
+
+
+# Repacking: element size, and (offset, key size) of the animation tracks inside each element
+SIMPLE_ARRAYS = {"name": 1, "global_loops": 4, "sequences": SEQUENCE_SIZE, "sequence_lookup": 2,
+                 "key_bone_lookup": 2, "vertices": 48, "replaceable_texture_lookup": 2,
+                 "materials": 4, "bone_lookup": 2, "texture_lookup": 2, "texture_unit_lookup": 2,
+                 "transparency_lookup": 2, "texture_transform_lookup": 2, "collision_indices": 2,
+                 "collision_positions": 12, "collision_normals": 12, "attachment_lookup": 2,
+                 "camera_lookup": 2}
+TRACK_ARRAYS = {"bones": (BONE_SIZE, [(16, 12), (36, 8), (56, 12)]),
+                "colors": (40, [(0, 12), (20, 2)]),
+                "texture_weights": (20, [(0, 2)]),
+                "texture_transforms": (60, [(0, 12), (20, 16), (40, 12)]),
+                "attachments": (ATTACHMENT_SIZE, [(20, 1)]),
+                "lights": (156, [(16, 12), (36, 4), (56, 12), (76, 4), (96, 4), (116, 4), (136, 1)]),
+                "cameras": (CAMERA_WOTLK, [(16, 36), (48, 36), (80, 12)])}
+EVENT_SIZE, EVENT_TRACK = 36, 24  # an event's track has timestamps only
+
+
+def repack(m2):
+    """The model rebuilt from only the data its structures reference, without key frames of
+    sequences 3.3.5 never plays (ids past MAX_ANIM_ID). Converting appends and leaves the replaced
+    data behind (the full retail vertex array, whole .skel chunks): the blood elf HD model was 35 MB
+    and the client used the old model instead. Returns (m2, kept (anim id, sub id) pairs).
+
+    ponytail: models with particles or ribbons come back as they are (their structs hold many
+    arrays not walked here); walk them too if those models get big.
+    """
+    src = bytes(m2)
+    arrays = {name: struct.unpack_from("<II", src, off) for off, name in ARRAYS}
+    header_of = {name: off for off, name in ARRAYS}
+    n_seq, seq_off = arrays["sequences"]
+    seqs = [struct.unpack_from("<HHI", src, seq_off + k * SEQUENCE_SIZE) for k in range(n_seq)]
+    flags = [struct.unpack_from("<I", src, seq_off + k * SEQUENCE_SIZE + 12)[0] for k in range(n_seq)]
+    played = [aid <= MAX_ANIM_ID for aid, _, _ in seqs]
+    kept = {(aid, sub) for (aid, sub, _), p in zip(seqs, played) if p}
+    if arrays["particles"][0] or arrays["ribbons"][0]:
+        return src, kept
+    flags_m2, = struct.unpack_from("<I", src, 0x10)
+    out = Blob(src[:HEADER_SIZE + (8 if flags_m2 & FLAG_COMBINER_COMBOS else 0)])
+
+    def copy(header, size, n=None, off=None):
+        if n is None:
+            n, off = struct.unpack_from("<II", src, header)
+        out.set_array(header, n, src[off:off + n * size])
+        return n, struct.unpack_from("<I", out.d, header + 4)[0]
+
+    def track(pos, key_size, values=True):
+        _, global_loop = struct.unpack_from("<Hh", out.d, pos)
+        for arr, size in ((pos + 4, 4),) + (((pos + 12, key_size),) if values else ()):
+            n, off = struct.unpack_from("<II", out.d, arr)
+            if not n:
+                continue
+            outer = bytearray(src[off:off + n * 8])
+            for k in range(n):
+                cnt, inner = struct.unpack_from("<II", outer, k * 8)
+                if not cnt:
+                    continue
+                if global_loop < 0 and k < n_seq and not played[k]:
+                    struct.pack_into("<II", outer, k * 8, 0, 0)
+                elif global_loop >= 0 or (k < n_seq and flags[k] & 0x20):
+                    struct.pack_into("<I", outer, k * 8 + 4, out.add(src[inner:inner + cnt * size]))
+                # else: the keys are in that sequence's .anim file; offsets stay as they are
+            struct.pack_into("<I", out.d, arr + 4, out.add(bytes(outer)))
+
+    for name, size in SIMPLE_ARRAYS.items():
+        copy(header_of[name], size)
+    if flags_m2 & FLAG_COMBINER_COMBOS:
+        copy(HEADER_SIZE, 2)
+    n, off = copy(header_of["textures"], 16)
+    for i in range(n):
+        t = off + i * 16
+        length, name_off = struct.unpack_from("<II", src, struct.unpack_from("<I", src, header_of["textures"] + 4)[0] + i * 16 + 8)
+        if length:
+            struct.pack_into("<I", out.d, t + 12, out.add(src[name_off:name_off + length]))
+    for name, (size, tracks) in TRACK_ARRAYS.items():
+        n, off = copy(header_of[name], size)
+        for i in range(n):
+            for t, key_size in tracks:
+                track(off + i * size + t, key_size)
+    n, off = copy(header_of["events"], EVENT_SIZE)
+    for i in range(n):
+        track(off + i * EVENT_SIZE + EVENT_TRACK, 4, values=False)
+    return bytes(out.d), kept
 
 
 def chunks(data):
@@ -459,7 +543,8 @@ def convert_model(data, model_name, texture_name, get_file):
         b.set_array(0x78, len(bone_lookup), struct.pack(f"<{len(bone_lookup)}H", *bone_lookup))
         warnings.append(f"split submeshes over {MAX_BONES_PER_SUBMESH} bones")
     struct.pack_into("<I", d, 0x44, len(skins))
-    return bytes(d), skins, anims, warnings
+    m2, kept = repack(d)
+    return m2, skins, {k: v for k, v in anims.items() if k in kept}, warnings
 
 
 def wrap_cells(d, emitter, done):
