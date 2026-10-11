@@ -37,6 +37,9 @@ RACES = [
 SEXES = {0: ("male", "Male"), 1: ("female", "Female")}
 JOIN = {2001: 501, 2301: 401, 2201: 0, 3202: 0, 3301: 0, 3401: 0,  # 3202 is the face (3201 a small cap)
         1801: 0}  # bare waist under belts; 3.3.5's own model has none, its waist is in the body
+# Eye glow: 3.3.5 shows 1702 on blood elves; retail's 1702-1705 are large flame flares (228 vertices,
+# alternative eye styles), its plain in-eye glow is 1701 (60). So retail 1701 stands in for 1702.
+RENAME = {1701: 1702, 1702: None, 1703: None, 1704: None, 1705: None}
 KEEP_GROUPS = {0, 1, 4, 5, 7, 8, 9, 10, 11, 12, 13, 15, 17, 18}
 TEXTURE_TYPES = {15: 2, 16: 2, 17: 2, 18: 2, 9: 1}
 EYE_TYPE = 19
@@ -53,6 +56,8 @@ def geoset_map(old_skin):
     allowed = set(convert.geoset_ids(old_skin))
 
     def remap(sid):
+        if sid in RENAME:
+            return RENAME[sid] if RENAME[sid] in allowed else None
         sid = JOIN.get(sid, sid)
         return sid if sid in allowed and sid // 100 in KEEP_GROUPS else None
     return remap
