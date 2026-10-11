@@ -105,12 +105,12 @@ class Dbc:
 
 
 def retail_tables():
-    disp = {int(r["ID"]): r for r in csv.DictReader(open(os.path.join(fetch.CACHE, "CreatureDisplayInfo.csv")))}
-    model = {int(r["ID"]): int(r["FileDataID"]) for r in csv.DictReader(open(os.path.join(fetch.CACHE, "CreatureModelData.csv")))}
+    disp = {int(r["ID"]): r for r in csv.DictReader(open(fetch.table("CreatureDisplayInfo")))}
+    model = {int(r["ID"]): int(r["FileDataID"]) for r in csv.DictReader(open(fetch.table("CreatureModelData")))}
     # 3.3.5 packs a display's geoset choice as one nibble per group (group 1 lowest): 0x1111 shows
     # geosets 101, 201, 301 and 401. Retail lists them as rows (GeosetIndex = group - 1).
     geosets = collections.Counter()
-    for r in csv.DictReader(open(os.path.join(fetch.CACHE, "CreatureDisplayInfoGeosetData.csv"))):
+    for r in csv.DictReader(open(fetch.table("CreatureDisplayInfoGeosetData"))):
         group, value = int(r["GeosetIndex"]), int(r["GeosetValue"])
         if group < 8 and value < 16:  # 3.3.5 has 8 nibbles; later groups cannot be chosen
             geosets[int(r["CreatureDisplayInfoID"])] |= value << (4 * group)
@@ -130,6 +130,7 @@ def build(names):
     rdisp, rmodel, rgeosets = retail_tables()
     files = {}
     report = []
+    fetch.prefetch_models([fetch.fdid(UPGRADES[n][1]) for n in names])
 
     for i, name in enumerate(names, 1):
         print(f"[{i}/{len(names)}] {name}", file=sys.stderr, flush=True)

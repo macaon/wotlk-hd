@@ -14,9 +14,11 @@ For each display in the 3.3.5 CreatureDisplayInfo.dbc, look up the same display 
 import collections
 import re
 import csv
+import os
 import struct
 import sys
 
+import fetch
 from mpq import Client
 
 
@@ -54,12 +56,12 @@ def classify():
     old_models = {r[0]: (norm(ms(r[2])), [f32(x) for x in r[17:23]]) for r in model_rows}
 
     names = {}
-    with open("cache/listfile.csv", encoding="utf-8") as f:
+    with open(os.path.join(fetch.CACHE, "listfile.csv"), encoding="utf-8") as f:
         for line in f:
             fid, _, name = line.rstrip("\n").partition(";")
             names[int(fid)] = name
-    rd = {int(r["ID"]): r for r in csv.DictReader(open("cache/CreatureDisplayInfo.csv"))}
-    rm = {int(r["ID"]): r for r in csv.DictReader(open("cache/CreatureModelData.csv"))}
+    rd = {int(r["ID"]): r for r in csv.DictReader(open(fetch.table("CreatureDisplayInfo")))}
+    rm = {int(r["ID"]): r for r in csv.DictReader(open(fetch.table("CreatureModelData")))}
 
     seen = []  # (display, kind or None, old path, new path, old box, new box)
     for row in disp:

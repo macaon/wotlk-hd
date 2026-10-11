@@ -101,8 +101,8 @@ def unlinked():
     planned = {u["old"] for u in json.load(open(OUT)).values() if "only" not in u} if os.path.exists(OUT) else set()
     old_displays = collections.Counter(old for _, kind, old, _ in seen
                                        if kind not in ("humanoid",) and old.startswith("creature/"))
-    rm = {r["ID"]: int(r["FileDataID"]) for r in csv.DictReader(open(os.path.join(fetch.CACHE, "CreatureModelData.csv")))}
-    used = collections.Counter(rm.get(r["ModelID"]) for r in csv.DictReader(open(os.path.join(fetch.CACHE, "CreatureDisplayInfo.csv"))))
+    rm = {r["ID"]: int(r["FileDataID"]) for r in csv.DictReader(open(fetch.table("CreatureModelData")))}
+    used = collections.Counter(rm.get(r["ModelID"]) for r in csv.DictReader(open(fetch.table("CreatureDisplayInfo"))))
     by_family = collections.defaultdict(list)
     names, _ = fetch._listfile()
     for fid, name in names.items():
