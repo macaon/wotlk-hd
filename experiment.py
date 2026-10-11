@@ -42,12 +42,12 @@ def no_extras(m2):
     return bytes(d)
 
 
-def only_base_geoset(skin):
-    """Only the batches of geoset 0 submeshes (body)."""
+def only_geosets(skin, keep_ids=(0,)):
+    """Only the batches of submeshes with these geoset ids."""
     s = bytearray(skin)
     ns, os_, nt, ot = struct.unpack_from("<IIII", s, 28)
     keep = [bytes(s[ot + i * 24:ot + i * 24 + 24]) for i in range(nt)
-            if struct.unpack_from("<H", s, os_ + struct.unpack_from("<H", s, ot + i * 24 + 4)[0] * 48)[0] == 0]
+            if struct.unpack_from("<H", s, os_ + struct.unpack_from("<H", s, ot + i * 24 + 4)[0] * 48)[0] in keep_ids]
     s[ot:ot + len(keep) * 24] = b"".join(keep)
     struct.pack_into("<I", s, 36, len(keep))
     return bytes(s)
@@ -58,17 +58,9 @@ def main():
     data = fetch.get(fetch.fdid(NEW))
     name = lambda f: build.mpq_path(fetch.name(f))
     conv, skins, anims, _ = convert.convert_model(data, "Gargoyle", name, fetch.get)
-    convert.MAX_BONES_PER_SUBMESH = 32
-    conv32, skins32, _, _ = convert.convert_model(data, "Gargoyle", name, fetch.get)
-    convert.MAX_BONES_PER_SUBMESH = 64
     files = {}
-    variants = [  # (label, m2, skin)
-        ("control: gargoyle2 as built", conv, skins[0]),
-        ("no bone animation (bind pose)", static_bones(conv), skins[0]),
-        ("no attachments, events, cameras", no_extras(conv), skins[0]),
-        ("submeshes split at 32 bones instead of 64", conv32, skins32[0]),
-        ("body geoset only", conv, only_base_geoset(skins[0])),
-    ]
+    # 90005 (body only) was clean; the display also shows 103, 202, 303, 402 and 502
+    variants = [("body + geoset %d" % g, conv, only_geosets(skins[0], (0, g))) for g in (103, 202, 303, 402, 502)]
     cdi = build.Dbc(client.read("DBFilesClient\\CreatureDisplayInfo.dbc"))
     cmd = build.Dbc(client.read("DBFilesClient\\CreatureModelData.dbc"))
     base_display = next(r for r in cdi.rows if r[0] == DISPLAY)

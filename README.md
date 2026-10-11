@@ -116,6 +116,11 @@ that create, free or mark dirty the composite as (size, size) and for the two DX
 (which assumed as many block rows as columns). The blitter copies regions 1:1 from a source mip
 chosen by width and never resamples, so source textures must match their region size.
 
+Known issue: gargoyle2 (Stonewing Slayer, display 7533) garbled into screen-wide triangles and
+crashed the client (0x8204ae, bone matrix copy in batch rendering) whenever it came into view, but
+not on a morphed player; every static check passes on it. Left out of picks.json; revert.py found
+it in game (reverting models over the patch until the crash stopped).
+
 ## Plan
 
 0. **Setup** (done): large-address-aware, FoV, survey.
