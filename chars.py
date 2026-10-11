@@ -102,13 +102,12 @@ def model(hd_path, old_path, files, report, dropped):
         files[path] = fetch.get(f)
         return path
     old_skin = Client().read(old_path[:-3] + "00.skin")
-    # Index starts past 65535 draw garbage in 3.3.5, so the skins fit under it: body and face from
-    # the most detailed LOD that leaves room, hair from a lighter one (retail's far LODs paint the
-    # eyes shut). The HD male's 16 hair styles are 46k indices even at the lightest LOD, so he keeps
-    # LOD 3 for the body and the styles that fit; CharHairGeosets sends the others to a kept one.
-    m2, skins, anims, warnings = convert.convert_model_fitting(
+    # Full detail: Wow-hdchar.exe draws index starts past 65535 (the submesh's level as the high
+    # word, patch_exe.py), so the skin keeps every 3.3.5 hair style. (convert_model_fitting with
+    # split= and fallback_body= fits under 65535 for an unpatched client, at the cost of styles.)
+    m2, skins, anims, warnings = convert.convert_model(
         fetch.get(fid), old_path.rsplit("\\", 1)[1][:-3], texture_name, fetch.get,
-        geoset_map=geoset_map(old_skin), split=lambda sid: 0 < sid < 100, fallback_body=3, dropped=dropped)
+        geoset_map=geoset_map(old_skin), index_limit=None)
     race_dir = hd_path.split("/")[1]
     eyes = f"character/{race_dir}/eyes00_00"
     eye_fid = next((f for n, f in fetch._listfile()[1].items() if n.startswith(eyes) and n.endswith(".blp")), None)
@@ -117,7 +116,7 @@ def model(hd_path, old_path, files, report, dropped):
     eye_path = texture_name(eye_fid)
     m2 = textures(m2, eye_path)
     skins = [single_layer_eyes(m2, s, eye_path) for s in skins]
-    convert.check(m2, skins)
+    convert.check(m2, skins, allow_level=True)
     files[old_path] = m2
     for i, s in enumerate(skins):
         files[f"{old_path[:-3]}{i:02d}.skin"] = s
