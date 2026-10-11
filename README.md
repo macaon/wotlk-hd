@@ -139,9 +139,9 @@ left every late geoset visible. So the HD characters keep full detail.
 Tauren: retail splits 3.3.5's hair style (horns and hair in one geoset) into Horn Style, Foremane
 and Hair, and its facial style into Facial Hair and Hair; chars.py maps them from retail's
 ChrCustomizationChoice order (which follows 3.3.5's), a retail horn shared by several styles is
-drawn once per style. Retail builds the race's size into the HD mesh, so chars.py sets 3.3.5's
-display 59 (x1.35) and model 60 (x1.25) scales to 1. Those DBCs come from the creature patch:
-run chars.py after build.py.
+drawn once per style. Retail builds the race's size into the HD mesh; 3.3.5 scales its own mesh
+with display 59 (x1.35) and model 60 (x1.25) instead, and character select ignores those, so
+chars.py shrinks the HD mesh by them (convert.scale_model) and leaves the DBCs alone.
 
 ## Client extension (client/)
 

@@ -367,6 +367,67 @@ def repack(m2):
     return bytes(out.d), kept
 
 
+def scale_model(m2, anims, f):
+    """The model and its .anim files uniformly scaled by f: positions, pivots, translation keys,
+    bounds, move speeds and cameras. For HD character meshes that build in a race size 3.3.5 adds
+    with display/model scale instead (tauren), so character select, which ignores those, matches.
+    ponytail: lights, ribbons and particles are not scaled (no character model has them)."""
+    d = bytearray(m2)
+    anims = {k: bytearray(v) for k, v in anims.items()}
+    arrays = {name: struct.unpack_from("<II", d, off) for off, name in ARRAYS}
+    if arrays["particles"][0] or arrays["ribbons"][0] or arrays["lights"][0]:
+        raise ConvertError("scale_model: particles, ribbons or lights")
+
+    def mul(buf, off, n):
+        struct.pack_into(f"<{n}f", buf, off, *(v * f for v in struct.unpack_from(f"<{n}f", buf, off)))
+    n_seq, seq_off = arrays["sequences"]
+    seqs = [struct.unpack_from("<HHI", d, seq_off + k * SEQUENCE_SIZE)[:2] for k in range(n_seq)]
+    seq_flags = [struct.unpack_from("<I", d, seq_off + k * SEQUENCE_SIZE + 12)[0] for k in range(n_seq)]
+    for k in range(n_seq):
+        s = seq_off + k * SEQUENCE_SIZE
+        mul(d, s + 8, 1)    # move speed
+        mul(d, s + 32, 7)   # bounding box and radius
+
+    def track(pos, floats):
+        """Scale every key value of the track at pos (floats per key), in the model or .anim."""
+        global_loop, = struct.unpack_from("<h", d, pos + 2)
+        n, off = struct.unpack_from("<II", d, pos + 12)
+        for k in range(n):
+            cnt, inner = struct.unpack_from("<II", d, off + k * 8)
+            if not cnt:
+                continue
+            if global_loop >= 0 or k >= n_seq or seq_flags[k] & 0x20:
+                buf = d
+            else:
+                buf = anims.get(seqs[k])
+                if buf is None:
+                    continue  # a sequence left out (ids past MAX_ANIM_ID)
+            mul(buf, inner, cnt * floats)
+    n, off = arrays["vertices"]
+    for i in range(n):
+        mul(d, off + i * 48, 3)
+    n, off = arrays["bones"]
+    for i in range(n):
+        track(off + i * BONE_SIZE + 16, 3)  # translation
+        mul(d, off + i * BONE_SIZE + 76, 3)  # pivot
+    n, off = arrays["attachments"]
+    for i in range(n):
+        mul(d, off + i * ATTACHMENT_SIZE + 8, 3)
+    n, off = arrays["events"]
+    for i in range(n):
+        mul(d, off + i * EVENT_SIZE + 12, 3)
+    n, off = arrays["collision_positions"]
+    mul(d, off, n * 3)
+    mul(d, 0xA0, 14)  # model bounding box, radius, collision box, radius
+    n, off = arrays["cameras"]
+    for i in range(n):
+        c = off + i * CAMERA_WOTLK
+        mul(d, c + 8, 2)                                  # far and near clip
+        track(c + 16, 9), mul(d, c + 36, 3)               # position spline keys, base
+        track(c + 48, 9), mul(d, c + 68, 3)               # target spline keys, base
+    return bytes(d), {k: bytes(v) for k, v in anims.items()}
+
+
 def chunks(data):
     out, pos = {}, 0
     while pos + 8 <= len(data):

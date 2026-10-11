@@ -37,6 +37,7 @@ RACES = [
                              1: "character/tauren/female/taurenfemale_hd.m2"}),
 ]
 SEXES = {0: ("male", "Male"), 1: ("female", "Female")}
+SEXES_BY_PATH = {upper: sex for sex, (_, upper) in SEXES.items()}
 JOIN = {2001: 501, 2301: 401, 2201: 0, 3202: 0, 3301: 0, 3401: 0,  # 3202 is the face (3201 a small cap)
         1801: 0}  # bare waist under belts; 3.3.5's own model has none, its waist is in the body
 # Eye glow: 3.3.5 shows 1702 on blood elves; retail's 1702-1705 are large flame flares (228 vertices,
@@ -148,6 +149,10 @@ def model(race, hd_path, old_path, files, report, dropped):
     m2, skins, anims, warnings = convert.convert_model(
         fetch.get(fid), old_path.rsplit("\\", 1)[1][:-3], texture_name, fetch.get,
         geoset_map=geoset_map(old_skin, race), index_limit=None)
+    scale = native_scale(race, SEXES_BY_PATH[old_path.rsplit("\\", 2)[1]])
+    if abs(scale - 1) > 1e-6:
+        m2, anims = convert.scale_model(m2, anims, 1 / scale)
+        warnings.append(f"mesh scaled by 1/{scale:g} (3.3.5 display x model scale)")
     race_dir = hd_path.split("/")[1]
     eyes = f"character/{race_dir}/eyes00_00"
     eye_fid = next((f for n, f in fetch._listfile()[1].items() if n.startswith(eyes) and n.endswith(".blp")), None)
@@ -272,32 +277,19 @@ def safe_for_other_races(cs, converted, files, report):
     report.append(f"other races made safe: {count} rows, {len(padded)} skins padded")
 
 
-def native_size(converted, files, report):
-    """Retail builds a race's size into its HD mesh (display and model scale 1); 3.3.5 scales its
-    own mesh instead (tauren: display 59 x1.35, model 60 x1.25), which on the HD mesh made giants.
-    Both scales go to 1 for every converted race and sex. The creature patch (build.py) writes
-    these DBCs too, so its output is the starting point: run chars.py after build.py."""
-    creature_patch = Client(chain=[build.patch_paths(4)[1]])
-    stock = Client()
-    read = lambda name: creature_patch.read(name) or stock.read(name)
-    races = build.Dbc(stock.read("DBFilesClient\\ChrRaces.dbc"))
-    cdi = build.Dbc(read("DBFilesClient\\CreatureDisplayInfo.dbc"))
-    cmd = build.Dbc(read("DBFilesClient\\CreatureModelData.dbc"))
-    one = struct.unpack("<I", struct.pack("<f", 1.0))[0]
-    displays = {r[CHR_DISPLAY + sex] for r in races.rows for race, sex in converted if r[0] == race}
-    models = set()
-    for r in cdi.rows:
-        if r[0] in displays:
-            models.add(r[build.CDI_MODEL])
-            if r[build.CDI_SCALE] != one:
-                report.append(f"display {r[0]} scale {struct.unpack('<f', struct.pack('<I', r[build.CDI_SCALE]))[0]:g} -> 1")
-                r[build.CDI_SCALE] = one
-    for r in cmd.rows:
-        if r[0] in models and r[CMD_SCALE] != one:
-            report.append(f"model {r[0]} scale {struct.unpack('<f', struct.pack('<I', r[CMD_SCALE]))[0]:g} -> 1")
-            r[CMD_SCALE] = one
-    files["DBFilesClient\\CreatureDisplayInfo.dbc"] = cdi.bytes()
-    files["DBFilesClient\\CreatureModelData.dbc"] = cmd.bytes()
+def native_scale(race, sex):
+    """3.3.5's display scale x model scale for a race and sex (tauren male 1.35, female 1.25):
+    retail's HD mesh has that size built in, and character select ignores both scales, so the
+    HD mesh is shrunk by it and the DBCs stay as they are."""
+    client = Client()
+    races = build.Dbc(client.read("DBFilesClient\\ChrRaces.dbc"))
+    cdi = build.Dbc(client.read("DBFilesClient\\CreatureDisplayInfo.dbc"))
+    cmd = build.Dbc(client.read("DBFilesClient\\CreatureModelData.dbc"))
+    f = lambda x: struct.unpack("<f", struct.pack("<I", x))[0]
+    display = next(r[CHR_DISPLAY + sex] for r in races.rows if r[0] == race)
+    d = next(r for r in cdi.rows if r[0] == display)
+    m = next(r for r in cmd.rows if r[0] == d[build.CDI_MODEL])
+    return f(d[build.CDI_SCALE]) * f(m[CMD_SCALE])
 
 
 def main():
@@ -317,9 +309,7 @@ def main():
             char_sections(cs, race, race_dir, sex, files, report)
             if dropped:
                 hair_tables.append(hair_fallbacks(race, sex, dropped, report))
-    converted = {(race, sex) for race, _, _, models in RACES for sex in models}
-    safe_for_other_races(cs, converted, files, report)
-    native_size(converted, files, report)
+    safe_for_other_races(cs, {(race, sex) for race, _, _, models in RACES for sex in models}, files, report)
     files["DBFilesClient\\CharSections.dbc"] = cs.bytes()
     if hair_tables:  # ponytail: one race with dropped styles so far; merge tables when there are more
         files["DBFilesClient\\CharHairGeosets.dbc"] = hair_tables[-1].bytes()
