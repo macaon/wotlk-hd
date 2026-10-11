@@ -427,6 +427,8 @@ def convert_model(data, model_name, texture_name, get_file):
             high_ids.add(aid)
         if not flags & 0x60 and (aid, sub) not in anims:  # external .anim (not in-file 0x20 or alias 0x40)
             fid = afid.get((aid, sub))
+            if not fid and aid > MAX_ANIM_ID:
+                continue  # never played by 3.3.5; repack drops its keys
             if not fid:
                 raise ConvertError(f"sequence {aid}-{sub} has no .anim file")
             anims[(aid, sub)] = anim_payload(get_file(fid), chunked)
