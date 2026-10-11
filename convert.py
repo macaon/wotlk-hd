@@ -10,7 +10,7 @@ Submeshes over 64 bones are split; vertices the chosen skin does not use are dro
 import math
 import struct
 
-from m2 import M2
+from m2 import ARRAYS, M2
 
 VERSION_WOTLK = 264
 MAX_BONES_PER_SUBMESH = 64  # the most any 3.3.5 creature skin uses (boneCountMax)
@@ -197,7 +197,7 @@ def geoset_ids(skin):
 
 def anim_payload(data, chunked):
     """The raw track data of a retail .anim file (what 3.3.5 .anim files hold whole)."""
-    if not chunked:
+    if not chunked and data[:4] not in (b"AFM2", b"AFSA", b"AFSB"):  # .skel models: chunked anyway
         return data
     pos = 0
     while pos + 8 <= len(data):
@@ -206,6 +206,91 @@ def anim_payload(data, chunked):
             return data[pos + 8:pos + 8 + size]
         pos += 8 + size
     raise ConvertError("chunked .anim without AFM2")
+
+
+# .skel chunks: where each array (count, offset relative to the chunk) sits, and its MD20 header slot
+SKEL_ARRAYS = {b"SKS1": [(0, 0x14), (8, 0x1C), (16, 0x24)],   # global loops, sequences, lookup
+               b"SKB1": [(0, 0x2C), (8, 0x34)],                # bones, key bone lookup
+               b"SKA1": [(0, 0xF0), (8, 0xF8)]}                # attachments, attachment lookup
+BONE_SIZE, ATTACHMENT_SIZE, SEQUENCE_SIZE = 88, 40, 64
+BONE_TRACKS, ATTACHMENT_TRACKS = (16, 36, 56), (20,)
+
+
+def chunks(data):
+    out, pos = {}, 0
+    while pos + 8 <= len(data):
+        cid, size = struct.unpack_from("<4sI", data, pos)
+        out[cid] = data[pos + 8:pos + 8 + size]
+        pos += 8 + size
+    return out
+
+
+def merge_skel(b, skel, get_file):
+    """Put a retail .skel's skeleton into the MD20 being built (retail moved bones, sequences and
+    attachments of character models there). Returns {(anim id, sub id): 3.3.5 .anim bytes}.
+
+    Each chunk is appended whole and its arrays pointed at; offsets inside are relative to the
+    chunk, so the animation tracks of bones and attachments are relocated. Per-sequence key arrays
+    that live in .anim files (sequence without flag 0x20, track without global loop) are relative
+    to a chunk of that file instead: AFM2 (model tracks), AFSA (attachments), AFSB (bones). 3.3.5
+    reads one payload, so the three are concatenated and those offsets moved by their chunk's base.
+    """
+    c = chunks(skel)
+    if b"SKPD" in c:
+        raise ConvertError("skeleton has a parent skeleton (not handled yet)")
+    d = b.d
+    bases = {}
+    for cid, arrays in SKEL_ARRAYS.items():
+        if cid not in c:
+            continue
+        base = bases[cid] = b.add(c[cid])
+        for rel, header in arrays:
+            n, off = struct.unpack_from("<II", c[cid], rel)
+            struct.pack_into("<II", d, header, n, base + off if n else 0)
+    n_seq, seq_off = struct.unpack_from("<II", d, 0x1C)
+    seq_flags = [struct.unpack_from("<I", d, seq_off + i * SEQUENCE_SIZE + 12)[0] for i in range(n_seq)]
+    raw = c.get(b"AFID", b"")
+    afid = {struct.unpack_from("<HH", raw, i * 8): struct.unpack_from("<I", raw, i * 8 + 4)[0]
+            for i in range(len(raw) // 8)}
+    anims, anim_base = {}, {}  # anim_base[sequence index][chunk id] = offset in the joined payload
+    for k in range(n_seq):
+        key = struct.unpack_from("<HH", d, seq_off + k * SEQUENCE_SIZE)
+        if seq_flags[k] & 0x60 or not afid.get(key):
+            continue
+        parts, joined = chunks(get_file(afid[key])), b""
+        anim_base[k] = {}
+        for cid in (b"AFM2", b"AFSA", b"AFSB"):
+            joined += bytes(-len(joined) % 16)
+            anim_base[k][cid] = len(joined)
+            joined += parts.get(cid, b"")
+        anims[key] = joined
+
+    def relocate(track, base, anim_chunk):
+        _, global_loop = struct.unpack_from("<Hh", d, track)
+        for arr in (track + 4, track + 12):  # timestamps, values: arrays of per-sequence arrays
+            n, off = struct.unpack_from("<II", d, arr)
+            if not n:
+                continue
+            off += base
+            struct.pack_into("<I", d, arr + 4, off)
+            for k in range(n):
+                cnt, inner = struct.unpack_from("<II", d, off + k * 8)
+                if not cnt:
+                    continue
+                if global_loop >= 0 or (k < n_seq and seq_flags[k] & 0x20):
+                    struct.pack_into("<I", d, off + k * 8 + 4, inner + base)
+                elif k in anim_base:
+                    struct.pack_into("<I", d, off + k * 8 + 4, inner + anim_base[k][anim_chunk])
+
+    for cid, header, size, tracks, anim_chunk in (
+            (b"SKB1", 0x2C, BONE_SIZE, BONE_TRACKS, b"AFSB"),
+            (b"SKA1", 0xF0, ATTACHMENT_SIZE, ATTACHMENT_TRACKS, b"AFSA")):
+        if cid in bases:
+            n, off = struct.unpack_from("<II", d, header)
+            for i in range(n):
+                for t in tracks:
+                    relocate(off + i * size + t, bases[cid], anim_chunk)
+    return anims
 
 
 def convert_model(data, model_name, texture_name, get_file):
@@ -219,10 +304,12 @@ def convert_model(data, model_name, texture_name, get_file):
     """
     m = M2(data)
     warnings = []
-    if "SKID" in m.chunks:
-        raise ConvertError("uses a .skel skeleton file (not handled yet)")
     b = Blob(m.md20)
     d = b.d
+    skel_anims = {}
+    if "SKID" in m.chunks:
+        skel_anims = merge_skel(b, get_file(m.u32s("SKID")[0]), get_file)
+        m.arrays = {name: struct.unpack_from("<II", d, off) for off, name in ARRAYS}
     struct.pack_into("<I", d, 4, VERSION_WOTLK)
     struct.pack_into("<I", d, 0x10, m.flags & MODEL_FLAGS)
     b.set_array(0x08, len(model_name) + 1, model_name.encode() + b"\0")
@@ -234,7 +321,7 @@ def convert_model(data, model_name, texture_name, get_file):
     for i in range(len(raw) // 8):
         aid, sub, fid = struct.unpack_from("<HHI", raw, i * 8)
         afid[(aid, sub)] = fid
-    anims = {}
+    anims = dict(skel_anims)
     n, off = m.arrays["sequences"]
     high_ids = set()
     for i in range(n):
@@ -246,7 +333,7 @@ def convert_model(data, model_name, texture_name, get_file):
         struct.pack_into("<I", d, s + 28, blend_in)
         if aid > MAX_ANIM_ID:
             high_ids.add(aid)
-        if not flags & 0x60:  # neither inside the M2 (0x20) nor an alias (0x40): external .anim
+        if not flags & 0x60 and (aid, sub) not in anims:  # external .anim (not in-file 0x20 or alias 0x40)
             fid = afid.get((aid, sub))
             if not fid:
                 raise ConvertError(f"sequence {aid}-{sub} has no .anim file")
