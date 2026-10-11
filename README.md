@@ -182,7 +182,9 @@ ziglang.org zig-linux-x86_64-0.13.0); copy the DLL next to Wow.exe; under Wine/P
 4. **Later**: world doodads and textures through the same pipeline; HD character models for
    humanoid NPCs; ReShade (works with `-opengl`).
 
-5. **HD characters**: blood elves and tauren done; the other races next.
+5. **HD characters**: blood elves, tauren and orcs done; the other races next. Retail options with
+   no 3.3.5 counterpart (more beards, sideburns, earrings, headdresses) stay out: offering them would
+   need new style rows in the server's DBCs too.
 6. **Revisit**: gargoyle2 still crashes the client on live data (left out of picks.json; the
    mixed builds were not its cause); a recoloured felbat2 for the Stonewing Slayer instead; Anduin and Lady Vashj (missing .anim files); retail animations
    with ids past 3.3.5's 505.

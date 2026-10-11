@@ -33,6 +33,7 @@ from mpq import Client
 RACES = [
     (10, "bloodelf", "BloodElf", {0: "character/bloodelf/male/bloodelfmale_hd.m2",
                                   1: "character/bloodelf/female/bloodelffemale_hd.m2"}),
+    (2, "orc", "Orc", {0: "character/orc/male/orcmale_hd.m2", 1: "character/orc/female/orcfemale_hd.m2"}),
     (6, "tauren", "Tauren", {0: "character/tauren/male/taurenmale_hd.m2",
                              1: "character/tauren/female/taurenfemale_hd.m2"}),
 ]
@@ -75,7 +76,20 @@ def tauren_geosets(sid, allowed):
 TAUREN_NOSE_RINGS = {1603: (302,), 1602: (303, 306, 307, 309)}  # retail "Bead", "Open"
 
 
-RACE_GEOSETS = {6: tauren_geosets}
+def orc_geosets(sid, allowed):
+    """Orc hair styles and beards keep their ids (retail's choices follow 3.3.5's). Retail moved the
+    male tusks into their own option (40xx): natural tusks always drawn. 3.3.5's female piercing
+    styles (3xx) are retail earrings plus nose rings, matched by shape (earrings that keep the
+    default ears, 702)."""
+    new = ORC_GEOSETS.get(sid, NotImplemented)
+    if isinstance(new, tuple):
+        return tuple(k for k in new if k in allowed) or None
+    return new
+
+
+ORC_GEOSETS = {4001: 0, 4002: None, 4003: None, 4004: None,
+               3501: (302, 305), 3502: (303, 306), 3504: (307,), 1601: (304,), 1603: (305, 306)}
+RACE_GEOSETS = {6: tauren_geosets, 2: orc_geosets}
 # Horn Color choices (ChrCustomizationElement -> Material -> TextureFileData), by 3.3.5 hair colour
 HORN_TEXTURES = {0: ["01", "02", "03", "01", "07", "07", "07"], 1: ["01", "02", "03", "04", "10", "10", "10", "10"]}
 
