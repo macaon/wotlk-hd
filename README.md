@@ -134,6 +134,15 @@ crashed; the converter now leaves out undrawn submeshes and takes the most detai
 fits (arakkoa has none). Wow-hdchar.exe adds level in the three draw paths after 0x8203b0, so the
 HD characters keep full detail.
 
+## Client extension (client/)
+
+`client/dinput8.dll` is our code inside the client: Wow.exe imports DINPUT8.dll, so a dinput8.dll
+next to it is loaded first and forwards DirectInput8Create to the system one. Hooks for what byte
+patches cannot do cleanly go here (byte patches broke world objects when a submesh field turned
+out to be used at run time). Build with `client/build.sh` (Zig's toolchain, unpacked into cache/:
+ziglang.org zig-linux-x86_64-0.13.0); copy the DLL next to Wow.exe; under Wine/Proton set
+`WINEDLLOVERRIDES=dinput8=n,b`. It writes wotlk-hd.log next to the exe.
+
 ## Plan
 
 0. **Setup** (done): large-address-aware, FoV, survey.
