@@ -56,37 +56,44 @@ __declspec(dllexport) HRESULT WINAPI DirectInput8Create(HINSTANCE inst, DWORD ve
     return real_create(inst, version, iid, out, outer);
 }
 
-/* patches.h applied in memory: the cave at its fixed address, then every site, all or nothing. */
+/* patches.h applied in memory: the cave wherever VirtualAlloc puts it (addresses fixed up), then
+ * every site, all or nothing. */
 static void apply_character_patches(void) {
     unsigned i, n = sizeof(hd_sites) / sizeof(hd_sites[0]), ready = 0;
     for (i = 0; i < n; i++) {
         if (memcmp((void *)(UINT_PTR)hd_sites[i].va, hd_sites[i].orig, hd_sites[i].orig_len) == 0)
             ready++;
-        else if (memcmp((void *)(UINT_PTR)hd_sites[i].va, hd_sites[i].patch, hd_sites[i].orig_len) == 0)
-            wlog("character patches: site %08x already patched", hd_sites[i].va);
+        else
+            wlog("character patches: site %08x not as expected (already patched?)", hd_sites[i].va);
     }
     if (ready != n) {
         wlog("character patches: %u of %u sites as expected, none applied (patched exe or another build)", ready, n);
         return;
     }
-    void *cave = VirtualAlloc((void *)(UINT_PTR)HD_CAVE, 0x1000, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-    if (cave != (void *)(UINT_PTR)HD_CAVE) {
-        wlog("character patches: cave address %08x not free (%p), none applied", HD_CAVE, cave);
-        if (cave)
-            VirtualFree(cave, 0, MEM_RELEASE);
+    BYTE *cave = VirtualAlloc(NULL, 0x1000, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+    if (!cave) {
+        wlog("character patches: no memory for the cave (%lu), none applied", GetLastError());
         return;
     }
+    int shift = (int)((UINT_PTR)cave - HD_CAVE);
     memcpy(cave, hd_cave, sizeof(hd_cave));
+    for (i = 0; i < sizeof(hd_fixes) / sizeof(hd_fixes[0]); i++)
+        if (hd_fixes[i].site == ~0u)
+            *(int *)(cave + hd_fixes[i].offset) += hd_fixes[i].sign * shift;
     for (i = 0; i < n; i++) {
         DWORD old;
-        void *at = (void *)(UINT_PTR)hd_sites[i].va;
+        unsigned j;
+        BYTE *at = (BYTE *)(UINT_PTR)hd_sites[i].va;
         VirtualProtect(at, hd_sites[i].patch_len, PAGE_EXECUTE_READWRITE, &old);
         memcpy(at, hd_sites[i].patch, hd_sites[i].patch_len);
+        for (j = 0; j < sizeof(hd_fixes) / sizeof(hd_fixes[0]); j++)
+            if (hd_fixes[j].site == i)
+                *(int *)(at + hd_fixes[j].offset) += hd_fixes[j].sign * shift;
         VirtualProtect(at, hd_sites[i].patch_len, old, &old);
     }
     FlushInstructionCache(GetCurrentProcess(), NULL, 0);
-    wlog("character patches: %u sites applied, cave at %08x (1024x512 character textures, 32-bit index starts)", n,
-         HD_CAVE);
+    wlog("character patches: %u sites applied, cave at %p (1024x512 character textures, 32-bit index starts)", n,
+         cave);
 }
 
 BOOL WINAPI DllMain(HINSTANCE dll, DWORD reason, LPVOID reserved) {
