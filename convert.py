@@ -44,6 +44,9 @@ PARTICLE_MULTITEXTURE = 0x10000000
 PARTICLE_COMPRESSED_GRAVITY = 0x00800000  # gravity keys are packed vectors, not floats
 PARTICLE_BLEND_MAX = 4
 FAR_CLIP_WOTLK = 27.777779  # retail portrait cameras store 100x this
+# 3.3.5 knows key bones 0..26 (its own models never use more); retail numbers them past 290, and a
+# Stonewing Slayer (gargoyle2, key bones up to 286) garbled and crashed the client while animating.
+MAX_KEY_BONE = 26
 
 
 class ConvertError(Exception):
@@ -82,13 +85,14 @@ def convert_shader(shader, tex_count):
     return 0, min(tex_count, 2), COORD_T1_T2
 
 
-def convert_skin(data, vertex_bones, bone_lookup, glow_material=None):
+def convert_skin(data, vertex_bones, bone_lookup, glow_material=None, n_colors=None):
     """A retail .skin as a 3.3.5 one (48-byte header). Returns bytes.
 
     vertex_bones(v) -> set of bones model vertex v is weighted to (absolute bone indices);
     vertex_bones(v, slots=True) -> its 4 influence slots, None where the weight is 0.
     bone_lookup: the model's bone lookup table; palettes of split submeshes are appended to it.
     glow_material: material index for the extra additive batch of EFFECT_GLOW batches.
+    n_colors: the model's color count; batches pointing past it get none (retail boar2 does).
 
     A submesh over MAX_BONES_PER_SUBMESH is split, in triangle order, into submeshes that each fit.
     Skin vertices store bone indices relative to their submesh's palette (bone_lookup[combo + i]),
@@ -165,6 +169,10 @@ def convert_skin(data, vertex_bones, bone_lookup, glow_material=None):
             struct.pack_into("<BbH", glow, 0, flags & BATCH_FLAGS, prio, 0)
             struct.pack_into("<HHHHH", glow, 10, glow_material, layer + 1, 1, tcombo + 2, COORD_T1_ENV)
             shader, tcount = 0x8000, 2  # effect 0 for the first two textures
+        if n_colors is not None and color >= n_colors:
+            struct.pack_into("<h", b, 8, -1)
+            if glow:
+                struct.pack_into("<h", glow, 8, -1)
         shader, tcount, coord = convert_shader(shader, tcount)
         struct.pack_into("<BbH", b, 0, flags & BATCH_FLAGS, prio, shader)
         struct.pack_into("<H", b, 14, tcount)
@@ -423,9 +431,24 @@ def convert_model(data, model_name, texture_name, get_file):
             return [b[k] if w[k] else None for k in range(4)]
         return {b[k] for k in range(4) if w[k]}
 
+    # Key bones 3.3.5 does not know: off on the bones, and the lookup only as long as 3.3.5's.
+    n, off = struct.unpack_from("<II", d, 0x2C)
+    for i in range(n):
+        if struct.unpack_from("<i", d, off + i * 88)[0] > MAX_KEY_BONE:
+            struct.pack_into("<i", d, off + i * 88, -1)
+    n, off = struct.unpack_from("<II", d, 0x34)
+    if n > MAX_KEY_BONE + 1:
+        struct.pack_into("<I", d, 0x34, MAX_KEY_BONE + 1)
+    # Lookups to texture transforms the model does not have (retail leaves 0 with none): none.
+    n_tt = struct.unpack_from("<I", d, 0x60)[0]
+    n, off = struct.unpack_from("<II", d, 0x98)
+    for i in range(n):
+        if struct.unpack_from("<h", d, off + i * 2)[0] >= n_tt:
+            struct.pack_into("<h", d, off + i * 2, -1)
+
     n_mat, mat_off = m.arrays["materials"]  # plus GLOW_MATERIAL, unused unless a batch needs it
     b.set_array(0x70, n_mat + 1, bytes(d[mat_off:mat_off + n_mat * 4]) + struct.pack("<HH", *GLOW_MATERIAL))
-    skins = [convert_skin(skin, vertex_bones, bone_lookup, n_mat)]
+    skins = [convert_skin(skin, vertex_bones, bone_lookup, n_mat, struct.unpack_from("<I", d, 0x48)[0])]
     if len(bone_lookup) > n:
         if len(bone_lookup) > 0xFFFF:
             raise ConvertError("bone lookup too large after splitting")
@@ -541,6 +564,13 @@ def check(m2_bytes, skins):
     nl, ol = m.arrays["bone_lookup"]
     bone_lookup = struct.unpack_from(f"<{nl}H", d, ol)
     _, voff = m.arrays["vertices"]
+    n_colors = m.count("colors")
+    nb, bo = m.arrays["bones"]
+    assert all(struct.unpack_from("<i", d, bo + i * 88)[0] <= MAX_KEY_BONE for i in range(nb)), "key bone 3.3.5 lacks"
+    assert m.count("key_bone_lookup") <= MAX_KEY_BONE + 1, "key bone lookup longer than 3.3.5's"
+    n, off = m.arrays["texture_transform_lookup"]
+    assert all(t < m.count("texture_transforms") for t in struct.unpack_from(f"<{n}h", d, off)), \
+        "texture transform lookup points past the transforms"
     for s in skins:
         nv, ov, ni, oi, nb, ob, ns, os_, nt, ot = struct.unpack_from("<10I", s, 4)
         lookup = struct.unpack_from(f"<{nv}H", s, ov)
@@ -563,6 +593,7 @@ def check(m2_bytes, skins):
             flags, prio, shader, sub, geo, color, mat, layer, tcount, tcombo, coord = \
                 struct.unpack_from("<BbHHHhHHHHH", s, ot + i * 24)
             assert sub < ns and mat < n_mat, "batch submesh/material out of range"
+            assert color == -1 or color < n_colors, "batch color out of range"
             assert tcombo + tcount <= n_tex_lookup, "batch texture combo out of range"
             assert coord + tcount <= n_units, "batch coord combo out of range"
     return True

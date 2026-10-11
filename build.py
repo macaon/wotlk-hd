@@ -52,6 +52,9 @@ def load_upgrades():
 # SPLITS: upgrades of only some displays of the old model (plan.py "only"), the ones retail gave a
 # variant model of their own; they go next to the old model and are built before the rest.
 UPGRADES, SPLITS = load_upgrades()
+# Retail files the converter reads wrongly: boar2's triangles join the wrong vertices (45% are
+# longer than 15% of the model; the other models ~0%). Left out until understood.
+BROKEN = {"boar"}
 
 # 3.3.5 CreatureDisplayInfo.dbc columns
 CDI_MODEL, CDI_EXTRA, CDI_SCALE, CDI_TEX, CDI_GEOSETS = 1, 3, 4, 6, 14
@@ -247,7 +250,7 @@ def build(names):
 
 
 if __name__ == "__main__":
-    names = sys.argv[1:] or list(UPGRADES)
+    names = sys.argv[1:] or [n for n in UPGRADES if n not in BROKEN]
     names.sort(key=lambda n: n not in SPLITS)  # moved displays then no longer look like the old model
     unknown = [n for n in names if n not in UPGRADES]
     if unknown:
