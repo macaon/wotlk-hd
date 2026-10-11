@@ -154,6 +154,34 @@ and FoV stay in Wow-hd.exe (LAA must be in the exe header). Build with `client/b
 ziglang.org zig-linux-x86_64-0.13.0); copy the DLL next to Wow.exe; under Wine/Proton set
 `WINEDLLOVERRIDES=dinput8=n,b`. It writes wotlk-hd.log next to the exe.
 
+## Adding a race (HD character models)
+
+Blood elves, orcs and tauren are done; each race is an entry in `chars.py` `RACES` plus, where retail
+reorganised it, a geoset function in `RACE_GEOSETS`. Order of work:
+
+1. `charcheck.py options <dir> <sex>`: retail's customization options, each choice's geosets, in
+   retail's order (its first choices follow 3.3.5's style order: that order is the mapping).
+   `charcheck.py geosets <dir> <sex> <race id>`: 3.3.5 and retail geoset ids, 3.3.5's hair and
+   facial style tables (facial columns are 1xx, 3xx, 2xx) and the 3.3.5 display x model scale.
+2. Map what moved: same ids need nothing (orc hair, beards); pieces split into new options get a
+   geoset function (tauren: horns 24xx and foremane under one 3.3.5 style id, nose rings 16xx for
+   3xx; orc: tusks 40xx always drawn, piercings as earring 35xx + nose ring 16xx). A geoset map may
+   return a tuple (one retail piece drawn for several styles) or 0 (always drawn).
+   When ids or order do not settle it, `charcheck.py match <dir> <sex> <3.3.5 ids> [groups]`
+   (needs numpy and scipy) ranks retail pieces by shape; beards redesigned in HD match nothing well.
+3. Add the race to `RACES`, run `chars.py` (after `build.py` only matters for the creature patch),
+   then `charcheck.py built <dir> <sex>`: skin-textured vertices outside 3.3.5's regions draw black
+   (tauren throat: `THROAT_RACES`, the face lower region), keyframes in missing .anim files or
+   starting after 0 crash the client (the converter fixes both; this confirms it).
+4. In game: character select size (meshes are shrunk by the 3.3.5 scale, `native_scale`), every
+   hair, facial and colour choice, and NPCs on the race's model (they play animations players
+   do not: the Lazy Peon's lie-down found the alias bug).
+
+Pitfalls seen so far: retail-only texture types (19 eyes, 20 jewelry: fixed files); the skin extra
+(type 8, tauren fur) shared per three skin colours in retail; `mpq.Client()`'s default chain leaves
+out our own patches (read out/patch-6.MPQ explicitly, as charcheck does); retail textures past
+3.3.5's layout (the face sheet is region 8, face upper; facial hair sheets go there too).
+
 ## To fix later
 
 - Blood elf eye glow colour: retail's plain glow (1701) shows cyan rather than fel green.
