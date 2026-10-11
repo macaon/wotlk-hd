@@ -14,7 +14,8 @@ through convert.py (their skeletons are .skel files); then:
   CharacterFacialHairStyles stay as they are.
 - textures: types 3.3.5 lacks become ones it has: guild emblem layers (15-18, cloak 1507) the
   cape, the eye texture (19) a fixed file, the extra skin layer (9) the body.
-- CharSections.dbc: skin, face, hair and underwear textures point at retail's HD files. The HD
+- CharSections.dbc: skin, face, hair and underwear textures point at retail's HD files, those the
+  compositor reads re-encoded as paletted BLP2 (blp.py; it draws retail's DXT green). The HD
   face is one image covering both face regions, so it fills both face slots; facial hair and scalp
   textures (classic layout) are left out.
 """
@@ -22,6 +23,7 @@ import collections
 import os
 import struct
 
+import blp
 import build
 import convert
 import fetch
@@ -107,12 +109,14 @@ def char_sections(cs, race, race_dir, sex, files, report):
     lower, _ = SEXES[sex]
     prefix = f"character/{race_dir}/{lower}/{race_dir}{lower}"
 
-    def hd(name):
+    def hd(name, composited=True):
+        """Path of retail texture `name` in the patch; textures the compositor reads re-encoded."""
         fid = fetch.fdid(name)
         if not fid:
             return None
         path = build.mpq_path(name)
-        files[path] = fetch.get(fid)
+        if path not in files:
+            files[path] = blp.reencode(fetch.get(fid)) if composited else fetch.get(fid)
         return path
     changed = collections.Counter()
     for r in cs.rows:
@@ -127,7 +131,7 @@ def char_sections(cs, race, race_dir, sex, files, report):
         elif r[CS_SECTION] == FACIAL_HAIR:
             want = ["", "", ""]
         elif r[CS_SECTION] == HAIR:
-            want = [hd(f"character/{race_dir}/hair00_{c:02d}_hd.blp"), "", ""]
+            want = [hd(f"character/{race_dir}/hair00_{c:02d}_hd.blp", composited=False), "", ""]
         elif r[CS_SECTION] == UNDERWEAR:
             want = [hd(f"{prefix}nakedpelvisskin00_{c:02d}_hd.blp"), hd(f"{prefix}nakedtorsoskin00_{c:02d}_hd.blp"), None]
         else:

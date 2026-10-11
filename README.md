@@ -141,8 +141,8 @@ catches it: each skin vertex's palette bone (skin) must be its model vertex's bo
 4. **Later**: world doodads and textures through the same pipeline; HD character models for
    humanoid NPCs; ReShade (works with `-opengl`).
 
-5. **Revisit**: gargoyle2 in game on live data (Stonewing Slayer; or a recoloured felbat2 if it
-   still looks wrong for the NPC); Anduin and Lady Vashj (missing .anim files); retail animations
+5. **Revisit**: gargoyle2 still crashes the client on live data (left out of picks.json; the
+   mixed builds were not its cause); a recoloured felbat2 for the Stonewing Slayer instead; Anduin and Lady Vashj (missing .anim files); retail animations
    with ids past 3.3.5's 505.
 
 Risks: newer models can look flat with 3.3.5 shaders; memory in a 32-bit client.
