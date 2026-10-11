@@ -57,8 +57,8 @@ def tauren_geosets(sid, allowed):
     """Retail splits 3.3.5's tauren hair style (horns and hair in one geoset, style v = geoset v + 2)
     into Horn Style (choice v = 2401 + v), Foremane (1-4) and Hair (2xx), and its facial style v
     (1xx, 2xx and 3xx of v + 1) into Facial Hair (10v) and Hair (20v); ChrCustomizationChoice order
-    follows 3.3.5's. Every horn style gets retail's default foremane (1, "Short"); 3xx has no
-    retail counterpart."""
+    follows 3.3.5's. Every horn style gets retail's default foremane (1, "Short"). 3.3.5's 3xx are
+    nose rings, retail's Nose Ring option (16xx), matched by shape (most vertices within 3 cm)."""
     if sid == 1:
         return tuple(sorted(k for k in allowed if 2 <= k < 100))
     if 1 < sid < 100:
@@ -67,7 +67,12 @@ def tauren_geosets(sid, allowed):
         return sid - 2399 if sid - 2399 in allowed else None
     if 100 < sid < 300:
         return sid + 1 if sid + 1 in allowed else None
+    if sid in TAUREN_NOSE_RINGS:
+        return tuple(k for k in TAUREN_NOSE_RINGS[sid] if k in allowed) or None
     return NotImplemented
+
+
+TAUREN_NOSE_RINGS = {1603: (302,), 1602: (303, 306, 307, 309)}  # retail "Bead", "Open"
 
 
 RACE_GEOSETS = {6: tauren_geosets}
