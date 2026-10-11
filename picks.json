@@ -276,7 +276,7 @@
   }
  },
  "gargoyle": {
-  "include": false,
+  "include": true,
   "old": "creature/gargoyle/gargoyle.m2",
   "new": "creature/gargoyle2/gargoyle2.m2",
   "skins": {

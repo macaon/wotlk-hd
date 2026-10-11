@@ -435,6 +435,18 @@ def convert_model(data, model_name, texture_name, get_file):
     if high_ids:
         warnings.append(f"animation ids above 3.3.5's {MAX_ANIM_ID} (never played): {sorted(high_ids)}")
 
+    # 3.3.5 reads sequence_lookup directly by animation id; retail's is a hash table (blood elf
+    # HD: 701 slots for ids up to 1818, so 158 ids gave another sequence; gargoyle2: 223 slots, so
+    # ids past 222 read beyond it, garbling and crashing the client). Rebuilt as 3.3.5's: the first
+    # sequence of each id, -1 where there is none.
+    lookup = {}
+    for i in range(n):
+        aid, = struct.unpack_from("<H", d, off + i * SEQUENCE_SIZE)
+        if aid <= MAX_ANIM_ID:
+            lookup.setdefault(aid, i)
+    table = [lookup.get(a, -1) for a in range(max(lookup, default=-1) + 1)]
+    b.set_array(0x24, len(table), struct.pack(f"<{len(table)}h", *table))
+
     # Textures: retail names hardcoded textures by FileDataID (TXID); 3.3.5 needs a path.
     txid = m.u32s("TXID")
     n, off = m.arrays["textures"]
@@ -674,6 +686,11 @@ def check(m2_bytes, skins):
     bone_lookup = struct.unpack_from(f"<{nl}H", d, ol)
     _, voff = m.arrays["vertices"]
     n_colors = m.count("colors")
+    n_seq, seq_off = m.arrays["sequences"]
+    n, off = m.arrays["sequence_lookup"]
+    for aid, k in enumerate(struct.unpack_from(f"<{n}h", d, off)):
+        assert k == -1 or (k < n_seq and struct.unpack_from("<H", d, seq_off + k * SEQUENCE_SIZE)[0] == aid), \
+            f"sequence lookup: id {aid} gives sequence {k}"
     nb, bo = m.arrays["bones"]
     assert all(struct.unpack_from("<i", d, bo + i * 88)[0] <= MAX_KEY_BONE for i in range(nb)), "key bone 3.3.5 lacks"
     assert m.count("key_bone_lookup") <= MAX_KEY_BONE + 1, "key bone lookup longer than 3.3.5's"
