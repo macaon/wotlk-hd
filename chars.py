@@ -46,7 +46,7 @@ JOIN = {2001: 501, 2301: 401, 2201: 0, 3202: 0, 3301: 0, 3401: 0,  # 3202 is the
 RENAME = {10: {1701: 1702, 1702: None, 1703: None, 1704: None, 1705: None}}
 KEEP_GROUPS = {0, 1, 4, 5, 7, 8, 9, 10, 11, 12, 13, 15, 17, 18}
 TEXTURE_TYPES = {15: 2, 16: 2, 17: 2, 18: 2, 9: 1}
-EYE_TYPE, JEWELRY_TYPE = 19, 20
+EYE_TYPE, JEWELRY_TYPE, SKIN_EXTRA_TYPE = 19, 20, 8
 # CharSections columns: ID, race, sex, section, texture 1..3, flags, variation, color
 CS_RACE, CS_SEX, CS_SECTION, CS_TEX, CS_VARIATION, CS_COLOR = 1, 2, 3, 4, 8, 9
 SKIN, FACE, FACIAL_HAIR, HAIR, UNDERWEAR = range(5)
@@ -68,8 +68,6 @@ def tauren_geosets(sid, allowed):
         return sid - 2399 if sid - 2399 in allowed else None
     if 100 < sid < 300:
         return sid + 1 if sid + 1 in allowed else None
-    if sid == 3201:  # the cap closing the back of the face (3202) above the neck
-        return 0
     if sid in TAUREN_NOSE_RINGS:
         return tuple(k for k in TAUREN_NOSE_RINGS[sid] if k in allowed) or None
     return NotImplemented
@@ -136,6 +134,36 @@ def textures(m2, eye_path, jewelry_path=None):
     return bytes(b.d)
 
 
+def alpha_keyed_fur(m2, skins):
+    """Batches drawing the skin extra (type 8: tauren fur, strands with transparent gaps) alpha
+    keyed, as 3.3.5's own models do: retail's are opaque blend with the cutout in its shaders,
+    and 3.3.5 drew the gaps black (the tauren neck). They get their own copy of the material."""
+    b = convert.Blob(m2)
+    n_tex, tex_off = struct.unpack_from("<II", b.d, 0x50)
+    types = [struct.unpack_from("<I", b.d, tex_off + i * 16)[0] for i in range(n_tex)]
+    n_tl, tl_off = struct.unpack_from("<II", b.d, 0x80)
+    lookup = [struct.unpack_from("<h", b.d, tl_off + i * 2)[0] for i in range(n_tl)]
+    n_mat, mat_off = struct.unpack_from("<II", b.d, 0x70)
+    mats = [struct.unpack_from("<HH", b.d, mat_off + i * 4) for i in range(n_mat)]
+    keyed = {}
+    out = []
+    for skin in skins:
+        s = bytearray(skin)
+        nb, ob = struct.unpack_from("<II", s, 0x24)
+        for i in range(nb):
+            mat, = struct.unpack_from("<H", s, ob + i * 24 + 10)
+            tex, = struct.unpack_from("<H", s, ob + i * 24 + 16)
+            if types[lookup[tex]] == SKIN_EXTRA_TYPE and mats[mat][1] == 0:
+                if mat not in keyed:
+                    keyed[mat] = len(mats)
+                    mats.append((mats[mat][0], 1))
+                struct.pack_into("<H", s, ob + i * 24 + 10, keyed[mat])
+        out.append(bytes(s))
+    if keyed:
+        b.set_array(0x70, len(mats), b"".join(struct.pack("<HH", *m) for m in mats))
+    return bytes(b.d), out
+
+
 def single_layer_eyes(m2, skin, eye_path):
     """Eye batches draw the eye texture alone: retail adds a reflection layer, and two layers through
     3.3.5's default shader multiply the eye into near-black orbs."""
@@ -184,6 +212,7 @@ def model(race, hd_path, old_path, files, report, dropped):
     jewelry_fid = next((f for n, f in fetch._listfile()[1].items() if n.startswith(jewelry) and n.endswith(".blp")), None)
     m2 = textures(m2, eye_path, jewelry_fid and texture_name(jewelry_fid))
     skins = [single_layer_eyes(m2, s, eye_path) for s in skins]
+    m2, skins = alpha_keyed_fur(m2, skins)
     convert.check(m2, skins, allow_level=True)
     files[old_path] = m2
     for i, s in enumerate(skins):

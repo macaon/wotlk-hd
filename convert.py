@@ -280,6 +280,7 @@ SKEL_ARRAYS = {b"SKS1": [(0, 0x14), (8, 0x1C), (16, 0x24)],   # global loops, se
                b"SKB1": [(0, 0x2C), (8, 0x34)],                # bones, key bone lookup
                b"SKA1": [(0, 0xF0), (8, 0xF8)]}                # attachments, attachment lookup
 BONE_SIZE, ATTACHMENT_SIZE, SEQUENCE_SIZE = 88, 40, 64
+SEQ_INLINE, SEQ_ALIAS = 0x20, 0x40  # sequence flags: keys in the .m2 itself; alias of aliasNext
 BONE_TRACKS, ATTACHMENT_TRACKS = (16, 36, 56), (20,)
 
 
@@ -367,6 +368,94 @@ def repack(m2):
     return bytes(out.d), kept
 
 
+def resolve_aliases(m2, anims):
+    """Alias sequences (flag 0x40: use the keys of sequence aliasNext) made self-contained: each
+    track's entry for the alias copies its target's, the target's .anim is stored under the alias's
+    name, and the flag goes. Their entries pointed into .anim files that do not exist, and 3.3.5
+    read keys from them (the Lazy Peon lying down: it exploded and crashed)."""
+    d = bytearray(m2)
+    anims = dict(anims)
+    arrays = {name: struct.unpack_from("<II", d, off) for off, name in ARRAYS}
+    n_seq, seq_off = arrays["sequences"]
+    flags = lambda k: struct.unpack_from("<I", d, seq_off + k * SEQUENCE_SIZE + 12)[0]
+    target = {}
+    for k in range(n_seq):
+        t, seen = k, set()
+        while flags(t) & SEQ_ALIAS and t not in seen:
+            seen.add(t)
+            t, = struct.unpack_from("<H", d, seq_off + t * SEQUENCE_SIZE + 62)
+            if t >= n_seq:
+                break
+        if t != k and t < n_seq and not flags(t) & SEQ_ALIAS:
+            target[k] = t
+    if not target:
+        return m2, anims
+    for name, (size, tracks) in TRACK_ARRAYS.items():
+        n, off = arrays[name]
+        for i in range(n):
+            for t_off, _ in tracks:
+                pos = off + i * size + t_off
+                for arr in (pos + 4, pos + 12):
+                    cnt, outer = struct.unpack_from("<II", d, arr)
+                    for k, t in target.items():
+                        if k < cnt and t < cnt:
+                            d[outer + k * 8:outer + k * 8 + 8] = d[outer + t * 8:outer + t * 8 + 8]
+    for k, t in target.items():
+        s, ts = seq_off + k * SEQUENCE_SIZE, seq_off + t * SEQUENCE_SIZE
+        struct.pack_into("<I", d, s + 12, (flags(k) & ~(SEQ_ALIAS | SEQ_INLINE)) | (flags(t) & SEQ_INLINE))
+        key, tkey = struct.unpack_from("<HH", d, s), struct.unpack_from("<HH", d, ts)
+        if not flags(t) & SEQ_INLINE and tkey in anims:
+            anims[key] = anims[tkey]
+    return bytes(d), anims
+
+
+def keys_from_zero(m2, anims):
+    """Every animated track's keys starting at time 0, a key holding the first value prepended
+    where retail's start later. 3.3.5's key search (0x8284d0) binary-searches once a sequence is
+    past 500 ms and underflows its upper bound when the time is before the first key: it read
+    far outside the timestamps and crashed (Durotar). Returns (m2, anims, tracks fixed)."""
+    d = bytearray(m2)
+    anims = {k: bytearray(v) for k, v in anims.items()}
+    arrays = {name: struct.unpack_from("<II", d, off) for off, name in ARRAYS}
+    n_seq, seq_off = arrays["sequences"]
+    seqs = [struct.unpack_from("<HH", d, seq_off + k * SEQUENCE_SIZE) for k in range(n_seq)]
+    seq_flags = [struct.unpack_from("<I", d, seq_off + k * SEQUENCE_SIZE + 12)[0] for k in range(n_seq)]
+    fixed = 0
+
+    def append(buf, data):
+        buf.extend(b"\0" * (-len(buf) % 16))
+        at = len(buf)
+        buf.extend(data)
+        return at
+    for name, (size, tracks) in TRACK_ARRAYS.items():
+        n, off = arrays[name]
+        for i in range(n):
+            for t, key_size in tracks:
+                pos = off + i * size + t
+                global_loop, = struct.unpack_from("<h", d, pos + 2)
+                n_ts, ts_off = struct.unpack_from("<II", d, pos + 4)
+                n_vs, vs_off = struct.unpack_from("<II", d, pos + 12)
+                for k in range(min(n_ts, n_vs)):
+                    cnt, ts = struct.unpack_from("<II", d, ts_off + k * 8)
+                    vcnt, vs = struct.unpack_from("<II", d, vs_off + k * 8)
+                    if not cnt or vcnt != cnt:
+                        continue
+                    if global_loop >= 0 or k >= n_seq or seq_flags[k] & 0x20:
+                        buf = d
+                    else:
+                        buf = anims.get(seqs[k])
+                        if buf is None:
+                            continue
+                    if struct.unpack_from("<I", buf, ts)[0] == 0:
+                        continue
+                    new_ts = append(buf, b"\0\0\0\0" + bytes(buf[ts:ts + cnt * 4]))
+                    new_vs = append(buf, bytes(buf[vs:vs + key_size]) + bytes(buf[vs:vs + cnt * key_size]))
+                    struct.pack_into("<II", d, ts_off + k * 8, cnt + 1, new_ts)
+                    struct.pack_into("<II", d, vs_off + k * 8, cnt + 1, new_vs)
+                    fixed += 1
+    return bytes(d), {k: bytes(v) for k, v in anims.items()}, fixed
+
+
 def scale_model(m2, anims, f):
     """The model and its .anim files uniformly scaled by f: positions, pivots, translation keys,
     bounds, move speeds and cameras. For HD character meshes that build in a race size 3.3.5 adds
@@ -388,6 +477,8 @@ def scale_model(m2, anims, f):
         mul(d, s + 8, 1)    # move speed
         mul(d, s + 32, 7)   # bounding box and radius
 
+    done = set()  # (buffer, offset): resolved aliases share their target's keys
+
     def track(pos, floats):
         """Scale every key value of the track at pos (floats per key), in the model or .anim."""
         global_loop, = struct.unpack_from("<h", d, pos + 2)
@@ -402,6 +493,9 @@ def scale_model(m2, anims, f):
                 buf = anims.get(seqs[k])
                 if buf is None:
                     continue  # a sequence left out (ids past MAX_ANIM_ID)
+            if (id(buf), inner) in done:
+                continue
+            done.add((id(buf), inner))
             mul(buf, inner, cnt * floats)
     n, off = arrays["vertices"]
     for i in range(n):
@@ -690,7 +784,11 @@ def convert_model(data, model_name, texture_name, get_file, lod=0, geoset_map=No
         warnings.append(f"split submeshes over {MAX_BONES_PER_SUBMESH} bones")
     struct.pack_into("<I", d, 0x44, len(skins))
     m2, kept = repack(d)
-    return m2, skins, {k: v for k, v in anims.items() if k in kept}, warnings
+    m2, anims = resolve_aliases(m2, {k: v for k, v in anims.items() if k in kept})
+    m2, anims, fixed = keys_from_zero(m2, anims)
+    if fixed:
+        warnings.append(f"{fixed} tracks given a key at time 0")
+    return m2, skins, anims, warnings
 
 
 def convert_model_fitting(data, model_name, texture_name, get_file, geoset_map=None, optional=None,
