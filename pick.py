@@ -3,8 +3,8 @@
 usage: pick.py    then open out/pick.html, review, and save picks.json into this folder
 
 Each old model gets a row: include or not, and for every old skin the retail display whose look it
-takes (textures and geosets), pre-filled with the closest colour match, or "keep old model" (molten
-giants have no lava mountaingiant2). build.py reads picks.json.
+takes (textures and geosets), pre-filled with the closest colour match, or "keep old model".
+Displays retail split off to a variant model (molten giants) are upgraded by build.SPLITS instead. build.py reads picks.json.
 An existing picks.json is loaded into the page, so choices can be revised later.
 """
 import base64
@@ -63,6 +63,7 @@ def main():
     rdisp, rmodel, rgeosets = build.retail_tables()
     saved = json.load(open(PICKS)) if os.path.exists(PICKS) else {}
     taken = {u[0] for n, u in build.UPGRADES.items() if n not in build.SPLITS}
+    split = set().union(*build.SPLITS.values())  # displays with an upgrade of their own
     models = []
     for n_displays, old, new, old_tris, new_tris, _ in plan.unlinked():
         if old in taken:
@@ -73,7 +74,8 @@ def main():
         # old skins: slot-0 texture name of the old model's displays
         old_skins = collections.Counter(
             cdi.string(r[build.CDI_TEX]).lower() for r in cdi.rows
-            if model_path.get(r[build.CDI_MODEL]) == old and not r[build.CDI_EXTRA] and r[build.CDI_TEX])
+            if model_path.get(r[build.CDI_MODEL]) == old and not r[build.CDI_EXTRA] and r[build.CDI_TEX]
+            and r[0] not in split)
         # retail looks: one per skin texture (its most used geosets, i.e. outfit), most used first
         outfits = collections.defaultdict(collections.Counter)
         for did, r in rdisp.items():
