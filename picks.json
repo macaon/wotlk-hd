@@ -1,0 +1,684 @@
+{
+ "furbolg": {
+  "include": true,
+  "old": "creature/furbolg/furbolg.m2",
+  "new": "creature/furbolg2/furbolg2.m2",
+  "skins": {
+   "furbolgskinbrown": 102909,
+   "furbolgskinblue": 101443,
+   "furbolgskinwhite": 103447,
+   "furbolgskingray": 101443,
+   "furbolgskinblack": 103452,
+   "furbolgskintan": 103447,
+   "furbolgskinyellowbrown": 102909
+  }
+ },
+ "raptor": {
+  "include": true,
+  "old": "creature/raptor/raptor.m2",
+  "new": "creature/raptor2/raptor2.m2",
+  "skins": {
+   "raptorskinorange": 59537,
+   "raptorskinviolet": 59538,
+   "raptorskinred": 59538,
+   "raptorskinmottledbluegreen": 59539,
+   "raptorskinmottleddarkgreen": 59540,
+   "ridingraptorskinobsidian": 59541,
+   "raptorskingrey": 59539,
+   "raptorskinyellow": 59537
+  }
+ },
+ "owl": {
+  "include": true,
+  "old": "creature/owl/owl.m2",
+  "new": "creature/owl2/owl2.m2",
+  "skins": {
+   "owlbrown": 64329,
+   "owlgrey": 64331,
+   "owlwhite": 64331,
+   "owlblack": 64328,
+   "owlarrokoagreen": 64329,
+   "owljade": 64331,
+   "owlarrokoapurple": 64330,
+   "owlarrokoared": 64329,
+   "owlblue": 64331,
+   "owlspirit": 64331,
+   "owlsapphire": 64331
+  }
+ },
+ "harpy": {
+  "include": true,
+  "old": "creature/harpy/harpy.m2",
+  "new": "creature/harpy2/harpy2.m2",
+  "skins": {
+   "harpybrown": 63596,
+   "harpyblack": 63605,
+   "harpyred": 63598,
+   "harpyivory": 63597,
+   "harpypurple": 63597,
+   "harpyblue": 63604,
+   "harpyorangered": 63598,
+   "harpyaqua": 63604,
+   "harpyyellow": 63596,
+   "harpygreen": 63604
+  }
+ },
+ "mountaingiant": {
+  "include": true,
+  "old": "creature/mountaingiant/mountaingiant.m2",
+  "new": "creature/mountaingiant2/mountaingiant2.m2",
+  "skins": {
+   "mountaingiant": 106016,
+   "hillgiant": 106014,
+   "moltengiant": 100214,
+   "forestgiant": 106015,
+   "tundragiant": 100846,
+   "mountaingiantpartialwhitecrystal": 100847,
+   "mountaingiantwhitecrystal": 100846,
+   "felgiantgreen": 105489
+  }
+ },
+ "bogbeast": {
+  "include": true,
+  "old": "creature/bogbeast/bogbeast.m2",
+  "new": "creature/bogbeast2/bogbeast2.m2",
+  "skins": {
+   "bogbeastskinblackgreen": 115575,
+   "bogbeastskinred": 115577,
+   "bogbeastskingreen": 115577,
+   "bogbeastskindiseased": 115575,
+   "bogbeastskinyellow": 115577,
+   "bogbeastskindesert": 115577
+  }
+ },
+ "dragonwhelp": {
+  "include": true,
+  "old": "creature/dragonwhelp/dragonwhelp.m2",
+  "new": "creature/dragonwhelp3/dragonwhelp3.m2",
+  "skins": {
+   "dragonwhelpskinblack": 100197,
+   "dragonwhelpskingreen": 101643,
+   "dragonwhelpskinred": 102140,
+   "dragonwhelpskinblue": 102138,
+   "dragonwhelpskinmechanical": 107456,
+   "dragonwhelpskinbronze": 102137,
+   "dragonwhelpskindiseased": 101643,
+   "dragonwhelpskinbluedragonflight": 102138,
+   "dragonwhelpskinpurple": 102139
+  }
+ },
+ "lasherorchid": {
+  "include": true,
+  "old": "creature/lasherorchid/lasherorchid.m2",
+  "new": "creature/lasherorchid2/lasherorchid2.m2",
+  "skins": {
+   "lasherorchidskingreen": 75988,
+   "lasherorchidskinblue": 76017,
+   "lasherorchidskinred": 75988,
+   "lasherorchidskinpurple": 76017,
+   "lasherorchidskinwhite": 76017,
+   "lasherorchidskinbrown": 75988,
+   "lasherorchidskinblack": 75988,
+   "lasherorchidskinturquoise": 76017,
+   "lasherorchidskinviolet": 76017,
+   "lasherorchidskinindigo": 76017
+  }
+ },
+ "mammoth": {
+  "include": true,
+  "old": "creature/mammoth/mammoth.m2",
+  "new": "creature/mammoth2/mammoth2.m2",
+  "skins": {
+   "mammothmountbrown": 104750,
+   "mammothmountblack": 104743,
+   "mammothmountwhite": 104623
+  }
+ },
+ "ghost": {
+  "include": true,
+  "old": "creature/ghost/ghost.m2",
+  "new": "creature/ghost2/ghost2.m2",
+  "skins": {
+   "ghostskin": 90425,
+   "ghostskinpurple": 90429,
+   "ghost2": 90427,
+   "ghostskingreen": 90428
+  }
+ },
+ "basilisk": {
+  "include": true,
+  "old": "creature/basilisk/basilisk.m2",
+  "new": "creature/basilisk2/basilisk2.m2",
+  "skins": {
+   "basiliskskinblack": 67022,
+   "basiliskskinred": 65052,
+   "basiliskskinwhite": 65050,
+   "basiliskskinyellow": 65052,
+   "basiliskskingreen": 65051,
+   "basiliskskinblue": 65050
+  }
+ },
+ "arcanegolem": {
+  "include": true,
+  "old": "creature/arcanegolem/arcanegolem.m2",
+  "new": "creature/arcanegolem2/arcanegolem2.m2",
+  "skins": {
+   "ag_model_mesh_purple": 131334,
+   "ag_model_mesh_black": 137564,
+   "ag_model_mesh_frost": 131334,
+   "ag_model_mesh_arcanedefense": 131334,
+   "ag_model_mesh_arcaneoffense": 137564,
+   "ag_model_mesh_broken2": 137431,
+   "ag_model_mesh_broken": 137431
+  }
+ },
+ "felbat": {
+  "include": true,
+  "old": "creature/felbat/felbat.m2",
+  "new": "creature/felbat2/felbat2.m2",
+  "skins": {
+   "batskinbrown01": 65202,
+   "batskin01": 65203,
+   "batskinviolet01": 65202,
+   "batskinwhite01": 65203
+  }
+ },
+ "shivan": {
+  "include": true,
+  "old": "creature/shivan/shivan.m2",
+  "new": "creature/shivan2/shivan2.m2",
+  "skins": {
+   "shivanskin_blue": 74897,
+   "shivanskin_red": 74898,
+   "shivanskin_green": 74896,
+   "shivanskin_black": 74895
+  }
+ },
+ "dragonspawn": {
+  "include": true,
+  "old": "creature/dragonspawn/dragonspawn.m2",
+  "new": "creature/dragonspawn2/dragonspawn2.m2",
+  "skins": {
+   "dragonspawnskin": 103498,
+   "dragonspawnskingreen": 104325,
+   "dragonspawnskinblue": 104182,
+   "dragonspawnskinred": 102652,
+   "dragonspawnskinnexus": 106158,
+   "dragonspawnskinbronze": 103498,
+   "dragonspawnskinwhite": 102195,
+   "dragonspawnskinpurple": 102652
+  }
+ },
+ "oracle": {
+  "include": true,
+  "old": "creature/oracle/oracle.m2",
+  "new": "creature/oracle2/oracle2.m2",
+  "skins": {
+   "oracle_black": 100706,
+   "oracle_lightblue": 106006,
+   "oracle_blue": 100705,
+   "oracle_original": 100707,
+   "oracle_red": 106004,
+   "oracle_charcoal": 100706,
+   "oracle_pink": 106005,
+   "oracle_yellow": 106004
+  }
+ },
+ "warpstalker": {
+  "include": true,
+  "old": "creature/warpstalker/warpstalker.m2",
+  "new": "creature/warpstalker2/warpstalker2.m2",
+  "skins": {
+   "warpstalkerskinwhite": 141335,
+   "warpstalkerskingreen": 124300,
+   "warpstalkerskinred": 124300,
+   "warpstalkerskinblue": 124300,
+   "warpstalkerskinturquiose": 124300,
+   "warpstalkerskinblack": 124300
+  }
+ },
+ "dreadlord": {
+  "include": true,
+  "old": "creature/dreadlord/dreadlord.m2",
+  "new": "creature/dreadlord2/dreadlord2.m2",
+  "skins": {
+   "dreadlordskin": 63637,
+   "dreadlordskingreen": 63636
+  }
+ },
+ "fleshbeast": {
+  "include": true,
+  "old": "creature/fleshbeast/fleshbeast.m2",
+  "new": "creature/fleshbeast2/fleshbeast2.m2",
+  "skins": {
+   "fleshbeastblack": 92318,
+   "fleshbeast": 92317,
+   "fleshbeastalbino": 92232
+  }
+ },
+ "seagiant": {
+  "include": true,
+  "old": "creature/seagiant/seagiant.m2",
+  "new": "creature/seagiant2/seagiant2.m2",
+  "skins": {
+   "seagiantskin01": 66809,
+   "seagiantskin01coilfang": 67254
+  }
+ },
+ "cryptfiend": {
+  "include": true,
+  "old": "creature/cryptfiend/cryptfiend.m2",
+  "new": "creature/cryptfiend2/cryptfiend2.m2",
+  "skins": {
+   "cryptfiendskin": 117315,
+   "cryptfiendskinpurple": 117043,
+   "cryptfiendskingreen": 117317
+  }
+ },
+ "gargoyle": {
+  "include": true,
+  "old": "creature/gargoyle/gargoyle.m2",
+  "new": "creature/gargoyle2/gargoyle2.m2",
+  "skins": {
+   "gargoyleskingray_01": 92785,
+   "gargoyleskinblack_01": 93826,
+   "gargoyleskinblue_01": 92399,
+   "gargoyleskingray_stone01": 92700,
+   "gargoyleskinivory_01": 92785,
+   "gargoyleskinblack_stone01": 93826,
+   "gargoyleskinblue_stone01": 92399,
+   "gargoyleskinivory_stone01": 92700
+  }
+ },
+ "necromancer": {
+  "include": true,
+  "old": "creature/necromancer/necromancer.m2",
+  "new": "creature/necromancer2/necromancer2.m2",
+  "skins": {
+   "necromancerpurple": 93937,
+   "necromancergreen": 95233,
+   "necromancerblue": 94055
+  }
+ },
+ "wrathguard": {
+  "include": true,
+  "old": "creature/wrathguard/wrathguard.m2",
+  "new": "creature/wrathguard2/wrathguard2.m2",
+  "skins": {
+   "wrathguard_body_red": 63967,
+   "wrathguard_body_black": 63967,
+   "wrathguard_body_01": 63967,
+   "wrathguard_body_green": 63968
+  }
+ },
+ "infernal": {
+  "include": true,
+  "old": "creature/infernal/infernal.m2",
+  "new": "creature/infernal2/infernal2.m2",
+  "skins": {
+   "infernalskin": 62180
+  }
+ },
+ "cryptlord": {
+  "include": true,
+  "old": "creature/cryptlord/cryptlord.m2",
+  "new": "creature/cryptlord2/cryptlord2.m2",
+  "skins": {
+   "cryptlordskin": 114662,
+   "cryptlordskin_scourge": 115729,
+   "cryptlordskin_red": 114775,
+   "cryptlordskin_dark": 114770
+  }
+ },
+ "gnomebot": {
+  "include": true,
+  "old": "creature/gnomespidertank/gnomebot.m2",
+  "new": "creature/gnomebot2/gnomebot2.m2",
+  "skins": {
+   "gnomespidertankskinblack": 91216,
+   "gnomespidertankskinred": 90780,
+   "gnomespidertankskinblue": 91216,
+   "gnomespidertankskingreen": 91216
+  }
+ },
+ "arakkoa": {
+  "include": true,
+  "old": "creature/arakkoa/arakkoa.m2",
+  "new": "creature/arakkoa2/arakkoa2.m2",
+  "skins": {
+   "arakkoapurple": 55993,
+   "arakkoa": 55984,
+   "arakkoa_green": 55995,
+   "arakkoa_gray": 56065
+  }
+ },
+ "fungalgiant": {
+  "include": true,
+  "old": "creature/fungalgiant/fungalgiant.m2",
+  "new": "creature/fungalgiant2/fungalgiant2.m2",
+  "skins": {
+   "fungalgiantgreenskin": 139452,
+   "fungalgiantyellowskin": 139453,
+   "fungalgiantpurpleskin": 139454
+  }
+ },
+ "hippogryph": {
+  "include": true,
+  "old": "creature/hippogryph/hippogryph.m2",
+  "new": "creature/hippogryph2/hippogryph2.m2",
+  "skins": {
+   "hippogryphskin01": 63622,
+   "hippogryphblueskin01": 63621,
+   "hippogryphbrownskin01": 116737,
+   "hippogryphpurpleskin01": 63622,
+   "hippogryphwhiteskin01": 63621
+  }
+ },
+ "superzombie": {
+  "include": true,
+  "old": "creature/superzombie/superzombie.m2",
+  "new": "creature/superzombie2/superzombie2.m2",
+  "skins": {
+   "superzombieblack": 95227,
+   "superzombiegreen": 94935,
+   "superzombieflesh": 95113,
+   "superzombiepale": 95112
+  }
+ },
+ "felreaver": {
+  "include": true,
+  "old": "creature/felreaver/felreaver.m2",
+  "new": "creature/felreaver2/felreaver2.m2",
+  "skins": {
+   "fel_reaver1": 66489,
+   "fel_reaver1red": 66490,
+   "fel_reaver1arcane": 66491
+  }
+ },
+ "nerubianpriest": {
+  "include": true,
+  "old": "creature/nerubianpriest/nerubianpriest.m2",
+  "new": "creature/nerubianpriest2/nerubianpriest2.m2",
+  "skins": {
+   "nerubianpriest_white": 114412,
+   "nerubianpriest_red": 114268,
+   "nerubianpriest_blue": 115745,
+   "nerubianpriest_green": 115748
+  }
+ },
+ "stag": {
+  "include": true,
+  "old": "creature/stag/stag.m2",
+  "new": "creature/stag2/stag2.m2",
+  "skins": {
+   "wapitiskinbrown": 70443,
+   "wapitiskingreen": 70441,
+   "wapitiskinarctic": 70445
+  }
+ },
+ "chimera": {
+  "include": true,
+  "old": "creature/chimera/chimera.m2",
+  "new": "creature/chimera2/chimera2.m2",
+  "skins": {
+   "chimeraskin01": 52403,
+   "chimeraskinblue_01": 60813
+  }
+ },
+ "voidlord": {
+  "include": true,
+  "old": "creature/voidlord/voidlord.m2",
+  "new": "creature/voidlord2/voidlord2.m2",
+  "skins": {
+   "voidlordskin_purple": 136683,
+   "voidlordskin_blue": 71758,
+   "voidlordskin_red": 44542
+  }
+ },
+ "babymurloc": {
+  "include": true,
+  "old": "creature/murloc/babymurloc.m2",
+  "new": "creature/babymurloc3/babymurloc3.m2",
+  "skins": {
+   "murlocbabyblue": 96259,
+   "murlocbabygreen": 136445,
+   "murlocbabyorange": 72660,
+   "murlocbabypink": 91235,
+   "murlocbabypurple": 96259,
+   "murlocbabywhite": 72660
+  }
+ },
+ "ridingsilithid": {
+  "include": true,
+  "old": "creature/ridingsilithid/ridingsilithid.m2",
+  "new": "creature/ridingsilithid2/ridingsilithid2.m2",
+  "skins": {
+   "ridingsilithidtankskinarmoredblue": 75706,
+   "ridingsilithidtankskinarmoredred": 75705,
+   "ridingsilithidtankskinarmoredyellow": 75705,
+   "ridingsilithidtankskinarmoredgreen": 75706,
+   "ridingsilithidtankskinarmoredblack": 75707
+  }
+ },
+ "flyingnerubian": {
+  "include": true,
+  "old": "creature/flyingnerubian/flyingnerubian.m2",
+  "new": "creature/flyingnerubian2/flyingnerubian2.m2",
+  "skins": {
+   "flyingnerubianred": 114986,
+   "flyingnerubianblue": 114509,
+   "flyingnerubiangrey": 112727,
+   "flyingnerubianyellow": 112727,
+   "flyingnerubiangreen": 112728
+  }
+ },
+ "nerubianspiderling": {
+  "include": true,
+  "old": "creature/nerubianspiderling/nerubianspiderling.m2",
+  "new": "creature/nerubianspiderling2/nerubianspiderling2.m2",
+  "skins": {
+   "nerubianspiderlingskinred": 116513,
+   "nerubianspiderlingskinbrown": 116503,
+   "nerubianspiderlingskinblue": 116084,
+   "nerubianspiderlingskingrey": 116513
+  }
+ },
+ "lich": {
+  "include": false,
+  "old": "creature/lich/lich.m2",
+  "new": "creature/lich2/lich2.m2",
+  "skins": {
+   "lichskin": 96860
+  }
+ },
+ "sporebat": {
+  "include": true,
+  "old": "creature/sporebat/sporebat.m2",
+  "new": "creature/sporebat3/sporebat3.m2",
+  "skins": {
+   "sporebatblue": 125189,
+   "sporebatgreen": 125191,
+   "sporebatyellow": 125192
+  }
+ },
+ "tripod": {
+  "include": true,
+  "old": "creature/tripod/tripod.m2",
+  "new": "creature/tripod2/tripod2.m2",
+  "skins": {
+   "tripodwhite": 131596,
+   "tripodblack": 131595,
+   "tripod": 131593,
+   "tripodgreen": 131595
+  }
+ },
+ "madscientist": {
+  "include": true,
+  "old": "creature/madscientist/madscientist.m2",
+  "new": "creature/madscientist2/madscientist2.m2",
+  "skins": {
+   "madscientist": 96457
+  }
+ },
+ "voidcaller": {
+  "include": true,
+  "old": "creature/voidcaller/voidcaller.m2",
+  "new": "creature/voidcaller2/voidcaller2.m2",
+  "skins": {
+   "voidcallerskin_blue": 136883,
+   "voidcallerskin_purple": 136882,
+   "voidcallerskin_red": 136884
+  }
+ },
+ "cockroach": {
+  "include": true,
+  "old": "creature/cockroach/cockroach.m2",
+  "new": "creature/cockroach2/cockroach2.m2",
+  "skins": {
+   "cockroach": 120516
+  }
+ },
+ "dragonwhelpoutland": {
+  "include": true,
+  "old": "creature/dragonwhelpoutland/dragonwhelpoutland.m2",
+  "new": "creature/dragonwhelpoutland2/dragonwhelpoutland2.m2",
+  "skins": {
+   "dragonwhelpskinoutland1": 100279,
+   "dragonwhelpskinoutland3": 100278
+  }
+ },
+ "dragon": {
+  "include": true,
+  "old": "creature/dragon/dragon.m2",
+  "new": "creature/dragon2/dragon2.m2",
+  "skins": {
+   "dragonskin1bronze": 105525,
+   "dragonskin1red": 105528,
+   "dragonskin1taerar": 106214
+  }
+ },
+ "pterrordax": {
+  "include": true,
+  "old": "creature/pterrordax/pterrordax.m2",
+  "new": "creature/pterrordax2/pterrordax2.m2",
+  "skins": {
+   "pterrordaxskingray": 76659,
+   "pterrordaxskingreen": 76658
+  }
+ },
+ "rocketmount": {
+  "include": true,
+  "old": "creature/rocketmount/rocketmount.m2",
+  "new": "creature/rocketmount5/rocketmount5.m2",
+  "skins": {
+   "rocketmount": 122614,
+   "rocketmountblue": 122618,
+   "rocketmountpink": 122616
+  }
+ },
+ "obsidiandestroyer": {
+  "include": true,
+  "old": "creature/obsidiandestroyer/obsidiandestroyer.m2",
+  "new": "creature/obsidiandestroyer2/obsidiandestroyer2.m2",
+  "skins": {
+   "obsidiandestroyerskin": 92907
+  }
+ },
+ "snowman": {
+  "include": true,
+  "old": "creature/snowman/snowman.m2",
+  "new": "creature/snowman2/snowman2.m2",
+  "skins": {
+   "snowman01": 138596
+  }
+ },
+ "skunk": {
+  "include": true,
+  "old": "creature/skunk/skunk.m2",
+  "new": "creature/skunk2/skunk2.m2",
+  "skins": {
+   "skunk": 113157
+  }
+ },
+ "vrykulfemale": {
+  "include": true,
+  "old": "creature/vrykulfemale/vrykulfemale.m2",
+  "new": "creature/vrykulfemale2/vrykulfemale2.m2",
+  "skins": {
+   "vrykulfemaleskin": 68940
+  }
+ },
+ "cow": {
+  "include": false,
+  "old": "creature/cow/cow.m2",
+  "new": "creature/cow2/cow2.m2",
+  "skins": {
+   "cow": 139736,
+   "cowbrown": 139751
+  }
+ },
+ "creature_scourgecrystal": {
+  "include": false,
+  "old": "creature/questobjects/creature_scourgecrystal.m2",
+  "new": "creature/questobjects/creature_scourgecrystal02.m2",
+  "skins": {
+   "creaturescourgecrystal": 22506
+  }
+ },
+ "archimonde": {
+  "include": false,
+  "old": "creature/eredar/archimonde.m2",
+  "new": "creature/archimonde2/archimonde2.m2",
+  "skins": {
+   "archimonde_skin": 66806
+  }
+ },
+ "kingymiron": {
+  "include": false,
+  "old": "creature/kingymiron/kingymiron.m2",
+  "new": "creature/kingymiron2/kingymiron2.m2",
+  "skins": {
+   "ymiron_body": 65079
+  }
+ },
+ "dragonkalecgos": {
+  "include": false,
+  "old": "creature/dragonkalecgos/dragonkalecgos.m2",
+  "new": "creature/dragonkalecgos2/dragonkalecgos2.m2",
+  "skins": {
+   "dragonskin1kalecgos": 105921
+  }
+ },
+ "rexxar": {
+  "include": false,
+  "old": "creature/rexxar/rexxar.m2",
+  "new": "creature/rexxar2/rexxar2.m2",
+  "skins": {
+   "rexxar": 60766
+  }
+ },
+ "babyhawkstrider": {
+  "include": false,
+  "old": "creature/babyhawkstrider/babyhawkstrider.m2",
+  "new": "creature/babyhawkstrider2/babyhawkstrider2.m2",
+  "skins": {
+   "babyhawkstrider": 127895
+  }
+ },
+ "kiljaeden": {
+  "include": false,
+  "old": "creature/kiljaeden/kiljaeden.m2",
+  "new": "creature/kiljaeden2/kiljaeden2.m2",
+  "skins": {
+   "kiljaeden": 74504
+  }
+ },
+ "rocketmount2": {
+  "include": false,
+  "old": "creature/rocketmount2/rocketmount2.m2",
+  "new": "creature/rocketmount5/rocketmount5.m2",
+  "skins": {
+   "rocketmount2blue": 122617
+  }
+ }
+}
