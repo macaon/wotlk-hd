@@ -140,4 +140,8 @@ it in game (reverting models over the patch until the crash stopped).
 4. **Later**: world doodads and textures through the same pipeline; HD character models for
    humanoid NPCs; ReShade (works with `-opengl`).
 
+5. **Revisit**: gargoyle2 for the Stonewing Slayer (crash when in view, see Known issue above);
+   boar2 (triangles do not match its vertices as read); Lady Vashj (missing .anim); retail
+   animations with ids past 3.3.5's 505.
+
 Risks: newer models can look flat with 3.3.5 shaders; memory in a 32-bit client.
