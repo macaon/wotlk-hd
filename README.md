@@ -110,6 +110,12 @@ layout 2 (2048x1024) is the HD one; HD skin and face files are 1024x512, i.e. la
 scale. So HD models at native texture resolution need a 1024x512 composite with that table. The
 table is global: every character model, old or HD, is composited with it.
 
+`patch_exe.py --characters` writes Wow-hdchar.exe with that composite: level fixed at 10, the
+region table replaced, and a new section `.hdchar` holding the table and detours for the 13 places
+that create, free or mark dirty the composite as (size, size) and for the two DXT compression loops
+(which assumed as many block rows as columns). The blitter copies regions 1:1 from a source mip
+chosen by width and never resamples, so source textures must match their region size.
+
 ## Plan
 
 0. **Setup** (done): large-address-aware, FoV, survey.
