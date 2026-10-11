@@ -35,7 +35,8 @@ RACES = [
                                   1: "character/bloodelf/female/bloodelffemale_hd.m2"}),
 ]
 SEXES = {0: ("male", "Male"), 1: ("female", "Female")}
-JOIN = {2001: 501, 2301: 401, 2201: 0, 3202: 0, 3301: 0, 3401: 0}  # 3202 is the face (3201 a small cap)
+JOIN = {2001: 501, 2301: 401, 2201: 0, 3202: 0, 3301: 0, 3401: 0,  # 3202 is the face (3201 a small cap)
+        1801: 0}  # bare waist under belts; 3.3.5's own model has none, its waist is in the body
 KEEP_GROUPS = {0, 1, 4, 5, 7, 8, 9, 10, 11, 12, 13, 15, 17, 18}
 TEXTURE_TYPES = {15: 2, 16: 2, 17: 2, 18: 2, 9: 1}
 EYE_TYPE = 19
@@ -73,7 +74,26 @@ def textures(m2, eye_path):
     return bytes(b.d)
 
 
-def model(hd_path, old_path, files, report):
+def single_layer_eyes(m2, skin, eye_path):
+    """Eye batches draw the eye texture alone: retail adds a reflection layer, and two layers through
+    3.3.5's default shader multiply the eye into near-black orbs."""
+    n, off = struct.unpack_from("<II", m2, 0x50)
+    names = []
+    for i in range(n):
+        _, _, length, name_off = struct.unpack_from("<4I", m2, off + i * 16)
+        names.append(m2[name_off:name_off + length - 1].decode("latin-1") if length else "")
+    nl, ol = struct.unpack_from("<II", m2, 0x80)
+    lookup = struct.unpack_from(f"<{nl}H", m2, ol)
+    s = bytearray(skin)
+    nt, ot = struct.unpack_from("<II", s, 36)
+    for i in range(nt):
+        count, combo = struct.unpack_from("<HH", s, ot + i * 24 + 14)
+        if count > 1 and names[lookup[combo]] == eye_path:
+            struct.pack_into("<H", s, ot + i * 24 + 14, 1)
+    return bytes(s)
+
+
+def model(hd_path, old_path, files, report, dropped):
     fid = fetch.fdid(hd_path)
     fetch.prefetch_models([fid])
 
@@ -82,18 +102,21 @@ def model(hd_path, old_path, files, report):
         files[path] = fetch.get(f)
         return path
     old_skin = Client().read(old_path[:-3] + "00.skin")
-    # Index starts past 65535 drew garbage even with Wow-hdchar.exe's level patches, so the skins
-    # fit under it: the most detailed LOD that does, alternative hair styles last and left out if
-    # nothing else fits (the HD male's 16 styles are 46k-60k indices on their own).
+    # Index starts past 65535 draw garbage in 3.3.5, so the skins fit under it: body and face from
+    # the most detailed LOD that leaves room, hair from a lighter one (retail's far LODs paint the
+    # eyes shut). The HD male's 16 hair styles are 46k indices even at the lightest LOD, so he keeps
+    # LOD 3 for the body and the styles that fit; CharHairGeosets sends the others to a kept one.
     m2, skins, anims, warnings = convert.convert_model_fitting(
         fetch.get(fid), old_path.rsplit("\\", 1)[1][:-3], texture_name, fetch.get,
-        geoset_map=geoset_map(old_skin), optional=lambda sid: 0 < sid < 100)
+        geoset_map=geoset_map(old_skin), split=lambda sid: 0 < sid < 100, fallback_body=3, dropped=dropped)
     race_dir = hd_path.split("/")[1]
     eyes = f"character/{race_dir}/eyes00_00"
     eye_fid = next((f for n, f in fetch._listfile()[1].items() if n.startswith(eyes) and n.endswith(".blp")), None)
     if not eye_fid:
         raise convert.ConvertError(f"no eye texture {eyes}*")
-    m2 = textures(m2, texture_name(eye_fid))
+    eye_path = texture_name(eye_fid)
+    m2 = textures(m2, eye_path)
+    skins = [single_layer_eyes(m2, s, eye_path) for s in skins]
     convert.check(m2, skins)
     files[old_path] = m2
     for i, s in enumerate(skins):
@@ -153,6 +176,20 @@ def char_sections(cs, race, race_dir, sex, files, report):
     report.append(f"CharSections race {race} sex {sex}: {dict(changed)}")
 
 
+def hair_fallbacks(race, sex, dropped, report):
+    """CharHairGeosets with styles whose geoset was left out pointed at the nearest kept one, so a
+    character with such a style gets a similar one rather than none."""
+    table = build.Dbc(Client().read("DBFilesClient\\CharHairGeosets.dbc"))
+    kept = sorted({r[4] for r in table.rows if r[1] == race and r[2] == sex} - dropped)
+    moved = 0
+    for r in table.rows:
+        if r[1] == race and r[2] == sex and r[4] in dropped and kept:
+            r[4] = min(kept, key=lambda g: abs(g - r[4]))
+            moved += 1
+    report.append(f"CharHairGeosets race {race} sex {sex}: {moved} styles moved to a kept one")
+    return table
+
+
 def safe_for_other_races(cs, converted, files, report):
     """CharSections rows of races without HD models, made safe for Wow-hdchar.exe: its compositor
     copies a region's full size from a source smaller than the region without scaling, so 3.3.5's
@@ -193,19 +230,24 @@ def safe_for_other_races(cs, converted, files, report):
 def main():
     client = Client()
     cs = build.Dbc(client.read("DBFilesClient\\CharSections.dbc"))
-    files, report = {}, []
+    files, report, hair_tables = {}, [], []
     for race, race_dir, old_dir, hd_models in RACES:
         for sex, hd_path in hd_models.items():
             _, upper = SEXES[sex]
             old_path = f"Character\\{old_dir}\\{upper}\\{old_dir}{upper}.m2"
+            dropped = set()
             try:
-                model(hd_path, old_path, files, report)
+                model(hd_path, old_path, files, report, dropped)
             except (convert.ConvertError, AssertionError, struct.error, OSError, IndexError, KeyError) as e:
                 report.append(f"{old_path}: {type(e).__name__}: {e}")
                 continue
             char_sections(cs, race, race_dir, sex, files, report)
+            if dropped:
+                hair_tables.append(hair_fallbacks(race, sex, dropped, report))
     safe_for_other_races(cs, {(race, sex) for race, _, _, models in RACES for sex in models}, files, report)
     files["DBFilesClient\\CharSections.dbc"] = cs.bytes()
+    if hair_tables:  # ponytail: one race with dropped styles so far; merge tables when there are more
+        files["DBFilesClient\\CharHairGeosets.dbc"] = hair_tables[-1].bytes()
     print("\n".join(report))
     print(build.write_patch(6, files))
 

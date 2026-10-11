@@ -575,13 +575,19 @@ def convert_model(data, model_name, texture_name, get_file, lod=0, geoset_map=No
     sfid = m.u32s("SFID")
     if not sfid:
         raise ConvertError("no skins")
-    if lod >= len(sfid):
+    lods = lod if isinstance(lod, tuple) else (lod,)
+    if max(lods[:2]) >= len(sfid):
         raise ConvertError("no skin light enough for 3.3.5")
-    skin = get_file(sfid[lod])
-    if skin_agreement(d, skin) < 0.9:
-        # retail palettes are recomputed below, which would hide a skin from another export
-        raise ConvertError("skin does not match the model's vertices (files from different builds?)")
-    skin = compact_vertices(b, skin)
+    for k in lods[:2]:
+        if skin_agreement(d, get_file(sfid[k])) < 0.9:
+            # retail palettes are recomputed below, which would hide a skin from another export
+            raise ConvertError("skin does not match the model's vertices (files from different builds?)")
+    if isinstance(lod, tuple):  # (body lod, other lod, which geosets come from the other)
+        body, other, from_other = lod
+        skin = merge_skins(b, [(get_file(sfid[body]), lambda s: not from_other(s)),
+                               (get_file(sfid[other]), from_other)])
+    else:
+        skin = compact_vertices(b, get_file(sfid[lod]))
     n, off = m.arrays["bone_lookup"]
     bone_lookup = list(struct.unpack_from(f"<{n}H", d, off))
     _, voff = struct.unpack_from("<II", d, 0x3C)
@@ -622,11 +628,39 @@ def convert_model(data, model_name, texture_name, get_file, lod=0, geoset_map=No
     return m2, skins, {k: v for k, v in anims.items() if k in kept}, warnings
 
 
-def convert_model_fitting(data, model_name, texture_name, get_file, geoset_map=None, optional=None):
-    """convert_model with the most detailed retail skin that fits 3.3.5's 65535 index starts: the
-    first with nothing left out, else (with optional submeshes) the one leaving out the fewest."""
+def convert_model_fitting(data, model_name, texture_name, get_file, geoset_map=None, optional=None,
+                          split=None, fallback_body=None, dropped=None):
+    """convert_model with the most detailed retail skin that fits 3.3.5's 65535 index starts.
+
+    split(geoset id): geosets that may come from a lighter LOD than the rest (hair), so the body
+    keeps its detail; the pair is chosen by counting indices first. If no pair fits, the body comes
+    from fallback_body and split geosets from the lightest LOD, those that do not fit left out
+    (their ids added to `dropped`). Otherwise the first LOD with nothing left out, else (with
+    optional submeshes) the one leaving out the fewest."""
+    sfid = M2(data).u32s("SFID")
+    if split and sfid:
+        kept = (lambda s: geoset_map(s) is not None) if geoset_map else (lambda s: True)
+        skins = [get_file(f) for f in sfid]
+        for body in range(len(skins)):
+            for other in range(body, len(skins)):
+                total = (skin_indices(skins[body], lambda s: kept(s) and not split(s)) +
+                         skin_indices(skins[other], lambda s: kept(s) and split(s)))
+                if total <= 0xFFFF:
+                    result = convert_model(data, model_name, texture_name, get_file, (body, other, split),
+                                           geoset_map)
+                    if body or other:
+                        result[3].append(f"skins {body} (body) and {other} (split geosets) to fit 65535 indices")
+                    return result
+        if fallback_body is None:
+            raise ConvertError("no skin light enough for 3.3.5")
+        lost = set() if dropped is None else dropped
+        result = convert_model(data, model_name, texture_name, get_file,
+                               (fallback_body, len(skins) - 1, split), geoset_map, optional=split, dropped=lost)
+        result[3].append(f"skins {fallback_body} (body) and {len(skins) - 1} (split geosets); "
+                         f"left out to fit 65535 indices: geosets {sorted(lost)}")
+        return result
     best = None
-    for lod in range(len(M2(data).u32s("SFID")) or 1):
+    for lod in range(len(sfid) or 1):
         dropped = set()
         try:
             result = convert_model(data, model_name, texture_name, get_file, lod, geoset_map,
@@ -713,6 +747,59 @@ def skin_agreement(d, skin):
             total += 1
             ok += p < nl and bone_lookup[p] == d[voff + (look[i] + base) * 48 + 16]
     return ok / total if total else 1.0
+
+
+def merge_skins(b, parts):
+    """One skin from submeshes of several retail skins (LODs) of this model, vertices compacted like
+    compact_vertices: parts = [(skin, keep(geoset id))]. Lets a character take body and face from a
+    detailed LOD and hair from a light one (retail's far LODs paint the eyes shut)."""
+    lookup, indices, props, subs, batches = [], [], bytearray(), [], []
+    for skin, keep in parts:
+        nv, ov, ni, oi, nb, ob, ns, os_, nt, ot = struct.unpack_from("<10I", skin, 4)
+        base, = struct.unpack_from("<I", skin, 0x2C)
+        look = struct.unpack_from(f"<{nv}H", skin, ov)
+        idx = struct.unpack_from(f"<{ni}H", skin, oi)
+        drawn = {struct.unpack_from("<H", skin, ot + i * 24 + 4)[0] for i in range(nt)}
+        new_sub = {}
+        for j in range(ns):
+            s = bytearray(skin[os_ + j * 48:os_ + j * 48 + 48])
+            sid, level, vs, vc, start, count = struct.unpack_from("<6H", s)
+            if j not in drawn or not keep(sid):
+                continue
+            new_vs = len(lookup)
+            if new_vs + vc > 0xFFFF:
+                raise ConvertError("more than 65535 triangle indices: merged skin over the vertex limit")
+            lookup += [base + v for v in look[vs:vs + vc]]
+            props += skin[ob + vs * 4:ob + (vs + vc) * 4]
+            start += level << 16
+            new_start = len(indices)
+            indices += [i - vs + new_vs for i in idx[start:start + count]]
+            struct.pack_into("<HHHH", s, 2, new_start >> 16, new_vs, vc, new_start & 0xFFFF)
+            new_sub[j] = len(subs)
+            subs.append(bytes(s))
+        for i in range(nt):
+            bt = bytearray(skin[ot + i * 24:ot + i * 24 + 24])
+            j, = struct.unpack_from("<H", bt, 4)
+            if j in new_sub:
+                struct.pack_into("<H", bt, 4, new_sub[j])
+                batches.append(bytes(bt))
+    order = sorted(set(lookup))
+    if len(order) > 0xFFFF:
+        raise ConvertError(f"merged skin uses {len(order)} vertices (3.3.5 indexes at most 65535)")
+    n, off = struct.unpack_from("<II", b.d, 0x3C)
+    new_index = {v: i for i, v in enumerate(order)}
+    b.set_array(0x3C, len(order), b"".join(bytes(b.d[off + v * 48:off + v * 48 + 48]) for v in order))
+    skin = bytearray(pack_skin([new_index[v] for v in lookup], indices, bytes(props), subs, batches))
+    struct.pack_into("<I", skin, 0x2C, 0)
+    return bytes(skin)
+
+
+def skin_indices(skin, keep):
+    """Triangle indices a retail skin's drawn submeshes with keep(geoset id) would take."""
+    ns, os_, nt, ot = struct.unpack_from("<4I", skin, 28)
+    drawn = {struct.unpack_from("<H", skin, ot + i * 24 + 4)[0] for i in range(nt)}
+    return sum(struct.unpack_from("<H", skin, os_ + j * 48 + 10)[0] for j in drawn
+               if keep(struct.unpack_from("<H", skin, os_ + j * 48)[0]))
 
 
 def compact_vertices(b, skin):
