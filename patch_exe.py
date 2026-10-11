@@ -88,6 +88,15 @@ LEVEL_SITE, LEVEL_BYTES = 0x4F1B60, "750a83f8087605b808000000"
 # (6706 submeshes checked), so they draw as before. (site, original bytes, target register code)
 INDEX_SITES = [(0x8205D9, "0fb7560a0fb77608", "esi"), (0x820662, "0fb7560a0fb77608", "esi"),
                (0x8206DA, "0fb74e0a0fb75608", "edx")]
+# More paths take the u16 start alone: the hardware-skinning batch draw (0x820b9c, submesh in eax),
+# a second batch renderer (0x829c5a, submesh in esi) and a CPU path indexing the index data
+# (0x81dceb). Their detours use start | level << 16. (site, original bytes, cave body)
+STORE_SITES = [
+    (0x820B9C, "0fb750088955d4", "0fb75008" "50" "0fb74002" "c1e010" "0bd0" "58" "8955d4"),
+    (0x829C5A, "0fb746088945e0", "0fb74608" "52" "0fb75602" "c1e210" "0bc2" "5a" "8945e0"),
+    # CPU-side: index pointer = buffer (ebx+0x10) + start * 2
+    (0x81DCEB, "0fb74e088b5310", "0fb74e08" "50" "0fb74602" "c1e010" "0bc8" "58" "8b5310"),
+]
 INDEX_CAVES = {  # count load, then start | level << 16, keeping the scratch register
     "esi": "0fb7560a" "51" "0fb74e02" "c1e110" "0fb77608" "0bf1" "59",
     "edx": "0fb74e0a" "50" "0fb74602" "c1e010" "0fb75608" "0bd0" "58",
@@ -171,6 +180,11 @@ def patch_characters(exe):
         body = bytes.fromhex(INDEX_CAVES[reg])
         code += body + jmp(at + len(body), site + 8)
         pe.write(site, jmp(site, at) + b"\x90" * 3, expect=bytes.fromhex(original))
+    for site, original, cave_body in STORE_SITES:
+        at = cave + len(code)
+        body = bytes.fromhex(cave_body)
+        code += body + jmp(at + len(body), site + 7)
+        pe.write(site, jmp(site, at) + b"\x90" * 2, expect=bytes.fromhex(original))
     assert len(code) <= 0x1000
     pe.d[pe.offset(cave):pe.offset(cave) + len(code)] = code
     return bytes(pe.d)
