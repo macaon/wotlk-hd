@@ -5,9 +5,9 @@ usage: experiment.py    writes out/patch-enUS-5.MPQ (copy to <WoW>/Data/enUS/, n
 Each variant gets its own model file, CreatureModelData row and CreatureDisplayInfo row (90001+),
 so `.morph target <id>` shows them one after another. The server accepts any display id.
 
-Current experiment: voidwalker2's particles draw as flat squares. The 3.3.5 voidwalker has the
-same four emitters (two glow balls, two smoke), so variants swap in its flags and textures.
-(Previous one, shade: showed the emitter struct conversion itself is right.)
+Current experiment: gargoyle2 (Stonewing Slayer, display 7533) garbles triangles while animating
+and crashed the client (bone matrix copy, 0x8203b0). Variants switch one part off at a time.
+(Earlier: voidwalker2 particles, shade emitters; both fine in the end.)
 """
 import os
 import struct
@@ -19,80 +19,65 @@ from mpq import CHAIN, Client, write_archive
 
 PATCH4 = os.path.join(build.OUT, "patch-enUS-4.MPQ")
 FIRST_ID = 90001
-OLD = "Creature\\VoidWalker\\VoidWalker.m2"
-NEW = "creature/voidwalker2/voidwalker2.m2"
-DISPLAY = 1132  # warlock voidwalker
-GLOW = "CREATURE\\FIREELEMENTAL\\GLOWBALL.BLP"   # what the 3.3.5 voidwalker's glow balls use
-SMOKE = "CREATURE\\VOIDWALKER\\SMOKE01.BLP"
+OLD = "Creature\\Gargoyle\\Gargoyle.m2"
+NEW = "creature/gargoyle2/gargoyle2.m2"
+DISPLAY = 7533  # Stonewing Slayer
 
 
-def edit_emitters(m2, fn):
-    """m2 with fn(emitter bytearray, index, model) applied to each emitter; may append strings."""
-    b = convert.Blob(m2)
-    m = convert.M2(m2)
-    n, off = m.arrays["particles"]
-    for i in range(n):
-        e = bytearray(b.d[off + i * convert.PARTICLE_WOTLK:off + (i + 1) * convert.PARTICLE_WOTLK])
-        fn(e, i, b)
-        b.d[off + i * convert.PARTICLE_WOTLK:off + (i + 1) * convert.PARTICLE_WOTLK] = e
-    return bytes(b.d)
-
-
-def add_texture(b, path):
-    """Append a hardcoded texture slot naming path; returns its index."""
-    n, off = struct.unpack_from("<II", b.d, 0x50)
-    slots = bytes(b.d[off:off + n * 16])
-    name = path.encode() + b"\0"
-    name_off = b.add(name)
-    b.set_array(0x50, n + 1, slots + struct.pack("<4I", 0, 0, len(name), name_off))
-    return n
-
-
-def wotlk_flags(e, i, b):
-    e[4:8] = struct.pack("<I", 0x20001 if e[0x28] == 4 else 0x20019)
-
-
-def wotlk_textures(e, i, b):
-    path = GLOW if e[0x28] == 4 else SMOKE
-    cache = b.__dict__.setdefault("added", {})
-    if path not in cache:
-        cache[path] = add_texture(b, path)
-    struct.pack_into("<H", e, 0x16, cache[path])
-
-
-def no_particles(m2):
+def static_bones(m2):
+    """No bone animation: every bone track empty, so the model holds its bind pose."""
     d = bytearray(m2)
-    struct.pack_into("<II", d, 0x128, 0, 0)
+    n, off = struct.unpack_from("<II", d, 0x2C)
+    for i in range(n):
+        for t in convert.BONE_TRACKS:
+            struct.pack_into("<IIII", d, off + i * 88 + t + 4, 0, 0, 0, 0)
     return bytes(d)
+
+
+def no_extras(m2):
+    """No attachments, events or cameras."""
+    d = bytearray(m2)
+    for header in (0xF0, 0xF8, 0x100, 0x110, 0x118):
+        struct.pack_into("<II", d, header, 0, 0)
+    return bytes(d)
+
+
+def only_base_geoset(skin):
+    """Only the batches of geoset 0 submeshes (body)."""
+    s = bytearray(skin)
+    ns, os_, nt, ot = struct.unpack_from("<IIII", s, 28)
+    keep = [bytes(s[ot + i * 24:ot + i * 24 + 24]) for i in range(nt)
+            if struct.unpack_from("<H", s, os_ + struct.unpack_from("<H", s, ot + i * 24 + 4)[0] * 48)[0] == 0]
+    s[ot:ot + len(keep) * 24] = b"".join(keep)
+    struct.pack_into("<I", s, 36, len(keep))
+    return bytes(s)
 
 
 def main():
     client = Client(chain=[PATCH4] + CHAIN)
-    conv, skins, anims, _ = convert.convert_model(
-        fetch.get(fetch.fdid(NEW)), "VoidWalker", lambda f: build.mpq_path(fetch.name(f)), fetch.get)
-    files = {build.mpq_path(fetch.name(f)): fetch.get(f) for f in convert.M2(fetch.get(fetch.fdid(NEW))).u32s("TXID") if f}
-    both = edit_emitters(edit_emitters(conv, wotlk_flags), wotlk_textures)
-    original = Client()  # without the patch: the 3.3.5 file at OLD is replaced there
-    variants = [
-        ("CONTROL: the 3.3.5 voidwalker, unconverted (squares here too = OpenGL/client)",
-         original.read(OLD)),
-        ("converted voidwalker2, as built", conv),
-        ("converted, no particle emitters (are the squares particles?)", no_particles(conv)),
-        ("converted, emitter flags from the 3.3.5 voidwalker", edit_emitters(conv, wotlk_flags)),
-        ("converted, 3.3.5 particle textures (glowball/smoke01)", edit_emitters(conv, wotlk_textures)),
-        ("converted, 3.3.5 flags and textures", both),
+    data = fetch.get(fetch.fdid(NEW))
+    name = lambda f: build.mpq_path(fetch.name(f))
+    conv, skins, anims, _ = convert.convert_model(data, "Gargoyle", name, fetch.get)
+    convert.MAX_BONES_PER_SUBMESH = 32
+    conv32, skins32, _, _ = convert.convert_model(data, "Gargoyle", name, fetch.get)
+    convert.MAX_BONES_PER_SUBMESH = 64
+    files = {}
+    variants = [  # (label, m2, skin)
+        ("control: gargoyle2 as built", conv, skins[0]),
+        ("no bone animation (bind pose)", static_bones(conv), skins[0]),
+        ("no attachments, events, cameras", no_extras(conv), skins[0]),
+        ("submeshes split at 32 bones instead of 64", conv32, skins32[0]),
+        ("body geoset only", conv, only_base_geoset(skins[0])),
     ]
-
     cdi = build.Dbc(client.read("DBFilesClient\\CreatureDisplayInfo.dbc"))
     cmd = build.Dbc(client.read("DBFilesClient\\CreatureModelData.dbc"))
     base_display = next(r for r in cdi.rows if r[0] == DISPLAY)
     base_model = next(r for r in cmd.rows if r[0] == base_display[build.CDI_MODEL])
     model_dir = OLD.rsplit("\\", 1)[0]
     report = []
-    for i, (label, m2) in enumerate(variants):
+    for i, (label, m2, skin) in enumerate(variants):
         did = FIRST_ID + i
         path = f"{model_dir}\\Test{i + 1}.m2"
-        skin = original.read(OLD[:-3] + "00.skin") if i == 0 else skins[0]
         convert.check(m2, [skin])
         files[path] = m2
         files[path[:-3] + "00.skin"] = skin
