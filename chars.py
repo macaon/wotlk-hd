@@ -8,7 +8,7 @@ through convert.py (their skeletons are .skel files); then:
 
 - geosets: 3.3.5 shows hair (0xx), facial hair (1xx), ears (7xx) and armour (4xx-18xx) itself.
   Retail's new groups are set by its client: feet (20xx) and hands (23xx) show without boots and
-  gloves, so they join 501 and 401; torso (2201), face, eyes and brows (3201, 3301, 3401) always
+  gloves, so they join 501 and 401; torso (2201), face, eyes and brows (3202, 3301, 3401) always
   show, so they join the base 0. Other groups (eyesight, blindfolds, tattoos...) are left out.
   Hair styles and facial hair keep classic numbering in retail, so CharHairGeosets and
   CharacterFacialHairStyles stay as they are.
@@ -35,7 +35,7 @@ RACES = [
                                   1: "character/bloodelf/female/bloodelffemale_hd.m2"}),
 ]
 SEXES = {0: ("male", "Male"), 1: ("female", "Female")}
-JOIN = {2001: 501, 2301: 401, 2201: 0, 3201: 0, 3301: 0, 3401: 0}
+JOIN = {2001: 501, 2301: 401, 2201: 0, 3202: 0, 3301: 0, 3401: 0}  # 3202 is the face (3201 a small cap)
 KEEP_GROUPS = {0, 1, 4, 5, 7, 8, 9, 10, 11, 12, 13, 15, 17, 18}
 TEXTURE_TYPES = {15: 2, 16: 2, 17: 2, 18: 2, 9: 1}
 EYE_TYPE = 19
