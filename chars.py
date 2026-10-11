@@ -82,17 +82,19 @@ def model(hd_path, old_path, files, report):
         files[path] = fetch.get(f)
         return path
     old_skin = Client().read(old_path[:-3] + "00.skin")
-    # full detail: Wow-hdchar.exe draws index starts past 65535 (level), which these skins need
-    m2, skins, anims, warnings = convert.convert_model(
+    # Index starts past 65535 drew garbage even with Wow-hdchar.exe's level patches, so the skins
+    # fit under it: the most detailed LOD that does, alternative hair styles last and left out if
+    # nothing else fits (the HD male's 16 styles are 46k-60k indices on their own).
+    m2, skins, anims, warnings = convert.convert_model_fitting(
         fetch.get(fid), old_path.rsplit("\\", 1)[1][:-3], texture_name, fetch.get,
-        geoset_map=geoset_map(old_skin), index_limit=None)
+        geoset_map=geoset_map(old_skin), optional=lambda sid: 0 < sid < 100)
     race_dir = hd_path.split("/")[1]
     eyes = f"character/{race_dir}/eyes00_00"
     eye_fid = next((f for n, f in fetch._listfile()[1].items() if n.startswith(eyes) and n.endswith(".blp")), None)
     if not eye_fid:
         raise convert.ConvertError(f"no eye texture {eyes}*")
     m2 = textures(m2, texture_name(eye_fid))
-    convert.check(m2, skins, allow_level=True)
+    convert.check(m2, skins)
     files[old_path] = m2
     for i, s in enumerate(skins):
         files[f"{old_path[:-3]}{i:02d}.skin"] = s
