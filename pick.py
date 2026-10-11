@@ -62,7 +62,7 @@ def main():
     model_path = {r[0]: build.norm(cmd.string(r[2])) for r in cmd.rows}
     rdisp, rmodel, rgeosets = build.retail_tables()
     saved = json.load(open(PICKS)) if os.path.exists(PICKS) else {}
-    taken = {old for old, _, _ in build.UPGRADES.values()}
+    taken = {u[0] for n, u in build.UPGRADES.items() if n not in build.SPLITS}
     models = []
     for n_displays, old, new, old_tris, new_tris, _ in plan.unlinked():
         if old in taken:

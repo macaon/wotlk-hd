@@ -26,6 +26,22 @@
    6271
   ]
  },
+ "ancientofwar2diseased": {
+  "displays": 5,
+  "new": "creature/ancientofwar2diseased/ancientofwar2diseased.m2",
+  "old": "creature/ancientofwar/ancientofwar.m2",
+  "only": [
+   11362,
+   13170,
+   14383,
+   20250,
+   28656
+  ],
+  "triangles": [
+   1354,
+   6375
+  ]
+ },
  "ancientprotector": {
   "displays": 17,
   "new": "creature/ancientprotector2/ancientprotector2.m2",
@@ -35,6 +51,18 @@
    5032
   ]
  },
+ "anduin": {
+  "displays": 1,
+  "new": "creature/anduin/anduin.m2",
+  "old": "creature/humanmalekid/humanmalekid.m2",
+  "only": [
+   31201
+  ],
+  "triangles": [
+   672,
+   1808
+  ]
+ },
  "banshee": {
   "displays": 23,
   "new": "creature/banshee2/banshee2.m2",
@@ -42,6 +70,18 @@
   "triangles": [
    1045,
    4348
+  ]
+ },
+ "batmount": {
+  "displays": 1,
+  "new": "creature/bat/batmount.m2",
+  "old": "creature/felbat/battaxi.m2",
+  "only": [
+   24377
+  ],
+  "triangles": [
+   740,
+   3346
   ]
  },
  "be_broom01": {
@@ -224,6 +264,18 @@
    4622
   ]
  },
+ "druidtravelcat": {
+  "displays": 1,
+  "new": "creature/druidtravelcat/druidtravelcat.m2",
+  "old": "creature/tiger/tiger.m2",
+  "only": [
+   918
+  ],
+  "triangles": [
+   658,
+   5992
+  ]
+ },
  "dryad": {
   "displays": 17,
   "new": "creature/dryad3/dryad3.m2",
@@ -273,6 +325,18 @@
   "displays": 9,
   "new": "creature/faeriedragon2/faeriedragon2.m2",
   "old": "creature/faeriedragon/faeriedragon.m2",
+  "triangles": [
+   778,
+   1609
+  ]
+ },
+ "faeriedragon2": {
+  "displays": 1,
+  "new": "creature/faeriedragon2/faeriedragon2.m2",
+  "old": "creature/faeriedragon/faeriedragon_ghost.m2",
+  "only": [
+   19269
+  ],
   "triangles": [
    778,
    1609
@@ -422,6 +486,19 @@
    2836
   ]
  },
+ "harvestgolem2": {
+  "displays": 2,
+  "new": "creature/harvestgolem2/harvestgolem2.m2",
+  "old": "creature/golemharveststage2/golemharveststage2.m2",
+  "only": [
+   5299,
+   29155
+  ],
+  "triangles": [
+   848,
+   15256
+  ]
+ },
  "horse": {
   "displays": 15,
   "new": "creature/horse3/horse3.m2",
@@ -467,6 +544,23 @@
    2192
   ]
  },
+ "imp2_noflames": {
+  "displays": 6,
+  "new": "creature/imp2/imp2_noflames.m2",
+  "old": "creature/imp/imp.m2",
+  "only": [
+   10811,
+   10815,
+   10817,
+   12190,
+   17035,
+   19344
+  ],
+  "triangles": [
+   622,
+   2192
+  ]
+ },
  "kalecgos": {
   "displays": 3,
   "new": "creature/kalecgos2/kalecgos2.m2",
@@ -503,6 +597,35 @@
    2930
   ]
  },
+ "kodobeast2pack": {
+  "displays": 1,
+  "new": "creature/kodobeast2mount/kodobeast2pack.m2",
+  "old": "creature/kodobeast/kodobeastpack.m2",
+  "only": [
+   7933
+  ],
+  "triangles": [
+   2055,
+   4835
+  ]
+ },
+ "kodobeast2wooly": {
+  "displays": 6,
+  "new": "creature/kodobeast2wooly/kodobeast2wooly.m2",
+  "old": "creature/kodobeast/kodobeast.m2",
+  "only": [
+   10914,
+   10915,
+   10916,
+   10917,
+   10919,
+   23265
+  ],
+  "triangles": [
+   878,
+   3332
+  ]
+ },
  "krakken": {
   "displays": 4,
   "new": "creature/krakken2/krakken2.m2",
@@ -510,6 +633,18 @@
   "triangles": [
    2086,
    8212
+  ]
+ },
+ "kvaldir": {
+  "displays": 1,
+  "new": "creature/kvaldir/kvaldir.m2",
+  "old": "creature/seavrykulmale/seavrykulmaleoarsman.m2",
+  "only": [
+   28072
+  ],
+  "triangles": [
+   3721,
+   11581
   ]
  },
  "ladyalexstrasa": {
@@ -548,6 +683,19 @@
    1152
   ]
  },
+ "lavatarantula": {
+  "displays": 2,
+  "new": "creature/lavatarantula/lavatarantula.m2",
+  "old": "creature/tarantula/tarantula.m2",
+  "only": [
+   4457,
+   4458
+  ],
+  "triangles": [
+   768,
+   4576
+  ]
+ },
  "lobstrok": {
   "displays": 24,
   "new": "creature/lobstrok2/lobstrok2.m2",
@@ -564,6 +712,19 @@
   "triangles": [
    928,
    2074
+  ]
+ },
+ "mechanicalchicken": {
+  "displays": 2,
+  "new": "creature/mechanicalchicken/mechanicalchicken.m2",
+  "old": "creature/chicken/chicken.m2",
+  "only": [
+   6909,
+   7920
+  ],
+  "triangles": [
+   98,
+   840
   ]
  },
  "medivh": {
@@ -593,6 +754,24 @@
    3398
   ]
  },
+ "moltengiant": {
+  "displays": 7,
+  "new": "creature/moltengiant/moltengiant.m2",
+  "old": "creature/mountaingiant/mountaingiant.m2",
+  "only": [
+   8269,
+   9210,
+   10044,
+   11986,
+   12162,
+   12232,
+   12233
+  ],
+  "triangles": [
+   1084,
+   1380
+  ]
+ },
  "murloc": {
   "displays": 57,
   "new": "creature/murloc2/murloc2.m2",
@@ -600,6 +779,18 @@
   "triangles": [
    778,
    1519
+  ]
+ },
+ "nightbane2": {
+  "displays": 1,
+  "new": "creature/nightbane2/nightbane2.m2",
+  "old": "creature/nightbane/nightbane.m2",
+  "only": [
+   18062
+  ],
+  "triangles": [
+   6071,
+   11572
   ]
  },
  "northrendghoul": {
@@ -620,6 +811,18 @@
    12618
   ]
  },
+ "nozdormudragon": {
+  "displays": 1,
+  "new": "creature/nozdormudragon/nozdormudragon.m2",
+  "old": "creature/dragon/northrenddragon.m2",
+  "only": [
+   24934
+  ],
+  "triangles": [
+   2914,
+   5034
+  ]
+ },
  "pig": {
   "displays": 5,
   "new": "creature/babypig/babypig.m2",
@@ -627,6 +830,20 @@
   "triangles": [
    360,
    1294
+  ]
+ },
+ "pig2": {
+  "displays": 3,
+  "new": "creature/pig2/pig2.m2",
+  "old": "creature/pig/pig.m2",
+  "only": [
+   16356,
+   16357,
+   16358
+  ],
+  "triangles": [
+   360,
+   1664
   ]
  },
  "pitlord": {
@@ -689,6 +906,18 @@
   "old": "creature/rabbit/rabbitgold.m2",
   "triangles": [
    103,
+   1124
+  ]
+ },
+ "rabbitgold2": {
+  "displays": 1,
+  "new": "creature/rabbit2/rabbitgold2.m2",
+  "old": "creature/rabbit/rabbit.m2",
+  "only": [
+   15918
+  ],
+  "triangles": [
+   107,
    1124
   ]
  },
@@ -978,6 +1207,18 @@
   "triangles": [
    750,
    2684
+  ]
+ },
+ "yseradragon": {
+  "displays": 1,
+  "new": "creature/yseradragon/yseradragon.m2",
+  "old": "creature/dragon/northrenddragon.m2",
+  "only": [
+   24808
+  ],
+  "triangles": [
+   2914,
+   4346
   ]
  },
  "zombie": {

@@ -103,7 +103,9 @@ def first_display(cdi, model_rows, old_path, new_rows, new_model_path):
     """A display of the old model to show, preferring one the patch changed (some may keep the old
     model): DISPLAYS' choice, else the first non-humanoid display."""
     models = {r[0] for r in model_rows if build.norm(r[1]) == old_path}
-    dids = [r[0] for r in cdi.rows if r[build.CDI_MODEL] in models and not r[build.CDI_EXTRA]]
+    split = set().union(*build.SPLITS.values())  # shown under their own names
+    dids = [r[0] for r in cdi.rows if r[build.CDI_MODEL] in models and not r[build.CDI_EXTRA]
+            and r[0] not in split]
     moved = [d for d in dids if new_model_path.get(new_rows[d][build.CDI_MODEL]) != build.mpq_path(old_path)]
     return (moved or dids or [None])[0]
 
@@ -125,7 +127,7 @@ def main(names):
     for name in names:
         old_path, new_path, _ = build.UPGRADES[name]
         path = build.mpq_path(old_path)
-        did = DISPLAYS.get(name) or first_display(old_cdi, model_rows, old_path, new_rows, new_model_path)
+        did = DISPLAYS.get(name) or min(build.SPLITS.get(name, [0])) or first_display(old_cdi, model_rows, old_path, new_rows, new_model_path)
         if did is None:
             continue
         # a display moved to <name>_hd.m2 when other skins keep the old model (build.py KEEP)

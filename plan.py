@@ -18,11 +18,29 @@ import survey
 from mpq import Client
 
 MIN_GAIN = 1.5
+SPLIT_GAIN = 1.01  # any denser: wolf_ghost and minifelreaver are the same meshes
+# survey.py "reused" displays that really were given to another creature, not split off
+REASSIGNED = {4, 64}  # crystal spider and sound test -> murloc2
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "upgrades.json")
 
 
 def triangles(skin):
     return struct.unpack_from("<I", skin, 12)[0] // 3 if skin and skin[:4] == b"SKIN" else None
+
+
+def gain(client, old, new, minimum=MIN_GAIN):
+    """(old, new) skin0 triangles if the retail model is an upgrade, else the reason it is not."""
+    old_tris = triangles(client.read(old[:-3].replace("/", "\\") + "00.skin"))
+    fid = fetch.fdid(new[:-3] + "00.skin")
+    if not old_tris or not fid:
+        return "no skin to compare"
+    try:
+        new_tris = triangles(fetch.get(fid))
+    except OSError:
+        return "download failed"
+    if not new_tris or new_tris < old_tris * minimum:
+        return f"under {minimum}x triangles"
+    return old_tris, new_tris
 
 
 def main():
@@ -31,34 +49,45 @@ def main():
     for _, kind, old, new in seen:
         if kind in ("new-model", "updated") and old.startswith("creature/"):
             targets[old][new] += 1
+    # Displays retail moved to a variant model of their own (molten giants: moltengiant, not the
+    # mountaingiant2 the rest went to). survey.py calls them reused; they become upgrades of just
+    # those displays, next to the old model.
+    splits = collections.defaultdict(list)
+    for did, kind, old, new in seen:
+        if (kind == "reused" and old.startswith("creature/") and new.startswith("creature/")
+                and did not in REASSIGNED):
+            splits[(old, new)].append(did)
     client = Client()
     upgrades, skipped = {}, collections.Counter()
+
+    def add(name, entry):
+        if name in upgrades:
+            name = entry["old"][len("creature/"):-3].replace("/", "_") + "_" + name
+        upgrades[name] = entry
+
     for old, counter in sorted(targets.items()):
         new = counter.most_common(1)[0][0]
         if new.startswith("character/"):
             skipped["retail uses a character model (humanoid track)"] += 1
             continue  # customizable models take materials and textures from elsewhere (naga)
-        old_tris = triangles(client.read(old[:-3].replace("/", "\\") + "00.skin"))
-        fid = fetch.fdid(new[:-3] + "00.skin")
-        if not old_tris or not fid:
-            skipped["no skin to compare"] += 1
+        g = gain(client, old, new)
+        if isinstance(g, str):
+            skipped[g] += 1
             continue
-        try:
-            new_tris = triangles(fetch.get(fid))
-        except OSError:
-            skipped["download failed"] += 1
+        add(old.rsplit("/", 1)[1][:-3], {"old": old, "new": new, "triangles": list(g),
+                                          "displays": sum(counter.values())})
+    for (old, new), dids in sorted(splits.items()):
+        # the creature's own model in retail, even if not much denser (moltengiant: 1.27x)
+        g = gain(client, old, new, SPLIT_GAIN)
+        if isinstance(g, str):
+            skipped[f"split: {g}"] += 1
             continue
-        if not new_tris or new_tris < old_tris * MIN_GAIN:
-            skipped[f"under {MIN_GAIN}x triangles"] += 1
-            continue
-        name = old.rsplit("/", 1)[1][:-3]
-        if name in upgrades:
-            name = old[len("creature/"):-3].replace("/", "_")
-        upgrades[name] = {"old": old, "new": new, "triangles": [old_tris, new_tris],
-                          "displays": sum(counter.values())}
+        add(new.rsplit("/", 1)[1][:-3], {"old": old, "new": new, "triangles": list(g),
+                                          "displays": len(dids), "only": sorted(dids)})
     with open(OUT, "w") as f:
         json.dump(upgrades, f, indent=1, sort_keys=True)
-    print(f"{len(targets)} candidates, {len(upgrades)} upgrades -> {OUT}")
+    n_splits = sum("only" in u for u in upgrades.values())
+    print(f"{len(targets)} candidates, {len(upgrades)} upgrades ({n_splits} split off) -> {OUT}")
     for reason, n in skipped.most_common():
         print(f"  skipped {n}: {reason}")
 
@@ -69,7 +98,7 @@ def unlinked():
     [(old displays, old path, new path, old triangles, new triangles, retail displays)]"""
     import csv
     _, seen = survey.classify()
-    planned = {u["old"] for u in json.load(open(OUT)).values()} if os.path.exists(OUT) else set()
+    planned = {u["old"] for u in json.load(open(OUT)).values() if "only" not in u} if os.path.exists(OUT) else set()
     old_displays = collections.Counter(old for _, kind, old, _ in seen
                                        if kind not in ("humanoid",) and old.startswith("creature/"))
     rm = {r["ID"]: int(r["FileDataID"]) for r in csv.DictReader(open(os.path.join(fetch.CACHE, "CreatureModelData.csv")))}

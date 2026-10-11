@@ -37,18 +37,21 @@ def load_upgrades():
     path = os.path.join(here, "upgrades.json")
     planned = json.load(open(path)) if os.path.exists(path) else {}
     upgrades = {name: (u["old"], u["new"], {}) for name, u in planned.items()}
+    splits = {name: set(u["only"]) for name, u in planned.items() if "only" in u}
     # picks.json (pick.py): unlinked upgrades, each old skin -> the retail display whose look it takes
     path = os.path.join(here, "picks.json")
     picked = json.load(open(path)) if os.path.exists(path) else {}
     extra = {name: (p["old"], p["new"], p["skins"]) for name, p in picked.items() if p["include"]}
     extra.update(MANUAL)
     taken = {old for old, _, _ in extra.values()}
-    upgrades = {n: u for n, u in upgrades.items() if u[0] not in taken}
+    upgrades = {n: u for n, u in upgrades.items() if u[0] not in taken or n in splits}
     upgrades.update(extra)
-    return upgrades
+    return upgrades, splits
 
 
-UPGRADES = load_upgrades()
+# SPLITS: upgrades of only some displays of the old model (plan.py "only"), the ones retail gave a
+# variant model of their own; they go next to the old model and are built before the rest.
+UPGRADES, SPLITS = load_upgrades()
 
 # 3.3.5 CreatureDisplayInfo.dbc columns
 CDI_MODEL, CDI_EXTRA, CDI_SCALE, CDI_TEX, CDI_GEOSETS = 1, 3, 4, 6, 14
@@ -134,8 +137,10 @@ def build(names):
         # Skins picked "keep" stay on the old model (molten giants: mountaingiant2 has no lava skin),
         # so the new one goes next to it (<name>_hd.m2) with its own CreatureModelData row, and only
         # the displays that change point at it.
-        side_by_side = KEEP in manual.values()
-        target = old_mpq[:-3] + "_hd.m2" if side_by_side else old_mpq
+        only = SPLITS.get(name)
+        side_by_side = KEEP in manual.values() or only
+        target = (f"{model_dir}\\{new.rsplit('/', 1)[1]}" if only
+                  else old_mpq[:-3] + "_hd.m2" if side_by_side else old_mpq)
         base = target[:-3]
 
         def texture_name(fid):
@@ -180,7 +185,8 @@ def build(names):
 
         # Displays of the old model: retail's own textures and scale where it moved the same display
         # to the new model; otherwise the texture other displays with that old skin got.
-        rows = [r for r in cdi.rows if old_model.get(r[CDI_MODEL]) == old and not r[CDI_EXTRA]]
+        rows = [r for r in cdi.rows if old_model.get(r[CDI_MODEL]) == old and not r[CDI_EXTRA]
+                and (not only or r[0] in only)]
         paired, learned = {}, collections.defaultdict(collections.Counter)
         for r in rows:
             rr = rdisp.get(r[0])
@@ -242,6 +248,7 @@ def build(names):
 
 if __name__ == "__main__":
     names = sys.argv[1:] or list(UPGRADES)
+    names.sort(key=lambda n: n not in SPLITS)  # moved displays then no longer look like the old model
     unknown = [n for n in names if n not in UPGRADES]
     if unknown:
         sys.exit(f"unknown upgrades: {unknown}; known: {list(UPGRADES)}")
