@@ -20,6 +20,7 @@ through convert.py (their skeletons are .skel files); then:
   textures (classic layout) are left out.
 """
 import collections
+import csv
 import io
 import os
 import struct
@@ -38,6 +39,8 @@ RACES = [
     (2, "orc", "Orc", {0: "character/orc/male/orcmale_hd.m2", 1: "character/orc/female/orcfemale_hd.m2"}),
     (6, "tauren", "Tauren", {0: "character/tauren/male/taurenmale_hd.m2",
                              1: "character/tauren/female/taurenfemale_hd.m2"}),
+    (5, "scourge", "Scourge", {0: "character/scourge/male/scourgemale_hd.m2",
+                               1: "character/scourge/female/scourgefemale_hd.m2"}),
 ]
 SEXES = {0: ("male", "Male"), 1: ("female", "Female")}
 SEXES_BY_PATH = {upper: sex for sex, (_, upper) in SEXES.items()}
@@ -45,7 +48,8 @@ JOIN = {2001: 501, 2301: 401, 2201: 0, 3202: 0, 3301: 0, 3401: 0,  # 3202 is the
         1801: 0}  # bare waist under belts; 3.3.5's own model has none, its waist is in the body
 # Eye glow: 3.3.5 shows 1702 on blood elves; retail's 1702-1705 are large flame flares (228 vertices,
 # alternative eye styles), its plain in-eye glow is 1701 (60). So retail 1701 stands in for 1702.
-RENAME = {10: {1701: 1702, 1702: None, 1703: None, 1704: None, 1705: None}}
+# Undead likewise (3.3.5's model has 1702 and 1703, retail's 1702-1705 are the Primalist flares).
+RENAME = {r: {1701: 1702, 1702: None, 1703: None, 1704: None, 1705: None} for r in (10, 5)}
 KEEP_GROUPS = {0, 1, 4, 5, 7, 8, 9, 10, 11, 12, 13, 15, 17, 18}
 TEXTURE_TYPES = {15: 2, 16: 2, 17: 2, 18: 2, 9: 1}
 EYE_TYPE, JEWELRY_TYPE = 19, 20
@@ -54,7 +58,7 @@ CS_RACE, CS_SEX, CS_SECTION, CS_TEX, CS_VARIATION, CS_COLOR = 1, 2, 3, 4, 8, 9
 SKIN, FACE, FACIAL_HAIR, HAIR, UNDERWEAR = range(5)
 CHR_DISPLAY = 4  # ChrRaces: male display, then female
 COMPOSITE, THROAT_BOX = (1024, 512), (0, 320, 256, 512)  # patch_exe.py's composite, face lower region
-THROAT_RACES = {6}  # races whose HD mesh samples the face lower block (tauren throat)
+THROAT_RACES = {6, 5}  # races whose HD mesh samples the face lower block (tauren throat, undead bones)
 CMD_SCALE = 4    # CreatureModelData: ModelScale
 
 
@@ -93,7 +97,20 @@ def orc_geosets(sid, allowed):
 
 ORC_GEOSETS = {4001: 0, 4002: None, 4003: None, 4004: None,
                3501: (302, 305), 3502: (303, 306), 3504: (307,), 1601: (304,), 1603: (305, 306)}
-RACE_GEOSETS = {6: tauren_geosets, 2: orc_geosets}
+
+
+def undead_geosets(sid, allowed):
+    """Retail's Skin Type adds exposed bone pieces (19xx, 29xx, 30xx); its first, Bony (x01), is
+    3.3.5's look, always drawn. Male jaws keep their ids (1xx; retail's 2xx skeletal jaws have no
+    3.3.5 style). The female jaw is in 3.3.5's body; retail moved it to Jaw Features (202 Intact)."""
+    if sid in (1901, 2901, 3001):
+        return 0
+    if sid == 202 and 102 not in allowed:
+        return 0
+    return NotImplemented
+
+
+RACE_GEOSETS = {6: tauren_geosets, 2: orc_geosets, 5: undead_geosets}
 # Horn Color choices (ChrCustomizationElement -> Material -> TextureFileData), by 3.3.5 hair colour
 HORN_TEXTURES = {0: ["01", "02", "03", "01", "07", "07", "07"], 1: ["01", "02", "03", "04", "10", "10", "10", "10"]}
 
@@ -195,6 +212,37 @@ def model(race, hd_path, old_path, files, report, dropped):
     report.append(f"{old_path} <- {hd_path}" + "".join(f"\n  {w}" for w in warnings))
 
 
+def table(name):
+    return list(csv.DictReader(open(fetch.table(name))))
+
+
+def chr_model(hd_path):
+    """retail's ChrModel id for an HD model path."""
+    fid = str(fetch.fdid(hd_path))
+    disp = {r["ID"]: r for r in table("CreatureDisplayInfo")}
+    model = {r["ID"]: r for r in table("CreatureModelData")}
+    return next(r["ID"] for r in table("ChrModel") if disp.get(r["DisplayID"])
+                and model.get(disp[r["DisplayID"]]["ModelID"], {}).get("FileDataID") == fid)
+
+
+def choice_textures(hd_path, option):
+    """File ids of the texture each choice of a retail customization option sets, in retail's choice
+    order (which follows 3.3.5's colour numbers): Hair Color's are the hair sheets retail draws."""
+    cm = chr_model(hd_path)
+    opt = next((o["ID"] for o in table("ChrCustomizationOption") if o["ChrModelID"] == cm and o["Name_lang"] == option), None)
+    if opt is None:  # tauren: Horn Color instead
+        return []
+    mat = {r["ID"]: r["MaterialResourcesID"] for r in table("ChrCustomizationMaterial")}
+    files = {}
+    for r in table("TextureFileData"):
+        files.setdefault(r["MaterialResourcesID"], int(r["FileDataID"]))
+    material = {e["ChrCustomizationChoiceID"]: e["ChrCustomizationMaterialID"]
+                for e in table("ChrCustomizationElement") if e["ChrCustomizationMaterialID"] != "0"}
+    choices = sorted((c for c in table("ChrCustomizationChoice") if c["ChrCustomizationOptionID"] == opt),
+                     key=lambda c: int(c["OrderIndex"]))
+    return [files.get(mat.get(material.get(c["ID"]))) for c in choices]
+
+
 def char_sections(cs, race, race_dir, sex, files, report):
     """Point a race and sex's CharSections rows at retail's HD textures (by color and variation)."""
     lower, _ = SEXES[sex]
@@ -245,6 +293,7 @@ def char_sections(cs, race, race_dir, sex, files, report):
             im.load()
             files[path] = blp.encode(im.convert("RGBA").resize(COMPOSITE).crop(THROAT_BOX))
         return path
+    hair = choice_textures(f"{prefix}_hd.m2", "Hair Color")
     changed = collections.Counter()
     for r in cs.rows:
         if r[CS_RACE] != race or r[CS_SEX] != sex:
@@ -261,8 +310,9 @@ def char_sections(cs, race, race_dir, sex, files, report):
             colors = HORN_TEXTURES[sex]
             want = [hd(f"character/tauren/taurenhorns_{colors[r[CS_COLOR]] if r[CS_COLOR] < len(colors) else colors[0]}.blp",
                        composited=False), "", ""]
-        elif r[CS_SECTION] == HAIR:
-            want = [hd_of(names[0], composited=False), "", ""]
+        elif r[CS_SECTION] == HAIR:  # retail's Hair Color sheet, the same for every style
+            fid = hair[r[CS_COLOR]] if names[0] and r[CS_COLOR] < len(hair) else None
+            want = [hd(fetch.name(fid), composited=False) if fid else None, "", ""]
         elif r[CS_SECTION] == UNDERWEAR:
             want = [hd_of(names[0]), hd_of(names[1]) if names[1] else None, None]
         else:

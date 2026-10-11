@@ -6,13 +6,13 @@ usage: charcheck.py options <race dir> <sex>     retail customization choices an
        charcheck.py match <race dir> <sex> <3.3.5 ids> [retail groups]
                                                  retail geosets closest in shape to 3.3.5's
        charcheck.py built <race dir> <sex>       the built out/patch-6 model: skin vertices outside
-                                                 3.3.5's regions, broken keyframes, aliases left
+                                                 3.3.5's regions or in the face lower one, broken
+                                                 keyframes, aliases left
 
 race dir is retail's folder name (orc, tauren, scourge, ...), sex male or female. match needs numpy
 and scipy (the scratch venv); the rest runs with the repo's python.
 """
 import collections
-import csv
 import os
 import struct
 import sys
@@ -30,8 +30,7 @@ REGIONS = [  # patch_exe.REGIONS as drawn: what the compositor fills, everything
     (256, 192, 256, 128), (256, 320, 256, 128), (256, 448, 256, 64), (512, 0, 512, 512), (0, 320, 256, 192)]
 
 
-def table(name):
-    return list(csv.DictReader(open(fetch.table(name))))
+table = chars.table
 
 
 def hd_path(race_dir, sex):
@@ -46,11 +45,7 @@ def old_path(race_dir, sex):
 
 
 def options(race_dir, sex):
-    fid = str(fetch.fdid(hd_path(race_dir, sex) + ".m2"))
-    disp = {r["ID"]: r for r in table("CreatureDisplayInfo")}
-    model = {r["ID"]: r for r in table("CreatureModelData")}
-    chr_model = next(r["ID"] for r in table("ChrModel") if disp.get(r["DisplayID"])
-                     and model.get(disp[r["DisplayID"]]["ModelID"], {}).get("FileDataID") == fid)
+    chr_model = chars.chr_model(hd_path(race_dir, sex) + ".m2")
     geo = {r["ID"]: r for r in table("ChrCustomizationGeoset")}
     elements = collections.defaultdict(list)
     for e in table("ChrCustomizationElement"):
@@ -140,7 +135,8 @@ def built(race_dir, sex):
     lookup = struct.unpack_from(f"<{nl}H", s, ol)
     ns, os_ = struct.unpack_from("<II", s, 0x1C)
     nb, ob = struct.unpack_from("<II", s, 0x24)
-    outside = collections.Counter()
+    outside, lower = collections.Counter(), collections.Counter()
+    fx, fy, fw, fh = REGIONS[-1]
     for i in range(nb):
         sub, = struct.unpack_from("<H", s, ob + 24 * i + 4)
         tex, = struct.unpack_from("<H", s, ob + 24 * i + 16)
@@ -152,7 +148,10 @@ def built(race_dir, sex):
             x, y = u % 1 * 1024, v % 1 * 512
             if not any(a <= x < a + w and b <= y < b + h for a, b, w, h in REGIONS):
                 outside[sid] += 1
+            elif fx <= x < fx + fw and fy <= y < fy + fh:
+                lower[sid] += 1
     print("skin-textured vertices outside the regions (drawn black):", dict(outside) or "none")
+    print("in the face lower region (need the race in chars.THROAT_RACES):", dict(lower) or "none")
     n_seq, seq_off = arrays["sequences"]
     seqs = [struct.unpack_from("<HH", m, seq_off + 64 * k) for k in range(n_seq)]
     flags = [struct.unpack_from("<I", m, seq_off + 64 * k + 12)[0] for k in range(n_seq)]
