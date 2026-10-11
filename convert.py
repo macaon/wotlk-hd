@@ -31,6 +31,11 @@ COORD_T1_ENV, COORD_T1_T2 = 0, 2
 # Shader effects selected with 0x8000: Wow.exe 12340 (0x836c90) accepts only 1..3, where 1..3
 # are retail's 0..2 (Combiners_Opaque_Mod2xNA_Alpha, _AddAlpha, _AddAlpha_Alpha + Diffuse_T1_Env).
 TABLE_SHADERS_WOTLK = 3
+# Retail effect 3 (Combiners_Opaque_Mod2xNA_Alpha_Add, Diffuse_T1_Env_T1) is effect 0 plus a third
+# texture added on top (moltengiant's lava cracks). 3.3.5 draws such glows as a second batch: the
+# same submesh on the next material layer, unlit and additive.
+EFFECT_GLOW = 3
+GLOW_MATERIAL = (0x11, BLEND_ADD)  # unlit, no z-write
 
 CAMERA_RETAIL, CAMERA_WOTLK = 116, 100
 PARTICLE_RETAIL, PARTICLE_WOTLK = 492, 476
@@ -77,12 +82,13 @@ def convert_shader(shader, tex_count):
     return 0, min(tex_count, 2), COORD_T1_T2
 
 
-def convert_skin(data, vertex_bones, bone_lookup):
+def convert_skin(data, vertex_bones, bone_lookup, glow_material=None):
     """A retail .skin as a 3.3.5 one (48-byte header). Returns bytes.
 
     vertex_bones(v) -> set of bones model vertex v is weighted to (absolute bone indices);
     vertex_bones(v, slots=True) -> its 4 influence slots, None where the weight is 0.
     bone_lookup: the model's bone lookup table; palettes of split submeshes are appended to it.
+    glow_material: material index for the extra additive batch of EFFECT_GLOW batches.
 
     A submesh over MAX_BONES_PER_SUBMESH is split, in triangle order, into submeshes that each fit.
     Skin vertices store bone indices relative to their submesh's palette (bone_lookup[combo + i]),
@@ -152,14 +158,21 @@ def convert_skin(data, vertex_bones, bone_lookup):
     batches = []
     for i in range(nt):
         b = bytearray(data[ot + i * 24:ot + i * 24 + 24])
-        flags, prio, shader, sub, geo, color, mat, layer, tcount = struct.unpack_from("<BbHHHhHHH", b)
+        flags, prio, shader, sub, geo, color, mat, layer, tcount, tcombo = struct.unpack_from("<BbHHHhHHHH", b)
+        glow = None
+        if shader == 0x8000 | EFFECT_GLOW and tcount == 3 and glow_material is not None:
+            glow = bytearray(b)
+            struct.pack_into("<BbH", glow, 0, flags & BATCH_FLAGS, prio, 0)
+            struct.pack_into("<HHHHH", glow, 10, glow_material, layer + 1, 1, tcombo + 2, COORD_T1_ENV)
+            shader, tcount = 0x8000, 2  # effect 0 for the first two textures
         shader, tcount, coord = convert_shader(shader, tcount)
         struct.pack_into("<BbH", b, 0, flags & BATCH_FLAGS, prio, shader)
         struct.pack_into("<H", b, 14, tcount)
         struct.pack_into("<H", b, 18, coord)
         for piece in pieces[sub]:
-            struct.pack_into("<H", b, 4, piece)
-            batches.append(bytes(b))
+            for out in [b] + ([glow] if glow else []):
+                struct.pack_into("<H", out, 4, piece)
+                batches.append(bytes(out))
 
     parts = [struct.pack(f"<{len(out_lookup)}H", *out_lookup), struct.pack(f"<{len(out_idx)}H", *out_idx),
              bytes(out_props), b"".join(out_subs), b"".join(batches)]
@@ -323,7 +336,9 @@ def convert_model(data, model_name, texture_name, get_file):
             return [b[k] if w[k] else None for k in range(4)]
         return {b[k] for k in range(4) if w[k]}
 
-    skins = [convert_skin(skin, vertex_bones, bone_lookup)]
+    n_mat, mat_off = m.arrays["materials"]  # plus GLOW_MATERIAL, unused unless a batch needs it
+    b.set_array(0x70, n_mat + 1, bytes(d[mat_off:mat_off + n_mat * 4]) + struct.pack("<HH", *GLOW_MATERIAL))
+    skins = [convert_skin(skin, vertex_bones, bone_lookup, n_mat)]
     if len(bone_lookup) > n:
         if len(bone_lookup) > 0xFFFF:
             raise ConvertError("bone lookup too large after splitting")

@@ -77,7 +77,7 @@ def mesh(client, path, cdi, row, textures):
     for i in range(nt):
         _, _, _, sub, _, _, mat, layer, _, tcombo = struct.unpack_from("<BbHHHhHHHH", skin, ot + i * 24)
         sid, level, _, _, istart, icount = subs[sub]
-        if layer or not visible(sid, row[build.CDI_GEOSETS]):
+        if not visible(sid, row[build.CDI_GEOSETS]):
             continue
         ttype, _, name = slots[tex_lookup[tcombo]]
         if ttype == 0:
@@ -86,7 +86,8 @@ def mesh(client, path, cdi, row, textures):
             tpath = f"{model_dir}\\{cdi.string(row[build.CDI_TEX + ttype - 11])}.blp"
         else:
             tpath = None
-        key = tpath.lower() if tpath else ""
+        # per client: the patch can replace a texture under the same name (moltengiant.blp)
+        key = f"{id(client)}:{tpath.lower()}" if tpath else ""
         if key and key not in textures:
             data = client.read(tpath)
             textures[key] = png(data) if data else ""
