@@ -168,7 +168,7 @@ def build(names):
             return path
 
         try:
-            m2, skins, anims, warnings = convert.convert_model(
+            m2, skins, anims, warnings = convert.convert_model_fitting(
                 fetch.get(new_fid), base.rsplit("\\", 1)[1], texture_name, fetch.get)
             convert.check(m2, skins)
         except convert.ConvertError as e:

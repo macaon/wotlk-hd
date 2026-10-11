@@ -44,22 +44,17 @@ CS_RACE, CS_SEX, CS_SECTION, CS_TEX, CS_VARIATION, CS_COLOR = 1, 2, 3, 4, 8, 9
 SKIN, FACE, FACIAL_HAIR, HAIR, UNDERWEAR = range(5)
 
 
-def geosets(skin):
-    """3.3.5 geosets for a converted HD skin: joined, kept, or their batches dropped."""
-    s = bytearray(skin)
-    ns, os_, nt, ot = struct.unpack_from("<IIII", s, 28)
-    keep_sub = set()
-    for j in range(ns):
-        sid, = struct.unpack_from("<H", s, os_ + j * 48)
+def geoset_map(old_skin):
+    """geoset_map for convert: retail ids joined (JOIN) or kept when the 3.3.5 model has them too
+    (its skin lists exactly what 3.3.5 can switch on: its hair styles, facial hair, armour
+    variants), the rest left out. Retail's extra hair styles and armour variants would not fit
+    3.3.5's 65535 indices anyway."""
+    allowed = set(convert.geoset_ids(old_skin))
+
+    def remap(sid):
         sid = JOIN.get(sid, sid)
-        struct.pack_into("<H", s, os_ + j * 48, sid)
-        if sid in JOIN.values() or sid // 100 in KEEP_GROUPS:
-            keep_sub.add(j)
-    batches = [bytes(s[ot + i * 24:ot + i * 24 + 24]) for i in range(nt)
-               if struct.unpack_from("<H", s, ot + i * 24 + 4)[0] in keep_sub]
-    s[ot:ot + len(batches) * 24] = b"".join(batches)
-    struct.pack_into("<I", s, 36, len(batches))
-    return bytes(s)
+        return sid if sid in allowed and sid // 100 in KEEP_GROUPS else None
+    return remap
 
 
 def textures(m2, eye_path):
@@ -86,16 +81,18 @@ def model(hd_path, old_path, files, report):
         path = build.mpq_path(fetch.name(f))
         files[path] = fetch.get(f)
         return path
+    old_skin = Client().read(old_path[:-3] + "00.skin")
+    # full detail: Wow-hdchar.exe draws index starts past 65535 (level), which these skins need
     m2, skins, anims, warnings = convert.convert_model(
-        fetch.get(fid), old_path.rsplit("\\", 1)[1][:-3], texture_name, fetch.get)
+        fetch.get(fid), old_path.rsplit("\\", 1)[1][:-3], texture_name, fetch.get,
+        geoset_map=geoset_map(old_skin), index_limit=None)
     race_dir = hd_path.split("/")[1]
     eyes = f"character/{race_dir}/eyes00_00"
     eye_fid = next((f for n, f in fetch._listfile()[1].items() if n.startswith(eyes) and n.endswith(".blp")), None)
     if not eye_fid:
         raise convert.ConvertError(f"no eye texture {eyes}*")
     m2 = textures(m2, texture_name(eye_fid))
-    skins = [geosets(s) for s in skins]
-    convert.check(m2, skins)
+    convert.check(m2, skins, allow_level=True)
     files[old_path] = m2
     for i, s in enumerate(skins):
         files[f"{old_path[:-3]}{i:02d}.skin"] = s

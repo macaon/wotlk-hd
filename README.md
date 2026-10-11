@@ -127,6 +127,13 @@ Data/enUS/. Models and textures must be in the base patch: Blizzard's Data/patch
 every locale patch for the 3.x model updates it holds (463 of our files, the blood elves among them,
 showed the old model until this split); DBCs override from the locale patch.
 
+3.3.5 draws a submesh from its u16 index start alone (it ignores level, the high word retail
+adds), so a skin's triangles must start below index 65536. Models past it (gargoyle2,
+dragonspawn, crypt fiend, nerubian priest, vrykul female at 69k-113k indices) drew garbage and
+crashed; the converter now leaves out undrawn submeshes and takes the most detailed retail LOD that
+fits (arakkoa has none). Wow-hdchar.exe adds level in the three draw paths after 0x8203b0, so the
+HD characters keep full detail.
+
 ## Plan
 
 0. **Setup** (done): large-address-aware, FoV, survey.

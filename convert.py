@@ -182,19 +182,64 @@ def convert_skin(data, vertex_bones, bone_lookup, glow_material=None, n_colors=N
                 struct.pack_into("<H", out, 4, piece)
                 batches.append(bytes(out))
 
-    parts = [struct.pack(f"<{len(out_lookup)}H", *out_lookup), struct.pack(f"<{len(out_idx)}H", *out_idx),
-             bytes(out_props), b"".join(out_subs), b"".join(batches)]
-    counts = [len(out_lookup), len(out_idx), len(out_lookup), len(out_subs), len(batches)]
+    return pack_skin(out_lookup, out_idx, bytes(out_props), out_subs, batches)
+
+
+def pack_skin(lookup, indices, props, subs, batches):
+    """A 3.3.5 skin from its arrays (submeshes and batches as 48- and 24-byte records)."""
+    parts = [struct.pack(f"<{len(lookup)}H", *lookup), struct.pack(f"<{len(indices)}H", *indices),
+             props, b"".join(subs), b"".join(batches)]
+    counts = [len(lookup), len(indices), len(lookup), len(subs), len(batches)]
     out = bytearray(48)
     header = [b"SKIN"]
     pos = 48
-    for n, p in zip(counts, parts):
+    for n, part in zip(counts, parts):
         header.append(struct.pack("<II", n, pos if n else 0))
-        out += p
-        pos += len(p)
+        out += part
+        pos += len(part)
     header.append(struct.pack("<I", MAX_BONES_PER_SUBMESH))
     out[:48] = b"".join(header)
     return bytes(out)
+
+
+def select_geosets(skin, geoset_map, index_limit=0xFFFF):
+    """The skin with submesh geosets renamed by geoset_map(id) -> new id, or None to drop the
+    submesh, and only drawn submeshes left, their triangles packed from index 0. 3.3.5 ignores a
+    submesh's level (the high word of its index start), so every start must stay under 65536:
+    the HD blood elves (113k drawn indices) and gargoyle2 (70k) drew garbage past it.
+    index_limit=None writes starts past it with level, for Wow-hdchar.exe (patch_exe.py)."""
+    nv, ov, ni, oi, nb, ob, ns, os_, nt, ot = struct.unpack_from("<10I", skin, 4)
+    lookup = struct.unpack_from(f"<{nv}H", skin, ov)
+    indices = struct.unpack_from(f"<{ni}H", skin, oi)
+    subs = [bytearray(skin[os_ + j * 48:os_ + j * 48 + 48]) for j in range(ns)]
+    batches = [bytearray(skin[ot + i * 24:ot + i * 24 + 24]) for i in range(nt)]
+    keep = {}
+    for j, s in enumerate(subs):
+        new_id = geoset_map(struct.unpack_from("<H", s, 0)[0]) if geoset_map else struct.unpack_from("<H", s, 0)[0]
+        if new_id is not None:
+            struct.pack_into("<H", s, 0, new_id)
+            keep[j] = True
+    drawn = sorted({struct.unpack_from("<H", b, 4)[0] for b in batches} & set(keep))
+    new_sub = {j: k for k, j in enumerate(drawn)}
+    out_idx, out_subs = [], []
+    for j in drawn:
+        s = subs[j]
+        level, = struct.unpack_from("<H", s, 2)
+        start, count = struct.unpack_from("<HH", s, 8)
+        start += level << 16
+        if index_limit is not None and len(out_idx) > index_limit:
+            raise ConvertError(f"more than 65535 triangle indices in drawn submeshes")
+        struct.pack_into("<H", s, 2, len(out_idx) >> 16)
+        struct.pack_into("<H", s, 8, len(out_idx) & 0xFFFF)
+        out_idx += indices[start:start + count]
+        out_subs.append(bytes(s))
+    out_batches = []
+    for b in batches:
+        sub, = struct.unpack_from("<H", b, 4)
+        if sub in new_sub:
+            struct.pack_into("<H", b, 4, new_sub[sub])
+            out_batches.append(bytes(b))
+    return pack_skin(lookup, out_idx, bytes(skin[ob:ob + nv * 4]), out_subs, out_batches)
 
 
 def geoset_ids(skin):
@@ -385,12 +430,14 @@ def merge_skel(b, skel, get_file):
     return anims
 
 
-def convert_model(data, model_name, texture_name, get_file):
+def convert_model(data, model_name, texture_name, get_file, lod=0, geoset_map=None, index_limit=0xFFFF):
     """Convert one retail model.
 
     model_name: name stored in the header (the 3.3.5 file name without extension).
     texture_name(fdid) -> path the converted model should reference for a hardcoded texture.
     get_file(fdid) -> bytes of a retail file (skins, anims).
+    lod: which retail skin to convert (convert_model_fitting tries lighter ones).
+    geoset_map(id) -> 3.3.5 geoset id, or None to leave the submesh out (see select_geosets).
 
     Returns (m2 bytes, [skin bytes], {(anim id, sub id): anim bytes}, [warnings]).
     """
@@ -517,7 +564,9 @@ def convert_model(data, model_name, texture_name, get_file):
     sfid = m.u32s("SFID")
     if not sfid:
         raise ConvertError("no skins")
-    skin = get_file(sfid[0])
+    if lod >= len(sfid):
+        raise ConvertError("no skin light enough for 3.3.5")
+    skin = get_file(sfid[lod])
     if skin_agreement(d, skin) < 0.9:
         # retail palettes are recomputed below, which would hide a skin from another export
         raise ConvertError("skin does not match the model's vertices (files from different builds?)")
@@ -550,7 +599,8 @@ def convert_model(data, model_name, texture_name, get_file):
 
     n_mat, mat_off = m.arrays["materials"]  # plus GLOW_MATERIAL, unused unless a batch needs it
     b.set_array(0x70, n_mat + 1, bytes(d[mat_off:mat_off + n_mat * 4]) + struct.pack("<HH", *GLOW_MATERIAL))
-    skins = [convert_skin(skin, vertex_bones, bone_lookup, n_mat, struct.unpack_from("<I", d, 0x48)[0])]
+    skins = [select_geosets(convert_skin(skin, vertex_bones, bone_lookup, n_mat, struct.unpack_from("<I", d, 0x48)[0]),
+                            geoset_map, index_limit)]
     if len(bone_lookup) > n:
         if len(bone_lookup) > 0xFFFF:
             raise ConvertError("bone lookup too large after splitting")
@@ -559,6 +609,22 @@ def convert_model(data, model_name, texture_name, get_file):
     struct.pack_into("<I", d, 0x44, len(skins))
     m2, kept = repack(d)
     return m2, skins, {k: v for k, v in anims.items() if k in kept}, warnings
+
+
+def convert_model_fitting(data, model_name, texture_name, get_file, geoset_map=None):
+    """convert_model with the most detailed retail skin that fits 3.3.5's 65535 indices."""
+    lod = 0
+    while True:
+        try:
+            result = convert_model(data, model_name, texture_name, get_file, lod, geoset_map)
+        except ConvertError as e:
+            if "65535 triangle indices" not in str(e):
+                raise
+            lod += 1
+            continue
+        if lod:
+            result[3].append(f"skin {lod} (lighter LOD): heavier ones exceed 65535 indices")
+        return result
 
 
 def wrap_cells(d, emitter, done):
@@ -661,7 +727,7 @@ def first_track_value(d, track_off):
     return struct.unpack_from("<f", d, o)[0] if n else None
 
 
-def check(m2_bytes, skins):
+def check(m2_bytes, skins, allow_level=False):
     """Read a converted model back and check every array and index lands inside the file."""
     m = M2(m2_bytes)
     assert m.version == VERSION_WOTLK and not m.chunks
@@ -705,6 +771,7 @@ def check(m2_bytes, skins):
         assert max(indices, default=0) < nv, "index outside the skin"
         for j in range(ns):
             level, vs, vc, istart, icount, bones, combo = struct.unpack_from("<7H", s, os_ + j * 48 + 2)
+            assert allow_level or level == 0, f"submesh {j} has level {level} (3.3.5 ignores it)"
             istart += level << 16
             assert bones <= MAX_BONES_PER_SUBMESH, f"submesh {j} uses {bones} bones"
             assert all(vs <= t < vs + vc for t in indices[istart:istart + icount]), f"submesh {j} indexes outside its vertices"
