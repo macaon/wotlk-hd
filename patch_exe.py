@@ -82,26 +82,11 @@ DXT_BYTES = "8945e47e358945ec"  # mov [ebp-0x1c],eax; jle; mov [ebp-0x14],eax
 # CCharacterComponent::Initialize: drop the level caps (jne; cmp eax,8; jbe; mov eax,8 -> mov
 # eax,10), and shift the region table by 10 - level instead of 9 - level.
 LEVEL_SITE, LEVEL_BYTES = 0x4F1B60, "750a83f8087605b808000000"
-# The M2 batch draw (three paths after 0x8203b0) passes a 32-bit index start but fills it from the
-# submesh's u16 start alone; retail adds level (the u16 at +2) as the high word, and HD character
-# skins need it (the blood elves have 113k-155k indices). 3.3.5's own skins have level 0 everywhere
-# (6706 submeshes checked), so they draw as before. (site, original bytes, target register code)
-INDEX_SITES = [(0x8205D9, "0fb7560a0fb77608", "esi"), (0x820662, "0fb7560a0fb77608", "esi"),
-               (0x8206DA, "0fb74e0a0fb75608", "edx")]
-# The hardware-skinning batch draw (0x820b9c, submesh from [esi+0x90] like the sites above) also
-# takes the u16 start alone; its detour uses start | level << 16. (site, original bytes, cave)
-# ponytail: HD character heads still drew garbage past index 65535 with all of these, so some
-# other step drops level too; chars.py keeps character skins under 65536 instead.
-STORE_SITES = [
-    (0x820B9C, "0fb750088955d4", "0fb75008" "50" "0fb74002" "c1e010" "0bd0" "58" "8955d4"),
-    # 0x829c5a and 0x81dceb read +8 of structs not confirmed to be skin submeshes; patched,
-    # world objects broke (their +2 is not 0), so they stay as they are.
-]
-INDEX_CAVES = {  # count load, then start | level << 16, keeping the scratch register
-    "esi": "0fb7560a" "51" "0fb74e02" "c1e110" "0fb77608" "0bf1" "59",
-    "edx": "0fb74e0a" "50" "0fb74602" "c1e010" "0fb75608" "0bd0" "58",
-}
 SHIFT_SITE, SHIFT_BYTES = 0x4F1B7A, "b909000000"
+# Not patched: the batch draws take a submesh's index start as u16 and ignore level (the high word
+# retail adds). Adding it in the draw paths (0x8205d9, 0x820662, 0x8206da, 0x820b9c) broke world
+# objects (3.3.5 seems to use that field at run time) and the HD heads still drew garbage, so skins
+# stay under index 65536 instead (convert.select_geosets).
 
 
 class Pe:
@@ -175,16 +160,6 @@ def patch_characters(exe):
         body += b"\x50\xd1\xf8\x75\x01\x40\x89\x45\xec\x58"  # push; sar 1; jnz; inc; mov [ebp-0x14]; pop
         code += body + jmp(at + len(body), cont)
         pe.write(site, jmp(site, at) + b"\x90" * 3, expect=bytes.fromhex(DXT_BYTES))
-    for site, original, reg in INDEX_SITES:
-        at = cave + len(code)
-        body = bytes.fromhex(INDEX_CAVES[reg])
-        code += body + jmp(at + len(body), site + 8)
-        pe.write(site, jmp(site, at) + b"\x90" * 3, expect=bytes.fromhex(original))
-    for site, original, cave_body in STORE_SITES:
-        at = cave + len(code)
-        body = bytes.fromhex(cave_body)
-        code += body + jmp(at + len(body), site + 7)
-        pe.write(site, jmp(site, at) + b"\x90" * 2, expect=bytes.fromhex(original))
     assert len(code) <= 0x1000
     pe.d[pe.offset(cave):pe.offset(cave) + len(code)] = code
     return bytes(pe.d)

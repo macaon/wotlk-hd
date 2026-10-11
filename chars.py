@@ -117,22 +117,30 @@ def char_sections(cs, race, race_dir, sex, files, report):
         if path not in files:
             files[path] = blp.reencode(fetch.get(fid)) if composited else fetch.get(fid)
         return path
+    original = build.Dbc(Client().read("DBFilesClient\\CharSections.dbc"))
+    old_rows = {r[0]: r for r in original.rows}
+
+    def hd_of(name, composited=True):
+        """retail's HD file for a 3.3.5 texture name (CharSections colour numbers do not always
+        match the file numbers: female face colour 16 is file _10, so names are mapped)."""
+        base = name.lower().replace("\\", "/").replace("facelower", "faceupper")
+        return hd(base[:-4] + "_hd.blp", composited) if base.endswith(".blp") else None
     changed = collections.Counter()
     for r in cs.rows:
         if r[CS_RACE] != race or r[CS_SEX] != sex:
             continue
-        v, c = r[CS_VARIATION], r[CS_COLOR]
+        names = [original.string(t) if t else "" for t in old_rows[r[0]][CS_TEX:CS_TEX + 3]]
         if r[CS_SECTION] == SKIN:
-            want = [hd(f"{prefix}skin00_{c:02d}_hd.blp"), None, None]
+            want = [hd_of(names[0]), None, None]
         elif r[CS_SECTION] == FACE:
-            face = hd(f"{prefix}faceupper{v:02d}_{c:02d}_hd.blp")
+            face = hd_of(names[1] or names[0])
             want = [face, face, None]
         elif r[CS_SECTION] == FACIAL_HAIR:
             want = ["", "", ""]
         elif r[CS_SECTION] == HAIR:
-            want = [hd(f"character/{race_dir}/hair00_{c:02d}_hd.blp", composited=False), "", ""]
+            want = [hd_of(names[0], composited=False), "", ""]
         elif r[CS_SECTION] == UNDERWEAR:
-            want = [hd(f"{prefix}nakedpelvisskin00_{c:02d}_hd.blp"), hd(f"{prefix}nakedtorsoskin00_{c:02d}_hd.blp"), None]
+            want = [hd_of(names[0]), hd_of(names[1]) if names[1] else None, None]
         else:
             continue
         if want[0] is None and r[CS_SECTION] != FACIAL_HAIR:
