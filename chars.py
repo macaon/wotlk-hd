@@ -153,6 +153,43 @@ def char_sections(cs, race, race_dir, sex, files, report):
     report.append(f"CharSections race {race} sex {sex}: {dict(changed)}")
 
 
+def safe_for_other_races(cs, converted, files, report):
+    """CharSections rows of races without HD models, made safe for Wow-hdchar.exe: its compositor
+    copies a region's full size from a source smaller than the region without scaling, so 3.3.5's
+    256x64 faces in the 512x512 face region read past their image (a crash logging in a tauren),
+    and a 512 skin read past for the right half. Skins are padded to 1024x512 (the old atlas on the
+    left), face, facial hair and scalp textures left out. Those races look wrong on that exe anyway
+    until they are converted."""
+    client = Client()
+    padded = {}
+    count = 0
+    for r in cs.rows:
+        if (r[CS_RACE], r[CS_SEX]) in converted:
+            continue
+        if r[CS_SECTION] == SKIN and r[CS_TEX]:
+            name = cs.string(r[CS_TEX])
+            if name not in padded:
+                data = client.read(name)
+                if data:
+                    im = blp.Image.open(blp.io.BytesIO(data))
+                    im.load()
+                    canvas = blp.Image.new("RGBA", (1024, 512), (0, 0, 0, 255))
+                    canvas.paste(im.convert("RGBA").resize((512, 512)), (0, 0))
+                    path = name[:-4] + "_hdpad.blp"
+                    files[path] = blp.encode(canvas)
+                    padded[name] = path
+            if name in padded:
+                r[CS_TEX] = cs.add_string(padded[name])
+                count += 1
+        elif r[CS_SECTION] in (FACE, FACIAL_HAIR):
+            r[CS_TEX:CS_TEX + 3] = [0, 0, 0]
+            count += 1
+        elif r[CS_SECTION] == HAIR:
+            r[CS_TEX + 1:CS_TEX + 3] = [0, 0]
+            count += 1
+    report.append(f"other races made safe: {count} rows, {len(padded)} skins padded")
+
+
 def main():
     client = Client()
     cs = build.Dbc(client.read("DBFilesClient\\CharSections.dbc"))
@@ -167,6 +204,7 @@ def main():
                 report.append(f"{old_path}: {type(e).__name__}: {e}")
                 continue
             char_sections(cs, race, race_dir, sex, files, report)
+    safe_for_other_races(cs, {(race, sex) for race, _, _, models in RACES for sex in models}, files, report)
     files["DBFilesClient\\CharSections.dbc"] = cs.bytes()
     print("\n".join(report))
     print(build.write_patch(6, files))
