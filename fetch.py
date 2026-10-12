@@ -12,6 +12,7 @@ with CascLib: cache/CascLib, see README), from wago.tools otherwise.
 import ctypes
 import os
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -25,10 +26,16 @@ RETAIL = os.environ.get("WOW_RETAIL", os.path.expanduser(
     "~/.local/share/Steam/steamapps/compatdata/4206469918/pfx/drive_c/Program Files (x86)/World of Warcraft"))
 CASCLIB = os.environ.get("CASCLIB", os.path.join(CACHE, "CascLib", "build", "libcasc.so"))
 _casc = None  # (library, storage handle), False when there is no matching install
+_casc_lock = threading.Lock()  # prefetch's threads: one opens the storage, CascLib reads one at a time
 
 
 def _local(fid):
     """The file from the local retail install, or None (no install of BUILD, no CascLib, not there)."""
+    with _casc_lock:
+        return _local_locked(fid)
+
+
+def _local_locked(fid):
     global _casc
     if _casc is None:
         _casc = False
