@@ -42,6 +42,7 @@ RACES = [
     (5, "scourge", "Scourge", {0: "character/scourge/male/scourgemale_hd.m2",
                                1: "character/scourge/female/scourgefemale_hd.m2"}),
     (8, "troll", "Troll", {0: "character/troll/male/trollmale_hd.m2", 1: "character/troll/female/trollfemale_hd.m2"}),
+    (1, "human", "Human", {0: "character/human/male/humanmale_hd.m2", 1: "character/human/female/humanfemale_hd.m2"}),
 ]
 SEXES = {0: ("male", "Male"), 1: ("female", "Female")}
 SEXES_BY_PATH = {upper: sex for sex, (_, upper) in SEXES.items()}
@@ -51,8 +52,8 @@ JOIN = {2001: 501, 2301: 401, 2201: 0, 3202: 0, 3301: 0, 3401: 0,  # 3202 is the
 # alternative eye styles), its plain in-eye glow is 1701 (60). So retail 1701 stands in for 1702.
 # Undead likewise (3.3.5's model has 1702 and 1703, retail's 1702-1705 are the Primalist flares).
 RENAME = {r: {1701: 1702, 1702: None, 1703: None, 1704: None, 1705: None} for r in (10, 5)}
-RENAME[8] = {1701: 1703, 1702: None, 1703: None, 1704: None, 1705: None}  # trolls: only the DK glow, 1703
-KEEP_GROUPS = {0, 1, 4, 5, 7, 8, 9, 10, 11, 12, 13, 15, 17, 18}
+RENAME[8] = RENAME[1] = {1701: 1703, 1702: None, 1703: None, 1704: None, 1705: None}  # only the DK glow, 1703
+KEEP_GROUPS = {0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 15, 17, 18}
 ARMOUR_GROUPS = {4, 5, 8, 9, 10, 11, 12, 13, 15}
 TEXTURE_TYPES = {15: 2, 16: 2, 17: 2, 18: 2, 9: 1}
 EYE_TYPE, JEWELRY_TYPE = 19, 20
@@ -111,6 +112,8 @@ def undead_geosets(sid, allowed):
         return 0
     if sid in (202, 203, 204) and 102 not in allowed:
         return sid
+    if 300 < sid < 400:  # retail's Face Features: no 3.3.5 style
+        return None
     return NotImplemented
 
 
@@ -138,7 +141,18 @@ def troll_geosets(sid, allowed):
     return NotImplemented
 
 
-RACE_GEOSETS = {6: tauren_geosets, 2: orc_geosets, 5: undead_geosets, 8: troll_geosets}
+def human_geosets(sid, allowed):
+    """3.3.5's human female facial styles are piercings (3xx); retail moved them to Piercings
+    (35xx), its first choices in 3.3.5's order (matched by shape: 3501-3506 = 302-307). Human
+    eyebrows are texture by default; retail's brow geometry (34xx) is extra choices, left out."""
+    if 3500 < sid < 3600:
+        return sid - 3199 if sid - 3199 in allowed else None
+    if 3400 < sid < 3500:
+        return None
+    return NotImplemented
+
+
+RACE_GEOSETS = {6: tauren_geosets, 2: orc_geosets, 5: undead_geosets, 8: troll_geosets, 1: human_geosets}
 # Horn Color choices (ChrCustomizationElement -> Material -> TextureFileData), by 3.3.5 hair colour
 HORN_TEXTURES = {0: ["01", "02", "03", "01", "07", "07", "07"], 1: ["01", "02", "03", "04", "10", "10", "10", "10"]}
 
@@ -256,19 +270,21 @@ def chr_model(hd_path):
                 and model.get(disp[r["DisplayID"]]["ModelID"], {}).get("FileDataID") == fid)
 
 
-def choice_textures(hd_path, option):
-    """File ids of the texture each choice of a retail customization option sets, in retail's choice
-    order (which follows 3.3.5's colour numbers): Hair Color's are the hair sheets retail draws."""
+def choice_textures(hd_path, option, target):
+    """File ids of the texture each choice of a retail customization option sets on a texture
+    target (ChrModelTextureTarget: 1 skin, 10 hair), in retail's choice order (which follows
+    3.3.5's colour numbers): Hair Color's are the hair sheets retail draws, Skin Color's the skins."""
     cm = chr_model(hd_path)
     opt = next((o["ID"] for o in table("ChrCustomizationOption") if o["ChrModelID"] == cm and o["Name_lang"] == option), None)
     if opt is None:  # tauren: Horn Color instead
         return []
-    mat = {r["ID"]: r["MaterialResourcesID"] for r in table("ChrCustomizationMaterial")}
+    mat = {r["ID"]: r["MaterialResourcesID"] for r in table("ChrCustomizationMaterial")
+           if r["ChrModelTextureTargetID"] == str(target)}
     files = {}
     for r in table("TextureFileData"):
         files.setdefault(r["MaterialResourcesID"], int(r["FileDataID"]))
     material = {e["ChrCustomizationChoiceID"]: e["ChrCustomizationMaterialID"]
-                for e in table("ChrCustomizationElement") if e["ChrCustomizationMaterialID"] != "0"}
+                for e in table("ChrCustomizationElement") if e["ChrCustomizationMaterialID"] in mat}
     choices = sorted((c for c in table("ChrCustomizationChoice") if c["ChrCustomizationOptionID"] == opt),
                      key=lambda c: int(c["OrderIndex"]))
     return [files.get(mat.get(material.get(c["ID"]))) for c in choices]
@@ -324,14 +340,16 @@ def char_sections(cs, race, race_dir, sex, files, report):
             im.load()
             files[path] = blp.encode(im.convert("RGBA").resize(COMPOSITE).crop(THROAT_BOX))
         return path
-    hair = choice_textures(f"{prefix}_hd.m2", "Hair Color")
+    hair = choice_textures(f"{prefix}_hd.m2", "Hair Color", 10)
+    skin_fids = choice_textures(f"{prefix}_hd.m2", "Skin Color", 1)
     changed = collections.Counter()
     for r in cs.rows:
         if r[CS_RACE] != race or r[CS_SEX] != sex:
             continue
         names = [original.string(t) if t else "" for t in old_rows[r[0]][CS_TEX:CS_TEX + 3]]
-        if r[CS_SECTION] == SKIN:  # the extra (tauren fur) is drawn directly, not composited
-            want = [hd_of(names[0]), skin_extra(names[0]) if names[1] else None, None]
+        if r[CS_SECTION] == SKIN:  # retail's Skin Color skin; the extra (tauren fur) drawn directly
+            fid = skin_fids[r[CS_COLOR]] if r[CS_COLOR] < len(skin_fids) else None
+            want = [hd(fetch.name(fid)) if fid else None, skin_extra(names[0]) if names[1] else None, None]
         elif r[CS_SECTION] == FACE:  # upper: the HD face sheet; lower: the throat block (tauren)
             face = hd_of(names[1] or names[0])
             want = [throat(r[CS_COLOR]) if face else None, face, None]
