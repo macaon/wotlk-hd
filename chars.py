@@ -54,11 +54,14 @@ SEXES = {0: ("male", "Male"), 1: ("female", "Female")}
 SEXES_BY_PATH = {upper: sex for sex, (_, upper) in SEXES.items()}
 JOIN = {2001: 501, 2301: 401, 2201: 0, 3202: 0, 3301: 0, 3401: 0,  # 3202 is the face (3201 a small cap)
         1801: 0}  # bare waist under belts; 3.3.5's own model has none, its waist is in the body
-# Eye glow: 3.3.5 shows 1702 on blood elves; retail's 1702-1705 are large flame flares (228 vertices,
-# alternative eye styles), its plain in-eye glow is 1701 (60). So retail 1701 stands in for 1702.
-# Undead likewise (3.3.5's model has 1702 and 1703, retail's 1702-1705 are the Primalist flares).
-RENAME = {r: {1701: 1702, 1702: None, 1703: None, 1704: None, 1705: None} for r in (10, 5)}
-RENAME[8] = RENAME[1] = RENAME[3] = {1701: 1703, 1702: None, 1703: None, 1704: None, 1705: None}  # only the DK glow, 1703
+# Eye glow: 3.3.5 shows 1702 on undead (and 1703 for death knights); retail's 1702-1705 are large
+# flame flares (228 vertices, the Primalist eye styles), its plain in-eye glow is 1701 (60). So
+# retail 1701 stands in for 1702 on undead.
+RENAME = {r: {1701: 1702, 1702: None, 1703: None, 1704: None, 1705: None} for r in (5,)}
+# only the DK glow, 1703: blood elf and night elf eyes in retail are the Eye Color texture alone (no
+# glow mesh; ours is retail's choice 0), so 3.3.5's own glow slot 1702 stays empty for them
+RENAME[8] = RENAME[1] = RENAME[3] = RENAME[10] = RENAME[4] = {1701: 1703, 1702: None, 1703: None, 1704: None,
+                                                              1705: None}
 KEEP_GROUPS = {0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 15, 17, 18}
 ARMOUR_GROUPS = {4, 5, 8, 9, 10, 11, 12, 13, 15}
 TEXTURE_TYPES = {15: 2, 16: 2, 17: 2, 18: 2, 9: 1}
@@ -325,6 +328,30 @@ def char_sections(cs, race, race_dir, sex, files, report):
     original = build.Dbc(Client().read("DBFilesClient\\CharSections.dbc"))
     old_rows = {r[0]: r for r in original.rows}
 
+def face_textures(hd_path):
+    """{(face, skin colour): file id} from retail's Face choices, whose materials (texture target 5,
+    the face) come per Skin Color choice (RelatedChrCustomizationChoiceID): CharSections' face rows
+    by variation and colour. Positions in retail's choice order, as for skins and hair colours."""
+    cm = chr_model(hd_path)
+    opts = {o["ID"]: o["Name_lang"] for o in table("ChrCustomizationOption") if o["ChrModelID"] == cm}
+    order = {}
+    for name in ("Face", "Skin Color"):
+        cs = sorted((c for c in table("ChrCustomizationChoice")
+                     if opts.get(c["ChrCustomizationOptionID"]) == name), key=lambda c: int(c["OrderIndex"]))
+        order[name] = {c["ID"]: i for i, c in enumerate(cs)}
+    mat = {r["ID"]: r["MaterialResourcesID"] for r in table("ChrCustomizationMaterial")
+           if r["ChrModelTextureTargetID"] == "5"}
+    files = {}
+    for r in table("TextureFileData"):
+        files.setdefault(r["MaterialResourcesID"], int(r["FileDataID"]))
+    out = {}
+    for e in table("ChrCustomizationElement"):
+        face, skin = order["Face"].get(e["ChrCustomizationChoiceID"]), order["Skin Color"].get(e["RelatedChrCustomizationChoiceID"])
+        if face is not None and skin is not None and files.get(mat.get(e["ChrCustomizationMaterialID"])):
+            out[face, skin] = files[mat[e["ChrCustomizationMaterialID"]]]
+    return out
+
+
     def hd_of(name, composited=True):
         """retail's HD file for a 3.3.5 texture name (CharSections colour numbers do not always
         match the file numbers: female face colour 16 is file _10, so names are mapped)."""
@@ -372,7 +399,8 @@ def char_sections(cs, race, race_dir, sex, files, report):
             fid = skin_fids[r[CS_COLOR]] if r[CS_COLOR] < len(skin_fids) else None
             want = [hd(fetch.name(fid)) if fid else None, skin_extra(names[0]) if names[1] else None, None]
         elif r[CS_SECTION] == FACE:  # upper: the HD face sheet; lower: the throat block (tauren)
-            face = hd_of(names[1] or names[0])
+            fid = faces.get((r[CS_VARIATION], r[CS_COLOR]))
+            face = hd(fetch.name(fid)) if fid else hd_of(names[1] or names[0])  # names: faces retail lacks
             want = [throat(r[CS_COLOR]) if face else None, face, None]
         elif r[CS_SECTION] == FACIAL_HAIR:  # HD facial hair is one full-face sheet (face upper), or geometry
             # 3.3.5's undead females use the race's sheets; retail's of those names are the male's,
@@ -380,6 +408,9 @@ def char_sections(cs, race, race_dir, sex, files, report):
             own = names[0] and hd_of(names[0])
             folder, file = names[0].rsplit("\\", 1) if own else ("", "")
             want = ["", own and hd_of(f"{folder}\\{lower}\\{file}") or own or "", ""]
+    faces = face_textures(f"{prefix}_hd.m2")
+    # Skin Color's underwear: target 13 pelvis, 14 torso
+    underwear = [choice_textures(f"{prefix}_hd.m2", "Skin Color", t) for t in (13, 14)]
         elif r[CS_SECTION] == HAIR and race_dir == "tauren":  # the "hair" texture is the horns
             colors = HORN_TEXTURES[sex]
             want = [hd(f"character/tauren/taurenhorns_{colors[r[CS_COLOR]] if r[CS_COLOR] < len(colors) else colors[0]}.blp",
@@ -387,8 +418,10 @@ def char_sections(cs, race, race_dir, sex, files, report):
         elif r[CS_SECTION] == HAIR:  # retail's Hair Color sheet, the same for every style
             fid = hair[r[CS_COLOR]] if names[0] and r[CS_COLOR] < len(hair) else None
             want = [hd(fetch.name(fid), composited=False) if fid else None, "", ""]
-        elif r[CS_SECTION] == UNDERWEAR:
-            want = [hd_of(names[0]), hd_of(names[1]) if names[1] else None, None]
+        elif r[CS_SECTION] == UNDERWEAR:  # names: colours retail lacks
+            fids = [u[r[CS_COLOR]] if r[CS_COLOR] < len(u) else None for u in underwear]
+            want = [hd(fetch.name(fids[0])) if fids[0] else hd_of(names[0]),
+                    (hd(fetch.name(fids[1])) if fids[1] else hd_of(names[1])) if names[1] else None, None]
         else:
             continue
         if want[0] is None and r[CS_SECTION] != FACIAL_HAIR:

@@ -206,6 +206,11 @@ reorganised it, a geoset function in `RACE_GEOSETS`. Order of work:
    hair, facial and colour choice, and NPCs on the race's model (they play animations players
    do not: the Lazy Peon's lie-down found the alias bug).
 
+Textures come from retail's materials, not file names: skins, underwear (targets 13, 14) and hair
+from Skin Color and Hair Color, faces from Face x Skin Color (target 5); names only for 3.3.5
+choices retail lacks. Eyes are retail's Eye Color choice 0; no glow mesh except the death knight's
+(1703), and undead's 1702.
+
 Pitfalls seen so far: retail-only texture types (19 eyes, 20 jewelry: fixed files); the skin extra
 (type 8, tauren fur) shared per three skin colours in retail; `mpq.Client()`'s default chain leaves
 out our own patches (read out/patch-<race dir>.MPQ explicitly, as charcheck does); retail textures past
