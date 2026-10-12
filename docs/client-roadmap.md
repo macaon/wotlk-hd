@@ -56,7 +56,22 @@ large texture or buffer even with plenty free overall.
 2. **Move the driver's memory out of the process.** Under classic Wine the OpenGL/Vulkan driver
    lives in the same 32-bit address space and competes with the game for it. Wine's newer WoW64
    mode runs 32-bit games in a 64-bit process with a 64-bit driver, so the driver's own allocations
-   sit above 4 GB. Check whether GE-Proton11-7 enables it by default.
+   sit above 4 GB. GE-Proton11-7 ships both modes and defaults to classic (it sets
+   `WINEARCH=wow64` only for whitelisted games); turn the new mode on with:
+
+       PROTON_USE_WOW64=1 ~/Git/azcore/clientstart.sh
+
+   Check which mode the client runs in (from another terminal, while it runs): the game process maps
+   `x86_64-unix/ntdll.so` in the new mode, `i386-unix/ntdll.so` in classic mode. (`/proc/<pid>/exe`
+   is not conclusive: the first match may be a wrapper process.)
+
+       for p in $(pgrep -f Wow-hd.exe); do echo $p; grep -oE '(i386|x86_64)-unix/ntdll\.so' /proc/$p/maps | sort -u; done
+
+   Risk: in the new mode Wine must map GPU buffers into the low 4 GB for 32-bit games, and its
+   OpenGL path for that is younger than DXVK's; if `-opengl` is slow or broken there, try D3D9 via
+   DXVK (drop `-opengl`), which also enables `d3d9.textureMemory` (item 3).
+   Large-address-aware is separate: `PROTON_FORCE_LARGE_ADDRESS_AWARE=1` forces it; the `noforcelgadd`
+   opt-out suggests GE's Wine defaults to on, unconfirmed, so keep the flag in Wow-hd.exe for now.
 3. **DXVK's `d3d9.textureMemory`.** It keeps the system-memory copies of textures out of the 32-bit
    address space except while in use. We use `-opengl` because DXVK slowed down over long sessions;
    if that slowdown is fixable, this setting plus Vulkan might beat the OpenGL path.
