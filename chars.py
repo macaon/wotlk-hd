@@ -48,11 +48,12 @@ SEXES = {0: ("male", "Male"), 1: ("female", "Female")}
 SEXES_BY_PATH = {upper: sex for sex, (_, upper) in SEXES.items()}
 JOIN = {2001: 501, 2301: 401, 2201: 0, 3202: 0, 3301: 0, 3401: 0,  # 3202 is the face (3201 a small cap)
         1801: 0}  # bare waist under belts; 3.3.5's own model has none, its waist is in the body
+    (3, "dwarf", "Dwarf", {0: "character/dwarf/male/dwarfmale_hd.m2", 1: "character/dwarf/female/dwarffemale_hd.m2"}),
 # Eye glow: 3.3.5 shows 1702 on blood elves; retail's 1702-1705 are large flame flares (228 vertices,
 # alternative eye styles), its plain in-eye glow is 1701 (60). So retail 1701 stands in for 1702.
 # Undead likewise (3.3.5's model has 1702 and 1703, retail's 1702-1705 are the Primalist flares).
 RENAME = {r: {1701: 1702, 1702: None, 1703: None, 1704: None, 1705: None} for r in (10, 5)}
-RENAME[8] = RENAME[1] = {1701: 1703, 1702: None, 1703: None, 1704: None, 1705: None}  # only the DK glow, 1703
+RENAME[8] = RENAME[1] = RENAME[3] = {1701: 1703, 1702: None, 1703: None, 1704: None, 1705: None}  # only the DK glow, 1703
 KEEP_GROUPS = {0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 15, 17, 18}
 ARMOUR_GROUPS = {4, 5, 8, 9, 10, 11, 12, 13, 15}
 TEXTURE_TYPES = {15: 2, 16: 2, 17: 2, 18: 2, 9: 1}
@@ -152,7 +153,19 @@ def human_geosets(sid, allowed):
     return NotImplemented
 
 
-RACE_GEOSETS = {6: tauren_geosets, 2: orc_geosets, 5: undead_geosets, 8: troll_geosets, 1: human_geosets}
+def dwarf_geosets(sid, allowed):
+    """3.3.5's dwarves have their ears in the body: retail's ears (702) always drawn, its helmet
+    stubs (701) left out. 3.3.5's female facial styles (3xx) are retail earrings (35xx) and a nose
+    ring (16xx), matched by shape."""
+    if sid // 100 == 7:
+        return 0 if sid == 702 else None
+    new = DWARF_GEOSETS.get(sid, NotImplemented)
+    return new if new is NotImplemented or new in allowed else None
+
+
+DWARF_GEOSETS = {3501: 302, 3502: 303, 3503: 304, 1601: 305, 3504: 306}
+RACE_GEOSETS = {6: tauren_geosets, 2: orc_geosets, 5: undead_geosets, 8: troll_geosets, 1: human_geosets,
+                3: dwarf_geosets}
 # Horn Color choices (ChrCustomizationElement -> Material -> TextureFileData), by 3.3.5 hair colour
 HORN_TEXTURES = {0: ["01", "02", "03", "01", "07", "07", "07"], 1: ["01", "02", "03", "04", "10", "10", "10", "10"]}
 
