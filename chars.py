@@ -41,6 +41,7 @@ RACES = [
                              1: "character/tauren/female/taurenfemale_hd.m2"}),
     (5, "scourge", "Scourge", {0: "character/scourge/male/scourgemale_hd.m2",
                                1: "character/scourge/female/scourgefemale_hd.m2"}),
+    (8, "troll", "Troll", {0: "character/troll/male/trollmale_hd.m2", 1: "character/troll/female/trollfemale_hd.m2"}),
 ]
 SEXES = {0: ("male", "Male"), 1: ("female", "Female")}
 SEXES_BY_PATH = {upper: sex for sex, (_, upper) in SEXES.items()}
@@ -50,7 +51,9 @@ JOIN = {2001: 501, 2301: 401, 2201: 0, 3202: 0, 3301: 0, 3401: 0,  # 3202 is the
 # alternative eye styles), its plain in-eye glow is 1701 (60). So retail 1701 stands in for 1702.
 # Undead likewise (3.3.5's model has 1702 and 1703, retail's 1702-1705 are the Primalist flares).
 RENAME = {r: {1701: 1702, 1702: None, 1703: None, 1704: None, 1705: None} for r in (10, 5)}
+RENAME[8] = {1701: 1703, 1702: None, 1703: None, 1704: None, 1705: None}  # trolls: only the DK glow, 1703
 KEEP_GROUPS = {0, 1, 4, 5, 7, 8, 9, 10, 11, 12, 13, 15, 17, 18}
+ARMOUR_GROUPS = {4, 5, 8, 9, 10, 11, 12, 13, 15}
 TEXTURE_TYPES = {15: 2, 16: 2, 17: 2, 18: 2, 9: 1}
 EYE_TYPE, JEWELRY_TYPE = 19, 20
 # CharSections columns: ID, race, sex, section, texture 1..3, flags, variation, color
@@ -127,7 +130,15 @@ def facial_styles(report):
     return table
 
 
-RACE_GEOSETS = {6: tauren_geosets, 2: orc_geosets, 5: undead_geosets}
+def troll_geosets(sid, allowed):
+    """3.3.5's troll facial styles are tusks (3xx); retail moved them to Tusks (40xx), its first
+    choices in 3.3.5's order (male tusks match by shape too: 4001-4005 = 302-306)."""
+    if 4000 < sid < 4100:
+        return sid - 3699 if sid - 3699 in allowed else None
+    return NotImplemented
+
+
+RACE_GEOSETS = {6: tauren_geosets, 2: orc_geosets, 5: undead_geosets, 8: troll_geosets}
 # Horn Color choices (ChrCustomizationElement -> Material -> TextureFileData), by 3.3.5 hair colour
 HORN_TEXTURES = {0: ["01", "02", "03", "01", "07", "07", "07"], 1: ["01", "02", "03", "04", "10", "10", "10", "10"]}
 
@@ -138,6 +149,9 @@ def geoset_map(old_skin, race):
     variants), the rest left out. Retail's extra hair styles and armour variants would not fit
     3.3.5's 65535 indices anyway."""
     allowed = set(convert.geoset_ids(old_skin))
+    # the client shows an armour group's x01 when no item covers it; 3.3.5's female troll has
+    # no 401 (her bare forearms are elsewhere), retail's are 401
+    allowed |= {g * 100 + 1 for g in ARMOUR_GROUPS if any(k // 100 == g for k in allowed)}
 
     rename = RENAME.get(race, {})
     special = RACE_GEOSETS.get(race)
