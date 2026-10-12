@@ -102,12 +102,29 @@ ORC_GEOSETS = {4001: 0, 4002: None, 4003: None, 4004: None,
 def undead_geosets(sid, allowed):
     """Retail's Skin Type adds exposed bone pieces (19xx, 29xx, 30xx); its first, Bony (x01), is
     3.3.5's look, always drawn. Male jaws keep their ids (1xx; retail's 2xx skeletal jaws have no
-    3.3.5 style). The female jaw is in 3.3.5's body; retail moved it to Jaw Features (202 Intact)."""
+    3.3.5 style). The female jaw is in 3.3.5's body; retail moved it to Jaw Features (202 Intact,
+    203 Bonejawed, 204 Toothy), kept as such and chosen per facial style (UNDEAD_FEMALE_JAWS)."""
     if sid in (1901, 2901, 3001):
         return 0
-    if sid == 202 and 102 not in allowed:
-        return 0
+    if sid in (202, 203, 204) and 102 not in allowed:
+        return sid
     return NotImplemented
+
+
+# 3.3.5 undead female facial style -> 2xx jaw: retail pairs the jaw textures 03 (style 4) and 04
+# (style 5) with Bonejawed and Toothy; the other styles' textures go on the intact jaw
+UNDEAD_FEMALE_JAWS = {4: 3, 5: 4}
+FHS_2XX = 5  # CharacterFacialHairStyles: race, sex, style, then geosets 1xx, 3xx, 2xx, 16xx, 17xx
+
+
+def facial_styles(report):
+    """CharacterFacialHairStyles with the undead female styles switching retail's jaws."""
+    table = build.Dbc(Client().read("DBFilesClient\\CharacterFacialHairStyles.dbc"))
+    for r in table.rows:
+        if r[0] == 5 and r[1] == 1:
+            r[FHS_2XX] = UNDEAD_FEMALE_JAWS.get(r[2], 2)
+    report.append("CharacterFacialHairStyles: undead female jaws")
+    return table
 
 
 RACE_GEOSETS = {6: tauren_geosets, 2: orc_geosets, 5: undead_geosets}
@@ -305,7 +322,11 @@ def char_sections(cs, race, race_dir, sex, files, report):
             face = hd_of(names[1] or names[0])
             want = [throat(r[CS_COLOR]) if face else None, face, None]
         elif r[CS_SECTION] == FACIAL_HAIR:  # HD facial hair is one full-face sheet (face upper), or geometry
-            want = ["", hd_of(names[0]) or "", ""]
+            # 3.3.5's undead females use the race's sheets; retail's of those names are the male's,
+            # the female's are in female/ (orc male's are only in male/, not used yet)
+            own = names[0] and hd_of(names[0])
+            folder, file = names[0].rsplit("\\", 1) if own else ("", "")
+            want = ["", own and hd_of(f"{folder}\\{lower}\\{file}") or own or "", ""]
         elif r[CS_SECTION] == HAIR and race_dir == "tauren":  # the "hair" texture is the horns
             colors = HORN_TEXTURES[sex]
             want = [hd(f"character/tauren/taurenhorns_{colors[r[CS_COLOR]] if r[CS_COLOR] < len(colors) else colors[0]}.blp",
@@ -414,6 +435,7 @@ def main():
     files["DBFilesClient\\CharSections.dbc"] = cs.bytes()
     if hair_tables:  # ponytail: one race with dropped styles so far; merge tables when there are more
         files["DBFilesClient\\CharHairGeosets.dbc"] = hair_tables[-1].bytes()
+    files["DBFilesClient\\CharacterFacialHairStyles.dbc"] = facial_styles(report).bytes()
     print("\n".join(report))
     print(build.write_patch(6, files))
 
