@@ -6,9 +6,10 @@ Everything comes from one build (BUILD, live retail). wago.tools' default withou
 products: its tables were the 12.1.5 PTR, and boar2.m2 came from a different export than its skins
 (10696 vertices against skins for 10821), which scrambled its triangles.
 
-ponytail: relies on wago.tools; a Blizzard CDN reader (TACT encoding/root/archive indexes) is
-the fallback if it goes away.
+Files come from a local retail install first when its .build.info says BUILD (WOW_RETAIL, read
+with CascLib: cache/CascLib, see README), from wago.tools otherwise.
 """
+import ctypes
 import os
 import sys
 import time
@@ -20,6 +21,45 @@ CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cache")
 BUILD_CACHE = os.path.join(CACHE, BUILD)
 _names = None
 _ids = None
+RETAIL = os.environ.get("WOW_RETAIL", os.path.expanduser(
+    "~/.local/share/Steam/steamapps/compatdata/4206469918/pfx/drive_c/Program Files (x86)/World of Warcraft"))
+CASCLIB = os.environ.get("CASCLIB", os.path.join(CACHE, "CascLib", "build", "libcasc.so"))
+_casc = None  # (library, storage handle), False when there is no matching install
+
+
+def _local(fid):
+    """The file from the local retail install, or None (no install of BUILD, no CascLib, not there)."""
+    global _casc
+    if _casc is None:
+        _casc = False
+        try:
+            info = open(os.path.join(RETAIL, ".build.info")).read()
+            lib = ctypes.CDLL(CASCLIB)
+        except OSError:
+            return None
+        if f"|{BUILD}|" not in info:
+            return None
+        h = ctypes.c_void_p()
+        lib.CascOpenStorage.argtypes = [ctypes.c_char_p, ctypes.c_uint, ctypes.POINTER(ctypes.c_void_p)]
+        lib.CascOpenFile.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint, ctypes.c_uint,
+                                     ctypes.POINTER(ctypes.c_void_p)]
+        lib.CascGetFileSize.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        lib.CascReadFile.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint, ctypes.POINTER(ctypes.c_uint)]
+        lib.CascCloseFile.argtypes = [ctypes.c_void_p]
+        if lib.CascOpenStorage(f"{RETAIL}*wow".encode(), 0, ctypes.byref(h)):
+            _casc = (lib, h)
+    if not _casc:
+        return None
+    lib, storage = _casc
+    f = ctypes.c_void_p()
+    if not lib.CascOpenFile(storage, ctypes.c_void_p(fid), 0, 3, ctypes.byref(f)):  # CASC_OPEN_BY_FILEID
+        return None
+    try:
+        size = lib.CascGetFileSize(f, None)
+        buf, got = ctypes.create_string_buffer(size), ctypes.c_uint()
+        return buf.raw if lib.CascReadFile(f, buf, size, ctypes.byref(got)) and got.value == size else None
+    finally:
+        lib.CascCloseFile(f)
 
 
 def _listfile():
@@ -43,7 +83,14 @@ def fdid(path):
 
 
 def get(fid):
-    """The file's bytes, downloaded once."""
+    """The file's bytes: cached, else from the local retail install or downloaded, then cached."""
+    path = os.path.join(BUILD_CACHE, "files", str(fid))
+    if not os.path.exists(path) and (data := _local(fid)) is not None:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path + ".tmp", "wb") as f:
+            f.write(data)
+        os.replace(path + ".tmp", path)
+        return data
     return _download(f"https://wago.tools/api/casc/{fid}?download&version={BUILD}",
                      os.path.join(BUILD_CACHE, "files", str(fid)))
 

@@ -12,7 +12,11 @@ one client patch, `Data/patch-4.MPQ`. AzerothCore stays unchanged. Private use o
 - `survey.py [-v]`: compares every WotLK creature display with retail (wago.tools CSV and the
   wowdev community listfile in `cache/`).
 - `mpq.py`: reads the client's MPQ chain and writes MPQs via StormLib (`~/Git/ref/StormLib/build`).
-- `fetch.py <fdid|path>`: retail files from wago.tools by FileDataID, cached in `cache/files/`.
+- `fetch.py <fdid|path>`: retail files by FileDataID, cached in `cache/files/`: from a local retail
+  install of the pinned build when there is one (`WOW_RETAIL`, read with CascLib: `git clone
+  https://github.com/ladislav-zezula/CascLib cache/CascLib`, check out tag 3.0, `cmake -S
+  cache/CascLib -B cache/CascLib/build -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCASC_BUILD_SHARED_LIB=ON
+  && cmake --build cache/CascLib/build`), from wago.tools otherwise.
 - `compare.py [name...]`: writes `out/compare.html`, old and converted models side by side.
 - `experiment.py`: A/B variants of a model under new display ids (90001+) for testing in game.
 - `plan.py [--unlinked]`: picks upgrades into `upgrades.json` (retail target where most of a
