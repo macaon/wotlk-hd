@@ -81,11 +81,38 @@ large texture or buffer even with plenty free overall.
 5. **Budget textures by role.** Full resolution on characters and close-up props, smaller on
    distant world textures. The mipmaps are already in the files: a build setting, not new art.
 
-A 64-bit client recompiled from the decompile is not realistic: M2 and other loaders read files as
-one blob and rewrite 32-bit offsets into pointers in place, pointer-size assumptions are everywhere,
-and matching the default client's behaviour is person-years of work. For a long-term 64-bit client,
-Whoa (github.com/whoahq/whoa, a clean-room 12340 reimplementation; check its status) is the
-realistic path.
+## Rewrite toward a 64-bit client (for discussion)
+
+Recompiling the raw decompile is not the way: decompiler output does not build, M2 and other
+loaders read files as one blob and rewrite 32-bit offsets into pointers in place, and pointer-size
+assumptions are everywhere. A function-by-function rewrite is a different matter: with AI-assisted
+reverse engineering, a 2008 single-threaded 32-bit MSVC binary of 7.7 MB is a reasonable target.
+The hard part is not writing the code but proving each rewritten function behaves like the
+original, so the result stays true to the default client.
+
+Two proven approaches, both using the original binary as the reference:
+
+- **Replace functions one at a time inside the running client** (how OpenRCT2 started: a DLL
+  injected into the original game, swapping in rewritten functions until none of the original was
+  left). dinput8.dll is already that injection point. The game stays playable at every step and
+  each replaced function can be compared against the original.
+- **Matching decompilation:** rewrite each function until it compiles to the same bytes, then port
+  the result (the Super Mario 64 and Zelda PC ports; for MSVC games, the LEGO Island decomp,
+  isledecomp, compares each rebuilt function with its `reccmp` tool). Wow.exe was built with VC8
+  (it ships with msvcr80), so matching it is possible.
+
+A 64-bit build only becomes possible once nearly everything is replaced; the M2 loader's
+offset-to-pointer trick then becomes a design decision for the rewrite, not a blocker.
+
+Before starting: check Whoa (github.com/whoahq/whoa), which is already rebuilding 12340 function
+by function, and may be worth joining or forking.
+
+First step to gauge the pace: replace one self-contained subsystem through the DLL (the BLP decoder
+or the MPQ reader) and compare its behaviour against the original.
+
+Open questions: our own rewrite vs joining Whoa; in-client replacement vs matching decompilation
+(or both: replace in-client, match where it is cheap); which subsystem first; how to test
+behaviour that is not byte-comparable (rendering, movement, Lua API).
 
 ## Other improvements
 
