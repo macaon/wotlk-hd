@@ -49,6 +49,8 @@ RACES = [
     (8, "troll", "Troll", {0: "character/troll/male/trollmale_hd.m2", 1: "character/troll/female/trollfemale_hd.m2"}),
     (1, "human", "Human", {0: "character/human/male/humanmale_hd.m2", 1: "character/human/female/humanfemale_hd.m2"}),
     (3, "dwarf", "Dwarf", {0: "character/dwarf/male/dwarfmale_hd.m2", 1: "character/dwarf/female/dwarffemale_hd.m2"}),
+    (4, "nightelf", "NightElf", {0: "character/nightelf/male/nightelfmale_hd.m2",
+                                 1: "character/nightelf/female/nightelffemale_hd.m2"}),
 ]
 SEXES = {0: ("male", "Male"), 1: ("female", "Female")}
 SEXES_BY_PATH = {upper: sex for sex, (_, upper) in SEXES.items()}
@@ -172,8 +174,23 @@ def dwarf_geosets(sid, allowed):
 
 
 DWARF_GEOSETS = {3501: 302, 3502: 303, 3503: 304, 1601: 305, 3504: 306}
+
+
+def nightelf_geosets(sid, allowed):
+    """3.3.5's night elf ears (702) are closest in shape to retail's Thin ears (701, its default);
+    the other ear choices are left out. Retail has four moustaches (301-304) for 3.3.5's 302-307,
+    none close in shape: 304 also stands in for 305 and 302 for 306, so styles 4 and 5 keep one."""
+    if sid // 100 == 7:
+        return 702 if sid == 701 and 702 in allowed else None
+    if sid in NIGHTELF_MUSTACHES:
+        ids = tuple(i for i in NIGHTELF_MUSTACHES[sid] if i in allowed)
+        return ids if len(ids) > 1 else ids[0] if ids else None
+    return NotImplemented
+
+
+NIGHTELF_MUSTACHES = {302: (302, 306), 304: (304, 305)}
 RACE_GEOSETS = {6: tauren_geosets, 2: orc_geosets, 5: undead_geosets, 8: troll_geosets, 1: human_geosets,
-                3: dwarf_geosets}
+                3: dwarf_geosets, 4: nightelf_geosets}
 # Horn Color choices (ChrCustomizationElement -> Material -> TextureFileData), by 3.3.5 hair colour
 HORN_TEXTURES = {0: ["01", "02", "03", "01", "07", "07", "07"], 1: ["01", "02", "03", "04", "10", "10", "10", "10"]}
 
@@ -311,23 +328,6 @@ def choice_textures(hd_path, option, target):
     return [files.get(mat.get(material.get(c["ID"]))) for c in choices]
 
 
-def char_sections(cs, race, race_dir, sex, files, report):
-    """Point a race and sex's CharSections rows at retail's HD textures (by color and variation)."""
-    lower, _ = SEXES[sex]
-    prefix = f"character/{race_dir}/{lower}/{race_dir}{lower}"
-
-    def hd(name, composited=True):
-        """Path of retail texture `name` in the patch; textures the compositor reads re-encoded."""
-        fid = fetch.fdid(name)
-        if not fid:
-            return None
-        path = build.mpq_path(name)
-        if path not in files:  # encoded when written: only for the races being built
-            files[path] = (lambda: blp.reencode(fetch.get(fid))) if composited else (lambda: fetch.get(fid))
-        return path
-    original = build.Dbc(Client().read("DBFilesClient\\CharSections.dbc"))
-    old_rows = {r[0]: r for r in original.rows}
-
 def face_textures(hd_path):
     """{(face, skin colour): file id} from retail's Face choices, whose materials (texture target 5,
     the face) come per Skin Color choice (RelatedChrCustomizationChoiceID): CharSections' face rows
@@ -351,6 +351,23 @@ def face_textures(hd_path):
             out[face, skin] = files[mat[e["ChrCustomizationMaterialID"]]]
     return out
 
+
+def char_sections(cs, race, race_dir, sex, files, report):
+    """Point a race and sex's CharSections rows at retail's HD textures (by color and variation)."""
+    lower, _ = SEXES[sex]
+    prefix = f"character/{race_dir}/{lower}/{race_dir}{lower}"
+
+    def hd(name, composited=True):
+        """Path of retail texture `name` in the patch; textures the compositor reads re-encoded."""
+        fid = fetch.fdid(name)
+        if not fid:
+            return None
+        path = build.mpq_path(name)
+        if path not in files:  # encoded when written: only for the races being built
+            files[path] = (lambda: blp.reencode(fetch.get(fid))) if composited else (lambda: fetch.get(fid))
+        return path
+    original = build.Dbc(Client().read("DBFilesClient\\CharSections.dbc"))
+    old_rows = {r[0]: r for r in original.rows}
 
     def hd_of(name, composited=True):
         """retail's HD file for a 3.3.5 texture name (CharSections colour numbers do not always
@@ -390,6 +407,9 @@ def face_textures(hd_path):
         return path
     hair = choice_textures(f"{prefix}_hd.m2", "Hair Color", 10)
     skin_fids = choice_textures(f"{prefix}_hd.m2", "Skin Color", 1)
+    faces = face_textures(f"{prefix}_hd.m2")
+    # Skin Color's underwear: target 13 pelvis, 14 torso
+    underwear = [choice_textures(f"{prefix}_hd.m2", "Skin Color", t) for t in (13, 14)]
     changed = collections.Counter()
     for r in cs.rows:
         if r[CS_RACE] != race or r[CS_SEX] != sex:
@@ -408,9 +428,6 @@ def face_textures(hd_path):
             own = names[0] and hd_of(names[0])
             folder, file = names[0].rsplit("\\", 1) if own else ("", "")
             want = ["", own and hd_of(f"{folder}\\{lower}\\{file}") or own or "", ""]
-    faces = face_textures(f"{prefix}_hd.m2")
-    # Skin Color's underwear: target 13 pelvis, 14 torso
-    underwear = [choice_textures(f"{prefix}_hd.m2", "Skin Color", t) for t in (13, 14)]
         elif r[CS_SECTION] == HAIR and race_dir == "tauren":  # the "hair" texture is the horns
             colors = HORN_TEXTURES[sex]
             want = [hd(f"character/tauren/taurenhorns_{colors[r[CS_COLOR]] if r[CS_COLOR] < len(colors) else colors[0]}.blp",
@@ -505,11 +522,12 @@ def face_bones_path(race, sex):
     return f"Character\\wotlk-hd\\faces-{race}-{sex}.bin"
 
 
-def face_bones(race, sex, hd_path):
+def face_bones(race, sex, hd_path, report):
     """Retail's per-face skeleton shapes (.bone files: offset matrices for some head bones) by
     face, for client/faces.c: b"FACE", version 1, face count, then per face (retail's Face choice
     order, which is 3.3.5's face variation) a bone count and (u32 bone, 16 floats) per bone. Faces
-    without a .bone file get no bones. Translations follow the mesh's 3.3.5 scale (tauren)."""
+    without a .bone file get no bones, as do those whose file the build lacks (night elf female
+    faces 0 and 9: not in retail's CASC either). Translations follow the mesh's 3.3.5 scale (tauren)."""
     cm = chr_model(hd_path)
     face = {o["ID"] for o in table("ChrCustomizationOption") if o["ChrModelID"] == cm and o["Name_lang"] == "Face"}
     choices = sorted((c for c in table("ChrCustomizationChoice") if c["ChrCustomizationOptionID"] in face),
@@ -522,8 +540,13 @@ def face_bones(race, sex, hd_path):
     for c in choices:
         fid = bone_files.get(sets.get(c["ID"]))
         bones = []
-        if fid:
-            data, off, ids, mats = fetch.get(fid), 4, [], []
+        try:
+            data = fid and fetch.get(fid)
+        except OSError as e:
+            report.append(f"face {c['OrderIndex']} of {hd_path}: default shape, no {fetch.name(fid)} ({e})")
+            data = None
+        if data:
+            off, ids, mats = 4, [], []
             while off < len(data):
                 tag, size = data[off:off + 4], struct.unpack_from("<I", data, off + 4)[0]
                 if tag == b"BIDA":
@@ -561,7 +584,7 @@ def main(selected):
                 except (convert.ConvertError, AssertionError, struct.error, OSError, IndexError, KeyError) as e:
                     report.append(f"{old_path}: {type(e).__name__}: {e}")
                     continue
-                own[face_bones_path(race, sex)] = face_bones(race, sex, hd_path)
+                own[face_bones_path(race, sex)] = face_bones(race, sex, hd_path, report)
             char_sections(cs, race, race_dir, sex, own, report)
             if dropped:
                 hair_tables.append(hair_fallbacks(race, sex, dropped, report))

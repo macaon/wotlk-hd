@@ -185,7 +185,7 @@ block, the limit for any big allocation (high-res textures).
 
 ## Adding a race (HD character models)
 
-Blood elves, orcs, tauren, undead, trolls, humans and dwarves are done; each race is an entry in `chars.py` `RACES` plus, where retail
+Blood elves, orcs, tauren, undead, trolls, humans, dwarves and night elves are done; each race is an entry in `chars.py` `RACES` plus, where retail
 reorganised it, a geoset function in `RACE_GEOSETS`. Order of work:
 
 1. `charcheck.py options <dir> <sex>`: retail's customization options, each choice's geosets, in
@@ -194,7 +194,7 @@ reorganised it, a geoset function in `RACE_GEOSETS`. Order of work:
    facial style tables (facial columns are 1xx, 3xx, 2xx) and the 3.3.5 display x model scale.
 2. Map what moved: same ids need nothing (orc hair, beards); pieces split into new options get a
    geoset function (tauren: horns 24xx and foremane under one 3.3.5 style id, nose rings 16xx for
-   3xx; troll: tusks 3xx moved to 40xx; human: female piercings 3xx moved to 35xx; dwarf: female 3xx to earrings 35xx and a nose ring 16xx, ears 702 always drawn; orc: tusks 40xx always drawn, piercings as earring 35xx + nose ring 16xx). A geoset map may
+   3xx; troll: tusks 3xx moved to 40xx; human: female piercings 3xx moved to 35xx; dwarf: female 3xx to earrings 35xx and a nose ring 16xx, ears 702 always drawn; night elf: ears 701 (Thin) as 702, male moustaches 305/306 borrow 304/302; orc: tusks 40xx always drawn, piercings as earring 35xx + nose ring 16xx). A geoset map may
    return a tuple (one retail piece drawn for several styles) or 0 (always drawn).
    When ids or order do not settle it, `charcheck.py match <dir> <sex> <3.3.5 ids> [groups]`
    (needs numpy and scipy) ranks retail pieces by shape; beards redesigned in HD match nothing well.
