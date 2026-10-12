@@ -127,7 +127,8 @@ PTR, boar2.m2 from another export than its skins). fetch.py pins one build; the 
 catches it: each skin vertex's palette bone (skin) must be its model vertex's bone (m2).
 
 Install: `install.py` copies out/patch-N.MPQ to <WoW>/Data/ and out/patch-enUS-N.MPQ to
-Data/enUS/. Models and textures must be in the base patch: Blizzard's Data/patch-3.MPQ outranks
+Data/enUS/; by default only those already installed and the per-race archives (out/ also holds old
+experiments, and every patch in Data loads), a new numbered patch by name (`install.py 9`). Models and textures must be in the base patch: Blizzard's Data/patch-3.MPQ outranks
 every locale patch for the 3.x model updates it holds (463 of our files, the blood elves among them,
 showed the old model until this split); DBCs override from the locale patch.
 
