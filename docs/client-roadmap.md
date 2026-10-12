@@ -44,6 +44,34 @@ existing 3.3.5 DLL extending Lua, camera and nameplates) is a good source of kno
 | New races (Worgen) | Possible, big project | Client: rows in `ChrRaces`, `CharBaseInfo`, `CharSections`, hair/facial tables, `HelmetGeosetVisData`, sounds, name generation; GlueXML for character creation; helmet variants per race (retail has them). Check for hard-coded race-count arrays in 12340 against 4.3.4 (Worgen's id 22 is the risk). Server: `playercreateinfo`, race masks, starting zone, racials, language, factions. Two Forms needs an aura-based model swap. Do Goblin first: race id 9 already exists in 3.3.5's `ChrRaces`. |
 | More character slots | Medium | 10 per realm is the client's cap (`CharactersPerRealm = 10`). Check whether 12340's character list array has a fixed size, add paging or scrolling to `CharacterSelect.lua`, and patch the interface signature check so modified GlueXML loads. |
 
+## Memory: working within 4 GB
+
+The client usually fails on address-space fragmentation, not total use: no contiguous block for a
+large texture or buffer even with plenty free overall.
+
+1. **Measure first.** A memory census in dinput8.dll (a `VirtualQuery` walk on a timer, ~20 lines)
+   logging committed/reserved memory per module, the client heap and the largest free block to
+   `wotlk-hd.log`. It shows whether the memory is the client's own (models, textures, the MPQ file
+   cache) or the graphics driver's, and decides which fix below applies.
+2. **Move the driver's memory out of the process.** Under classic Wine the OpenGL/Vulkan driver
+   lives in the same 32-bit address space and competes with the game for it. Wine's newer WoW64
+   mode runs 32-bit games in a 64-bit process with a 64-bit driver, so the driver's own allocations
+   sit above 4 GB. Check whether GE-Proton11-7 enables it by default.
+3. **DXVK's `d3d9.textureMemory`.** It keeps the system-memory copies of textures out of the 32-bit
+   address space except while in use. We use `-opengl` because DXVK slowed down over long sessions;
+   if that slowdown is fixable, this setting plus Vulkan might beat the OpenGL path.
+4. **Trim what the client keeps resident** (check, needs disassembly): whether it keeps decoded BLPs
+   after uploading them, how large its MPQ/file cache is, when it unloads models. Byte patches or
+   hooks like the existing ones.
+5. **Budget textures by role.** Full resolution on characters and close-up props, smaller on
+   distant world textures. The mipmaps are already in the files: a build setting, not new art.
+
+A 64-bit client recompiled from the decompile is not realistic: M2 and other loaders read files as
+one blob and rewrite 32-bit offsets into pointers in place, pointer-size assumptions are everywhere,
+and matching the default client's behaviour is person-years of work. For a long-term 64-bit client,
+Whoa (github.com/whoahq/whoa, a clean-room 12340 reimplementation; check its status) is the
+realistic path.
+
 ## Other improvements
 
 - **Disable the interface signature check:** one patch, unlocks GlueXML/FrameXML modding
