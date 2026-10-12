@@ -96,6 +96,30 @@ static void apply_character_patches(void) {
          cave);
 }
 
+/* Archives by name: the client finds Data\\patch-?.MPQ and Data\\<locale>\\patch-<locale>-?.MPQ by a
+ * wildcard search and loads them in descending name order (case-insensitive, later names win). A '*'
+ * for the '?' also finds patch-dwarf.MPQ and the like; names sort above the numbered patches. */
+static void allow_named_patches(void) {
+    static const struct { unsigned va; const char *orig; unsigned star; } sites[] = {
+        {0x009E2710u, "patch-?.MPQ", 6}, {0x009E2700u, "patch-%s-?.MPQ", 9}};
+    unsigned i;
+    for (i = 0; i < 2; i++) {
+        char *at = (char *)(UINT_PTR)sites[i].va;
+        DWORD old;
+        if (memcmp(at, sites[i].orig, strlen(sites[i].orig) + 1) != 0) {
+            wlog("named patches: %08x not \"%s\", left alone", sites[i].va, sites[i].orig);
+            continue;
+        }
+        if (!VirtualProtect(at, 16, PAGE_READWRITE, &old)) {
+            wlog("named patches: VirtualProtect %08x failed (%lu)", sites[i].va, GetLastError());
+            continue;
+        }
+        at[sites[i].star] = '*';
+        VirtualProtect(at, 16, old, &old);
+        wlog("named patches: %s", at);
+    }
+}
+
 BOOL WINAPI DllMain(HINSTANCE dll, DWORD reason, LPVOID reserved) {
     (void)reserved;
     if (reason == DLL_PROCESS_ATTACH) {
@@ -108,8 +132,10 @@ BOOL WINAPI DllMain(HINSTANCE dll, DWORD reason, LPVOID reserved) {
         /* 3.3.5a 12340 checks: the FoV constant patch_exe.py writes, read back */
         DWORD stamp = ((IMAGE_NT_HEADERS *)((BYTE *)base + ((IMAGE_DOS_HEADER *)base)->e_lfanew))->FileHeader.TimeDateStamp;
         wlog("Wow.exe PE timestamp %08lx%s", stamp, stamp == 0x4c2452fe ? " (3.3.5a 12340)" : " (not 12340: no patches)");
-        if (stamp == 0x4c2452fe)
+        if (stamp == 0x4c2452fe) {
             apply_character_patches();
+            allow_named_patches();
+        }
     }
     return TRUE;
 }

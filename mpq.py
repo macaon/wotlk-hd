@@ -47,6 +47,7 @@ def write_archive(path, files):
         raise OSError(f"cannot create {path}")
     try:
         for name, data in files.items():
+            data = data() if callable(data) else data  # built on demand (chars.py's textures)
             f = _h()
             if not _s.SFileCreateFile(h, name.encode(), 0, len(data), 0,
                                       MPQ_FILE_COMPRESS | MPQ_FILE_REPLACEEXISTING, ctypes.byref(f)):

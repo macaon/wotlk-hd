@@ -154,6 +154,12 @@ and FoV stay in Wow-hd.exe (LAA must be in the exe header). Build with `client/b
 ziglang.org zig-linux-x86_64-0.13.0); copy the DLL next to Wow.exe; under Wine/Proton set
 `WINEDLLOVERRIDES=dinput8=n,b`. It writes wotlk-hd.log next to the exe.
 
+It also lets the client load archives by name: the client finds `Data\patch-?.MPQ` and
+`Data\<locale>\patch-<locale>-?.MPQ` by wildcard and loads them in descending name order
+(case-insensitive: later names win), so the DLL turns both `?` into `*`. `chars.py` writes one
+archive per race (`patch-dwarf.MPQ`, ...), which sort above the numbered patches. Never leave other
+`patch-*.MPQ` files in Data (backups, side builds): they load too.
+
 ## Adding a race (HD character models)
 
 Blood elves, orcs, tauren, undead, trolls, humans and dwarves are done; each race is an entry in `chars.py` `RACES` plus, where retail
@@ -169,7 +175,7 @@ reorganised it, a geoset function in `RACE_GEOSETS`. Order of work:
    return a tuple (one retail piece drawn for several styles) or 0 (always drawn).
    When ids or order do not settle it, `charcheck.py match <dir> <sex> <3.3.5 ids> [groups]`
    (needs numpy and scipy) ranks retail pieces by shape; beards redesigned in HD match nothing well.
-3. Add the race to `RACES`, run `chars.py` (after `build.py` only matters for the creature patch),
+3. Add the race to `RACES`, run `chars.py <race dir>` (that race only; the others keep their out/patch-<race dir>.MPQ; after `build.py` only matters for the creature patch),
    then `charcheck.py built <dir> <sex>`: skin-textured vertices outside 3.3.5's regions draw black
    (tauren throat, undead fingers and bones: `THROAT_RACES`, the face lower region), keyframes in missing .anim files or
    starting after 0 crash the client (the converter fixes both; this confirms it).
@@ -179,7 +185,7 @@ reorganised it, a geoset function in `RACE_GEOSETS`. Order of work:
 
 Pitfalls seen so far: retail-only texture types (19 eyes, 20 jewelry: fixed files); the skin extra
 (type 8, tauren fur) shared per three skin colours in retail; `mpq.Client()`'s default chain leaves
-out our own patches (read out/patch-6.MPQ explicitly, as charcheck does); retail textures past
+out our own patches (read out/patch-<race dir>.MPQ explicitly, as charcheck does); retail textures past
 3.3.5's layout (the face sheet is region 8, face upper; facial hair sheets go there too).
 
 ## To fix later

@@ -1,6 +1,10 @@
 """HD player character models: retail's customizable models for 3.3.5, with Wow-hdchar.exe.
 
-usage: chars.py    writes out/patch-6.MPQ and out/patch-enUS-6.MPQ (install.py; needs Wow-hdchar.exe)
+usage: chars.py [race dir ...]    converts the races named (retail folder names: dwarf, scourge, ...;
+                                  default all) into out/patch-<race dir>.MPQ, one archive per race
+                                  (dinput8.dll loads them by name), and writes the shared
+                                  out/patch-6.MPQ and out/patch-enUS-6.MPQ (DBCs, every race); then
+                                  install.py
 
 Wow-hdchar.exe composites characters as 1024x512 in retail's HD layout (patch_exe.py), so the HD
 models' UVs and retail's HD skin, face and underwear textures fit unchanged. The models come in
@@ -24,12 +28,13 @@ import csv
 import io
 import os
 import struct
+import sys
 
 import blp
 import build
 import convert
 import fetch
-from mpq import Client
+from mpq import Client, write_archive
 from PIL import Image
 
 # race id, retail folder/prefix, 3.3.5 path prefix, HD model per sex
@@ -43,12 +48,12 @@ RACES = [
                                1: "character/scourge/female/scourgefemale_hd.m2"}),
     (8, "troll", "Troll", {0: "character/troll/male/trollmale_hd.m2", 1: "character/troll/female/trollfemale_hd.m2"}),
     (1, "human", "Human", {0: "character/human/male/humanmale_hd.m2", 1: "character/human/female/humanfemale_hd.m2"}),
+    (3, "dwarf", "Dwarf", {0: "character/dwarf/male/dwarfmale_hd.m2", 1: "character/dwarf/female/dwarffemale_hd.m2"}),
 ]
 SEXES = {0: ("male", "Male"), 1: ("female", "Female")}
 SEXES_BY_PATH = {upper: sex for sex, (_, upper) in SEXES.items()}
 JOIN = {2001: 501, 2301: 401, 2201: 0, 3202: 0, 3301: 0, 3401: 0,  # 3202 is the face (3201 a small cap)
         1801: 0}  # bare waist under belts; 3.3.5's own model has none, its waist is in the body
-    (3, "dwarf", "Dwarf", {0: "character/dwarf/male/dwarfmale_hd.m2", 1: "character/dwarf/female/dwarffemale_hd.m2"}),
 # Eye glow: 3.3.5 shows 1702 on blood elves; retail's 1702-1705 are large flame flares (228 vertices,
 # alternative eye styles), its plain in-eye glow is 1701 (60). So retail 1701 stands in for 1702.
 # Undead likewise (3.3.5's model has 1702 and 1703, retail's 1702-1705 are the Primalist flares).
@@ -314,8 +319,8 @@ def char_sections(cs, race, race_dir, sex, files, report):
         if not fid:
             return None
         path = build.mpq_path(name)
-        if path not in files:
-            files[path] = blp.reencode(fetch.get(fid)) if composited else fetch.get(fid)
+        if path not in files:  # encoded when written: only for the races being built
+            files[path] = (lambda: blp.reencode(fetch.get(fid))) if composited else (lambda: fetch.get(fid))
         return path
     original = build.Dbc(Client().read("DBFilesClient\\CharSections.dbc"))
     old_rows = {r[0]: r for r in original.rows}
@@ -349,9 +354,12 @@ def char_sections(cs, race, race_dir, sex, files, report):
             fid = fetch.fdid(skins[color].lower().replace("\\", "/")[:-4] + "_hd.blp")
             if not fid:
                 return ""
-            im = Image.open(io.BytesIO(fetch.get(fid)))
-            im.load()
-            files[path] = blp.encode(im.convert("RGBA").resize(COMPOSITE).crop(THROAT_BOX))
+
+            def encode():
+                im = Image.open(io.BytesIO(fetch.get(fid)))
+                im.load()
+                return blp.encode(im.convert("RGBA").resize(COMPOSITE).crop(THROAT_BOX))
+            files[path] = encode
         return path
     hair = choice_textures(f"{prefix}_hd.m2", "Hair Color", 10)
     skin_fids = choice_textures(f"{prefix}_hd.m2", "Skin Color", 1)
@@ -459,21 +467,30 @@ def native_scale(race, sex):
     return f(d[build.CDI_SCALE]) * f(m[CMD_SCALE])
 
 
-def main():
+def race_archive(race_dir):
+    return os.path.join(build.OUT, f"patch-{race_dir}.MPQ")
+
+
+def main(selected):
     client = Client()
     cs = build.Dbc(client.read("DBFilesClient\\CharSections.dbc"))
-    files, report, hair_tables = {}, [], []
+    files, report, hair_tables, race_files = {}, [], [], {}
     for race, race_dir, old_dir, hd_models in RACES:
+        rebuild = not selected or race_dir in selected
+        if not rebuild and not os.path.exists(race_archive(race_dir)):
+            report.append(f"{race_dir}: not rebuilt and no {race_archive(race_dir)}: its DBC rows point at missing files")
+        own = race_files.setdefault(race_dir, {}) if rebuild else {}  # DBC rows for every race, files for the rebuilt
         for sex, hd_path in hd_models.items():
             _, upper = SEXES[sex]
             old_path = f"Character\\{old_dir}\\{upper}\\{old_dir}{upper}.m2"
             dropped = set()
-            try:
-                model(race, hd_path, old_path, files, report, dropped)
-            except (convert.ConvertError, AssertionError, struct.error, OSError, IndexError, KeyError) as e:
-                report.append(f"{old_path}: {type(e).__name__}: {e}")
-                continue
-            char_sections(cs, race, race_dir, sex, files, report)
+            if rebuild:
+                try:
+                    model(race, hd_path, old_path, own, report, dropped)
+                except (convert.ConvertError, AssertionError, struct.error, OSError, IndexError, KeyError) as e:
+                    report.append(f"{old_path}: {type(e).__name__}: {e}")
+                    continue
+            char_sections(cs, race, race_dir, sex, own, report)
             if dropped:
                 hair_tables.append(hair_fallbacks(race, sex, dropped, report))
     safe_for_other_races(cs, {(race, sex) for race, _, _, models in RACES for sex in models}, files, report)
@@ -483,7 +500,13 @@ def main():
     files["DBFilesClient\\CharacterFacialHairStyles.dbc"] = facial_styles(report).bytes()
     print("\n".join(report))
     print(build.write_patch(6, files))
+    for race_dir, own in race_files.items():
+        write_archive(race_archive(race_dir), own)
+        print(f"wrote {race_archive(race_dir)}: {len(own)} files, {os.path.getsize(race_archive(race_dir)) // 1024} KiB")
 
 
 if __name__ == "__main__":
-    main()
+    unknown = set(sys.argv[1:]) - {d for _, d, _, _ in RACES}
+    if unknown:
+        sys.exit(f"unknown race dirs {sorted(unknown)}; known: {[d for _, d, _, _ in RACES]}")
+    main(set(sys.argv[1:]))

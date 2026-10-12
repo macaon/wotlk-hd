@@ -5,7 +5,7 @@ usage: charcheck.py options <race dir> <sex>     retail customization choices an
                                                  3.3.5 vs retail geoset ids, 3.3.5 style tables
        charcheck.py match <race dir> <sex> <3.3.5 ids> [retail groups]
                                                  retail geosets closest in shape to 3.3.5's
-       charcheck.py built <race dir> <sex>       the built out/patch-6 model: skin vertices outside
+       charcheck.py built <race dir> <sex>       the built out/patch-<race dir> model: skin vertices outside
                                                  3.3.5's regions or in the face lower one, broken
                                                  keyframes, aliases left
 
@@ -116,14 +116,15 @@ def match(race_dir, sex, ids, groups=None):
 
 def built(race_dir, sex):
     os.makedirs(os.path.join(OUT_WOW, "Data"), exist_ok=True)
-    link = os.path.join(OUT_WOW, "Data", "patch-6.MPQ")
+    name = os.path.basename(chars.race_archive(race_dir))
+    link = os.path.join(OUT_WOW, "Data", name)
     if not os.path.exists(link):
-        os.symlink(build.patch_paths(6)[0], link)
-    client = mpq.Client(wow_dir=OUT_WOW, chain=["patch-6.MPQ"])
+        os.symlink(chars.race_archive(race_dir), link)
+    client = mpq.Client(wow_dir=OUT_WOW, chain=[name])
     p = old_path(race_dir, sex)
     m, s = client.read(p + ".m2"), client.read(p + "00.skin")
     if not m:
-        print("not in out/patch-6.MPQ: run chars.py")
+        print(f"not in {name}: run chars.py {race_dir}")
         return
     arrays = {name: struct.unpack_from("<II", m, off) for off, name in ARRAYS}
     ov = arrays["vertices"][1]
