@@ -160,6 +160,13 @@ It also lets the client load archives by name: the client finds `Data\patch-?.MP
 archive per race (`patch-dwarf.MPQ`, ...), which sort above the numbered patches. Never leave other
 `patch-*.MPQ` files in Data (backups, side builds): they load too.
 
+MPQ reader (`client/mpq.c`, first step of docs/client-roadmap.md): StormLib (fetched into cache/ by
+`build.sh` at a pinned commit) takes over the calls the game's file layer makes into the client's
+own Storm. Off by default; `WOTLKHD_MPQ=shadow` repeats every read through StormLib and logs any
+difference (which archive, size, bytes, seeks), `WOTLKHD_MPQ=stormlib` serves the game's files from
+StormLib. Storm still opens the archives: the interface file checks look files up in its archive
+list. Pass the variable through the launcher: `WOTLKHD_MPQ=stormlib ~/Games/wotlk/launch.sh`.
+
 ## Adding a race (HD character models)
 
 Blood elves, orcs, tauren, undead, trolls, humans and dwarves are done; each race is an entry in `chars.py` `RACES` plus, where retail

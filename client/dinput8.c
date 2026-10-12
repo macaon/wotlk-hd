@@ -16,6 +16,8 @@ typedef HRESULT(WINAPI *DirectInput8Create_t)(HINSTANCE, DWORD, REFIID, LPVOID *
 static DirectInput8Create_t real_create;
 static FILE *log_file;
 
+void mpq_hooks(void); /* mpq.c */
+
 void wlog(const char *fmt, ...) {
     if (!log_file)
         return;
@@ -135,6 +137,7 @@ BOOL WINAPI DllMain(HINSTANCE dll, DWORD reason, LPVOID reserved) {
         if (stamp == 0x4c2452fe) {
             apply_character_patches();
             allow_named_patches();
+            mpq_hooks();
         }
     }
     return TRUE;

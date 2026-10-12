@@ -1,8 +1,28 @@
 #!/bin/sh
-# Builds client/dinput8.dll (32-bit Windows) with the Zig toolchain in cache/ (see README).
+# Builds client/dinput8.dll (32-bit Windows) with the Zig toolchain in cache/ (see README), with
+# StormLib (MIT, fetched into cache/ at a pinned commit and compiled once) linked in.
 set -e
 cd "$(dirname "$0")"
 ZIG="${ZIG:-../cache/zig-linux-x86_64-0.13.0/zig}"
-"$ZIG" cc -target x86-windows-gnu -O2 -shared -o dinput8.dll dinput8.c dinput8.def
+STORMLIB=../cache/StormLib STORMLIB_COMMIT=44ebfbf
+OBJ=../cache/stormlib-obj
+if [ ! -d "$STORMLIB" ]; then
+    git clone -q https://github.com/ladislav-zezula/StormLib.git "$STORMLIB"
+    git -C "$STORMLIB" checkout -q "$STORMLIB_COMMIT"
+fi
+if [ ! -f "$OBJ/done" ]; then
+    rm -rf "$OBJ" && mkdir -p "$OBJ"
+    (cd "$STORMLIB" && ls src/adpcm/adpcm.cpp src/huffman/huff.cpp src/jenkins/lookup3.c src/lzma/C/LzFind.c \
+        src/lzma/C/LzmaDec.c src/lzma/C/LzmaEnc.c src/pklib/explode.c src/pklib/implode.c src/sparse/sparse.cpp \
+        src/FileStream.cpp src/SBase*.cpp src/SCompression.cpp src/SFile*.cpp src/SMemUtf8.cpp \
+        src/LibTomCrypt.c src/LibTomMath.c src/LibTomMathDesc.c src/zlib/*.c src/bzip2/*.c) |
+        grep -v compress_zlib | while read -r f; do
+        case $f in *.cpp) cc="c++ -fno-exceptions" ;; *) cc=cc ;; esac
+        echo "$ZIG $cc -target x86-windows-gnu -O2 -D_7ZIP_ST -DBZ_STRICT_ANSI -w -c $STORMLIB/$f -o $OBJ/$(echo "$f" | tr / _).o"
+    done | xargs -P"$(nproc)" -I{} sh -c '{}'
+    touch "$OBJ/done"
+fi
+"$ZIG" c++ -target x86-windows-gnu -O2 -shared -w -I "$STORMLIB/src" -o dinput8.dll dinput8.c mpq.c dinput8.def \
+    "$OBJ"/*.o -lwininet
 rm -f dinput8.lib dinput8.pdb
 echo "built $(pwd)/dinput8.dll"
