@@ -167,6 +167,9 @@ difference (which archive, size, bytes, seeks), `WOTLKHD_MPQ=stormlib` serves th
 StormLib. Storm still opens the archives: the interface file checks look files up in its archive
 list. Pass the variable through the launcher: `WOTLKHD_MPQ=stormlib ~/Games/wotlk/launch.sh`.
 
+The DLL also logs a memory census once a minute: committed memory by kind and the largest free
+block, the limit for any big allocation (high-res textures).
+
 ## Adding a race (HD character models)
 
 Blood elves, orcs, tauren, undead, trolls, humans and dwarves are done; each race is an entry in `chars.py` `RACES` plus, where retail

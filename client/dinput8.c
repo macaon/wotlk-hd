@@ -122,6 +122,42 @@ static void allow_named_patches(void) {
     }
 }
 
+/* Memory census (docs/client-roadmap.md, "Memory"): once a minute, the address space by kind
+ * (image = exe and DLLs, mapped = files and shared sections, private = heaps, textures, driver
+ * buffers), and the largest free block, which is what a big allocation needs. */
+static DWORD WINAPI memory_census(LPVOID unused) {
+    SYSTEM_INFO si;
+    (void)unused;
+    GetSystemInfo(&si);
+    for (;;) {
+        MEMORY_BASIC_INFORMATION m;
+        SIZE_T image = 0, mapped = 0, private_ = 0, reserved = 0, free_ = 0, largest = 0;
+        BYTE *at = si.lpMinimumApplicationAddress;
+        while (at < (BYTE *)si.lpMaximumApplicationAddress && VirtualQuery(at, &m, sizeof(m))) {
+            if (m.State == MEM_FREE) {
+                free_ += m.RegionSize;
+                if (m.RegionSize > largest)
+                    largest = m.RegionSize;
+            } else if (m.State == MEM_RESERVE)
+                reserved += m.RegionSize;
+            else if (m.Type == MEM_IMAGE)
+                image += m.RegionSize;
+            else if (m.Type == MEM_MAPPED)
+                mapped += m.RegionSize;
+            else
+                private_ += m.RegionSize;
+            at = (BYTE *)m.BaseAddress + m.RegionSize;
+        }
+        wlog("memory: committed %lu MB (image %lu, mapped %lu, private %lu), reserved %lu MB, free %lu MB, "
+             "largest free block %lu MB, address space %lu MB",
+             (unsigned long)((image + mapped + private_) >> 20), (unsigned long)(image >> 20),
+             (unsigned long)(mapped >> 20), (unsigned long)(private_ >> 20), (unsigned long)(reserved >> 20),
+             (unsigned long)(free_ >> 20), (unsigned long)(largest >> 20),
+             (unsigned long)(((SIZE_T)si.lpMaximumApplicationAddress + 1) >> 20));
+        Sleep(60000);
+    }
+}
+
 BOOL WINAPI DllMain(HINSTANCE dll, DWORD reason, LPVOID reserved) {
     (void)reserved;
     if (reason == DLL_PROCESS_ATTACH) {
@@ -139,6 +175,7 @@ BOOL WINAPI DllMain(HINSTANCE dll, DWORD reason, LPVOID reserved) {
             allow_named_patches();
             mpq_hooks();
         }
-    }
+        CloseHandle(CreateThread(NULL, 0, memory_census, NULL, 0, NULL));
+    } /* no census at exit: the client ends without DLL_PROCESS_DETACH */
     return TRUE;
 }
