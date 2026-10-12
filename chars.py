@@ -467,6 +467,44 @@ def native_scale(race, sex):
     return f(d[build.CDI_SCALE]) * f(m[CMD_SCALE])
 
 
+def face_bones_path(race, sex):
+    """Where client/faces.c looks for a race and sex's face shapes."""
+    return f"Character\\wotlk-hd\\faces-{race}-{sex}.bin"
+
+
+def face_bones(race, sex, hd_path):
+    """Retail's per-face skeleton shapes (.bone files: offset matrices for some head bones) by
+    face, for client/faces.c: b"FACE", version 1, face count, then per face (retail's Face choice
+    order, which is 3.3.5's face variation) a bone count and (u32 bone, 16 floats) per bone. Faces
+    without a .bone file get no bones. Translations follow the mesh's 3.3.5 scale (tauren)."""
+    cm = chr_model(hd_path)
+    face = {o["ID"] for o in table("ChrCustomizationOption") if o["ChrModelID"] == cm and o["Name_lang"] == "Face"}
+    choices = sorted((c for c in table("ChrCustomizationChoice") if c["ChrCustomizationOptionID"] in face),
+                     key=lambda c: int(c["OrderIndex"]))
+    bone_files = {r["ID"]: int(r["BoneFileDataID"]) for r in table("ChrCustomizationBoneSet")}
+    sets = {e["ChrCustomizationChoiceID"]: e["ChrCustomizationBoneSetID"] for e in table("ChrCustomizationElement")
+            if e["ChrCustomizationBoneSetID"] != "0"}
+    scale = 1 / native_scale(race, sex)
+    out = [b"FACE", struct.pack("<II", 1, len(choices))]
+    for c in choices:
+        fid = bone_files.get(sets.get(c["ID"]))
+        bones = []
+        if fid:
+            data, off, ids, mats = fetch.get(fid), 4, [], []
+            while off < len(data):
+                tag, size = data[off:off + 4], struct.unpack_from("<I", data, off + 4)[0]
+                if tag == b"BIDA":
+                    ids = struct.unpack_from(f"<{size // 2}H", data, off + 8)
+                elif tag == b"BOMT":
+                    mats = [list(struct.unpack_from("<16f", data, off + 8 + 64 * k)) for k in range(size // 64)]
+                off += 8 + size
+            for bone, m in zip(ids, mats):
+                m[12:15] = [v * scale for v in m[12:15]]
+                bones.append(struct.pack("<I16f", bone, *m))
+        out += [struct.pack("<I", len(bones))] + bones
+    return b"".join(out)
+
+
 def race_archive(race_dir):
     return os.path.join(build.OUT, f"patch-{race_dir}.MPQ")
 
@@ -490,6 +528,7 @@ def main(selected):
                 except (convert.ConvertError, AssertionError, struct.error, OSError, IndexError, KeyError) as e:
                     report.append(f"{old_path}: {type(e).__name__}: {e}")
                     continue
+                own[face_bones_path(race, sex)] = face_bones(race, sex, hd_path)
             char_sections(cs, race, race_dir, sex, own, report)
             if dropped:
                 hair_tables.append(hair_fallbacks(race, sex, dropped, report))

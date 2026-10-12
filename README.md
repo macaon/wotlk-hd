@@ -172,6 +172,14 @@ difference (which archive, size, bytes, seeks), `WOTLKHD_MPQ=stormlib` serves th
 StormLib. Storm still opens the archives: the interface file checks look files up in its archive
 list. Pass the variable through the launcher: `WOTLKHD_MPQ=stormlib ~/Games/wotlk/launch.sh`.
 
+Face shapes (`client/faces.c`): retail gives each face a .bone file, offset matrices for about 30
+head bones (ChrCustomizationElement -> ChrCustomizationBoneSet), which reshape the skull to match
+the face texture. `chars.py` writes them per race and sex as `Character\wotlk-hd\faces-<race>-<sex>.bin`
+(by face variation; tauren offsets follow the shrunk mesh). The DLL notes each character model's
+face when its geosets are set up (0x4ed951: component race +0x18, sex +0x1c, face +0x2c, model
++0x38) and, where the animate function multiplies a bone's local matrix by its parent's (0x82fe4f),
+applies T(-pivot) x offset x T(pivot) to face bones, so children follow.
+
 The DLL also logs a memory census once a minute: committed memory by kind and the largest free
 block, the limit for any big allocation (high-res textures).
 
@@ -207,8 +215,9 @@ out our own patches (read out/patch-<race dir>.MPQ explicitly, as charcheck does
 
 - Blood elf eye glow colour: retail's plain glow (1701) shows cyan rather than fel green.
 - Humanoid NPCs on HD character models need retail's HD baked textures (CreatureDisplayInfoExtra).
-- Per-face skeleton shapes (.bone files, 20 per race and sex) are not applied: every face uses the
-  default shape.
+- Face shapes: whether retail applies the .bone offset before or after the bone's animation is a
+  guess (before: the shape rotates with jaw and lips); check faces while talking. NPCs on player
+  models (CreatureDisplayInfoExtra) may not pass the geoset update that records the face.
 - Helmets are sized for 3.3.5's heads; check fit and hair/ear hiding per race.
 - Higher-res armour textures: retail's versions fit the 1024x512 regions; 2048x1024 for more.
 
