@@ -30,6 +30,11 @@ MANUAL = {
         f"dragonhawkskin{old}": f"creature/dragonhawk2/dragonhawk2_{new}.blp" for old, new in [
             ("", "orange"), ("01", "orange"), ("02", "green"), ("03", "pink"), ("04", "cyan"),
             ("05", "red"), ("06", "black"), ("07", "black")]}),
+    # Lynxes (Springpaw red, Ghostclaw yellow): retail keeps druidcat_legacy for them; Midnight's
+    # Eversong lynxes use eversonglynx (displays 131955-131957). Yellow is closest to its tan.
+    "druidcat_legacy": ("creature/druidcat/druidcat_legacy.m2", "creature/eversonglynx/eversonglynx.m2", {
+        "lynxskinred": "creature/eversonglynx/eversonglynx_red.blp",
+        "lynxskinyellow": "creature/eversonglynx/eversonglynx_tan.blp"}),
 }
 
 

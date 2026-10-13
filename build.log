@@ -1,187 +1,658 @@
-[1/187] ancientofwar2diseased
-[2/187] anduin
-[3/187] batmount
-[4/187] druidtravelcat
-[5/187] faeriedragon2
-[6/187] harvestgolem2
-[7/187] imp2_noflames
-[8/187] kodobeast2pack
-[9/187] kodobeast2wooly
-[10/187] kvaldir
-[11/187] lavatarantula
-[12/187] mechanicalchicken
-[13/187] moltengiant
-[14/187] nagalord2
-[15/187] nightbane2
-[16/187] nozdormudragon
-[17/187] pig2
-[18/187] rabbitgold2
-[19/187] yseradragon
-[20/187] airelemental
-[21/187] ancientoflore
-[22/187] ancientofwar
-[23/187] ancientprotector
-[24/187] banshee
-[25/187] battlestandard_frostwolf_a_01
-[26/187] be_broom01
-[27/187] bear
-[28/187] bearmount
-[29/187] boar
-[30/187] bonespider
-[31/187] carrionbird
-[32/187] cat
-[33/187] chicken
-[34/187] crab
-[35/187] darkhound
-[36/187] diablofunsized
-[37/187] diemetradon
-[38/187] doomguard
-[39/187] draeneitotem_earth
-[40/187] druidbear
-[41/187] druidbeartauren
-[42/187] druidcat
-[43/187] druidcattauren
-[44/187] druidowlbear
-[45/187] druidowlbeartauren
-[46/187] dryad
-[47/187] eagle
-[48/187] elementalearth
-[49/187] ent
-[50/187] facelessone
-[51/187] faeriedragon
-[52/187] felguard
-[53/187] felhound
-[54/187] fireelemental
-[55/187] fleshgolem
-[56/187] frog
-[57/187] ghoul
-[58/187] giantspider
-[59/187] gnoll
-[60/187] gnollcaster
-[61/187] gnollmelee
-[62/187] golemharvest
-[63/187] golemstone
-[64/187] gorilla
-[65/187] grell
-[66/187] halfbodyofkathune
-[67/187] hammerhead
-[68/187] horse
-[69/187] humanfemalekid
-[70/187] humanmalekid
-[71/187] hyena
-[72/187] imp
-[73/187] kalecgos
-[74/187] keeperofthegrove
-[75/187] kobold
-[76/187] kodobeast
-[77/187] krakken
-[78/187] ladyalexstrasa
-[79/187] ladysylvanaswindrunner
-[80/187] ladyvashj
-[81/187] larva
-[82/187] lobstrok
-[83/187] manawurm
-[84/187] medivh
-[85/187] miev
-[86/187] minespider
-[87/187] murloc
-[88/187] northrendghoul
-[89/187] northrendghoulspiked
-[90/187] pig
-[91/187] pitlord
-[92/187] prariedog
-[93/187] quillboar
-[94/187] quillboarcaster
-[95/187] quillboarwarrior
-[96/187] rabbit
-[97/187] rabbitgold
-[98/187] ram
-[99/187] rat
-[100/187] ridingkodo
-[101/187] ridingphoenix
-[102/187] rocketchicken
-[103/187] satyr
-[104/187] sealion
-[105/187] seavrykulmale
-[106/187] seavrykulmale_a
-[107/187] shark
-[108/187] sheep
-[109/187] silithidscarab
-[110/187] skeleton
-[111/187] spirithealer
-[112/187] squirrel
-[113/187] succubus
-[114/187] tallstrider
-[115/187] tarantula
-[116/187] threshadon
-[117/187] thunderlizard
-[118/187] titanfemale
-[119/187] troglodyte
-[120/187] trolldire
-[121/187] turtle
-[122/187] valkier
-[123/187] valkierdark
-[124/187] velen
-[125/187] voidterror
-[126/187] voidwalker
-[127/187] waterelemental
-[128/187] wendigo
-[129/187] windserpent
-[130/187] woodendummy
-[131/187] zombie
-[132/187] zombiearm
-[133/187] zombiesword
-[134/187] furbolg
-[135/187] raptor
-[136/187] owl
-[137/187] harpy
-[138/187] mountaingiant
-[139/187] bogbeast
-[140/187] dragonwhelp
-[141/187] lasherorchid
-[142/187] mammoth
-[143/187] ghost
-[144/187] basilisk
-[145/187] arcanegolem
-[146/187] felbat
-[147/187] shivan
-[148/187] dragonspawn
-[149/187] oracle
-[150/187] warpstalker
-[151/187] dreadlord
-[152/187] fleshbeast
-[153/187] seagiant
-[154/187] cryptfiend
-[155/187] gargoyle
-[156/187] necromancer
-[157/187] wrathguard
-[158/187] infernal
-[159/187] cryptlord
-[160/187] gnomebot
-[161/187] arakkoa
-[162/187] fungalgiant
-[163/187] hippogryph
-[164/187] superzombie
-[165/187] felreaver
-[166/187] nerubianpriest
-[167/187] stag
-[168/187] chimera
-[169/187] voidlord
-[170/187] babymurloc
-[171/187] ridingsilithid
-[172/187] flyingnerubian
-[173/187] nerubianspiderling
-[174/187] sporebat
-[175/187] tripod
-[176/187] madscientist
-[177/187] voidcaller
-[178/187] cockroach
-[179/187] dragonwhelpoutland
-[180/187] dragon
-[181/187] pterrordax
-[182/187] rocketmount
-[183/187] obsidiandestroyer
-[184/187] snowman
-[185/187] skunk
-[186/187] vrykulfemale
-[187/187] dragonhawk
+[1/188] ancientofwar2diseased
+[2/188] anduin
+[3/188] batmount
+[4/188] druidtravelcat
+[5/188] faeriedragon2
+[6/188] harvestgolem2
+[7/188] imp2_noflames
+[8/188] kodobeast2pack
+[9/188] kodobeast2wooly
+[10/188] kvaldir
+[11/188] lavatarantula
+[12/188] mechanicalchicken
+[13/188] moltengiant
+[14/188] nagalord2
+[15/188] nightbane2
+[16/188] nozdormudragon
+[17/188] pig2
+[18/188] rabbitgold2
+[19/188] yseradragon
+[20/188] airelemental
+[21/188] ancientoflore
+[22/188] ancientofwar
+[23/188] ancientprotector
+[24/188] banshee
+[25/188] battlestandard_frostwolf_a_01
+[26/188] be_broom01
+[27/188] bear
+[28/188] bearmount
+[29/188] boar
+[30/188] bonespider
+[31/188] carrionbird
+[32/188] cat
+[33/188] chicken
+[34/188] crab
+[35/188] darkhound
+[36/188] diablofunsized
+[37/188] diemetradon
+[38/188] doomguard
+[39/188] draeneitotem_earth
+[40/188] druidbear
+[41/188] druidbeartauren
+[42/188] druidcat
+[43/188] druidcattauren
+[44/188] druidowlbear
+[45/188] druidowlbeartauren
+[46/188] dryad
+[47/188] eagle
+[48/188] elementalearth
+[49/188] ent
+[50/188] facelessone
+[51/188] faeriedragon
+[52/188] felguard
+[53/188] felhound
+[54/188] fireelemental
+[55/188] fleshgolem
+[56/188] frog
+[57/188] ghoul
+[58/188] giantspider
+[59/188] gnoll
+[60/188] gnollcaster
+[61/188] gnollmelee
+[62/188] golemharvest
+[63/188] golemstone
+[64/188] gorilla
+[65/188] grell
+[66/188] halfbodyofkathune
+[67/188] hammerhead
+[68/188] horse
+[69/188] humanfemalekid
+[70/188] humanmalekid
+[71/188] hyena
+[72/188] imp
+[73/188] kalecgos
+[74/188] keeperofthegrove
+[75/188] kobold
+[76/188] kodobeast
+[77/188] krakken
+[78/188] ladyalexstrasa
+[79/188] ladysylvanaswindrunner
+[80/188] ladyvashj
+[81/188] larva
+[82/188] lobstrok
+[83/188] manawurm
+[84/188] medivh
+[85/188] miev
+[86/188] minespider
+[87/188] murloc
+[88/188] northrendghoul
+[89/188] northrendghoulspiked
+[90/188] pig
+[91/188] pitlord
+[92/188] prariedog
+[93/188] quillboar
+[94/188] quillboarcaster
+[95/188] quillboarwarrior
+[96/188] rabbit
+[97/188] rabbitgold
+[98/188] ram
+[99/188] rat
+[100/188] ridingkodo
+[101/188] ridingphoenix
+[102/188] rocketchicken
+[103/188] satyr
+[104/188] sealion
+[105/188] seavrykulmale
+[106/188] seavrykulmale_a
+[107/188] shark
+[108/188] sheep
+[109/188] silithidscarab
+[110/188] skeleton
+[111/188] spirithealer
+[112/188] squirrel
+[113/188] succubus
+[114/188] tallstrider
+[115/188] tarantula
+[116/188] threshadon
+[117/188] thunderlizard
+[118/188] titanfemale
+[119/188] troglodyte
+[120/188] trolldire
+[121/188] turtle
+[122/188] valkier
+[123/188] valkierdark
+[124/188] velen
+[125/188] voidterror
+[126/188] voidwalker
+[127/188] waterelemental
+[128/188] wendigo
+[129/188] windserpent
+[130/188] woodendummy
+[131/188] zombie
+[132/188] zombiearm
+[133/188] zombiesword
+[134/188] furbolg
+[135/188] raptor
+[136/188] owl
+[137/188] harpy
+[138/188] mountaingiant
+[139/188] bogbeast
+[140/188] dragonwhelp
+[141/188] lasherorchid
+[142/188] mammoth
+[143/188] ghost
+[144/188] basilisk
+[145/188] arcanegolem
+[146/188] felbat
+[147/188] shivan
+[148/188] dragonspawn
+[149/188] oracle
+[150/188] warpstalker
+[151/188] dreadlord
+[152/188] fleshbeast
+[153/188] seagiant
+[154/188] cryptfiend
+[155/188] gargoyle
+[156/188] necromancer
+[157/188] wrathguard
+[158/188] infernal
+[159/188] cryptlord
+[160/188] gnomebot
+[161/188] arakkoa
+[162/188] fungalgiant
+[163/188] hippogryph
+[164/188] superzombie
+[165/188] felreaver
+[166/188] nerubianpriest
+[167/188] stag
+[168/188] chimera
+[169/188] voidlord
+[170/188] babymurloc
+[171/188] ridingsilithid
+[172/188] flyingnerubian
+[173/188] nerubianspiderling
+[174/188] sporebat
+[175/188] tripod
+[176/188] madscientist
+[177/188] voidcaller
+[178/188] cockroach
+[179/188] dragonwhelpoutland
+[180/188] dragon
+[181/188] pterrordax
+[182/188] rocketmount
+[183/188] obsidiandestroyer
+[184/188] snowman
+[185/188] skunk
+[186/188] vrykulfemale
+[187/188] dragonhawk
+[188/188] druidcat_legacy
+ancientofwar2diseased: creature/ancientofwar/ancientofwar.m2 <- creature/ancientofwar2diseased/ancientofwar2diseased.m2: 5 displays (5 matched in retail)
+  split submeshes over 64 bones
+anduin: creature/humanmalekid/humanmalekid.m2 <- creature/anduin/anduin.m2: 1 displays (1 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [508, 510, 512, 514, 516, 518, 520, 522, 524, 526, 584, 588, 618, 646, 650, 654, 656, 660, 662, 664, 666, 668, 670, 672, 674, 676, 678, 680, 682, 684, 686, 688, 690, 692, 696, 698, 702, 704, 706, 716, 718, 720, 722, 724, 726, 728, 730, 732, 734, 736, 774]
+  split submeshes over 64 bones
+batmount: creature/felbat/battaxi.m2 <- creature/bat/batmount.m2: 1 displays (1 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 544, 546, 548, 550, 552, 554, 556, 558, 560, 562, 564, 1032, 1520, 1522, 1530, 1532, 1558, 1634, 1678, 1680, 1702, 1704, 1722, 1726]
+  split submeshes over 64 bones
+druidtravelcat: creature/tiger/tiger.m2 <- creature/druidtravelcat/druidtravelcat.m2: 1 displays (1 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [524, 526, 532, 534, 536, 538, 540, 542, 544, 546, 658, 850, 1004, 1070, 1084]
+  split submeshes over 64 bones
+faeriedragon2: creature/faeriedragon/faeriedragon_ghost.m2 <- creature/faeriedragon2/faeriedragon2.m2: 1 displays (1 matched in retail)
+  split submeshes over 64 bones
+harvestgolem2: creature/golemharveststage2/golemharveststage2.m2 <- creature/harvestgolem2/harvestgolem2.m2: 2 displays (2 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [510]
+  split submeshes over 64 bones
+imp2_noflames: creature/imp/imp.m2 <- creature/imp2/imp2_noflames.m2: 6 displays (6 matched in retail)
+  split submeshes over 64 bones
+kodobeast2pack: creature/kodobeast/kodobeastpack.m2 <- creature/kodobeast2mount/kodobeast2pack.m2: 1 displays (1 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 544, 546, 1146]
+  split submeshes over 64 bones
+kodobeast2wooly: creature/kodobeast/kodobeast.m2 <- creature/kodobeast2wooly/kodobeast2wooly.m2: 6 displays (6 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 544, 546]
+  split submeshes over 64 bones
+kvaldir: creature/seavrykulmale/seavrykulmaleoarsman.m2 <- creature/kvaldir/kvaldir.m2: 1 displays (1 matched in retail)
+  split submeshes over 64 bones
+lavatarantula: creature/tarantula/tarantula.m2 <- creature/lavatarantula/lavatarantula.m2: 2 displays (2 matched in retail)
+  split submeshes over 64 bones
+mechanicalchicken: creature/chicken/chicken.m2 <- creature/mechanicalchicken/mechanicalchicken.m2: 2 displays (2 matched in retail)
+  split submeshes over 64 bones
+moltengiant: creature/mountaingiant/mountaingiant.m2 <- creature/moltengiant/moltengiant.m2: 7 displays (7 matched in retail)
+  split submeshes over 64 bones
+nagalord2: creature/nagalordmale/nagalordmale.m2 <- creature/nagalord2/nagalord2.m2: 1 displays (1 matched in retail)
+  split submeshes over 64 bones
+nightbane2: creature/nightbane/nightbane.m2 <- creature/nightbane2/nightbane2.m2: 1 displays (1 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 540, 542, 546, 552, 554, 564, 566, 568, 572]
+  split submeshes over 64 bones
+nozdormudragon: creature/dragon/northrenddragon.m2 <- creature/nozdormudragon/nozdormudragon.m2: 1 displays (1 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 540, 542, 546, 552, 554, 564, 566, 568, 572]
+  split submeshes over 64 bones
+pig2: creature/pig/pig.m2 <- creature/pig2/pig2.m2: 3 displays (3 matched in retail)
+  split submeshes over 64 bones
+rabbitgold2: creature/rabbit/rabbit.m2 <- creature/rabbit2/rabbitgold2.m2: 1 displays (1 matched in retail)
+  split submeshes over 64 bones
+yseradragon: creature/dragon/northrenddragon.m2 <- creature/yseradragon/yseradragon.m2: 1 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 540, 542, 546, 552, 554, 564, 566, 568, 572]
+  split submeshes over 64 bones
+airelemental: creature/airelemental/airelemental.m2 <- creature/airelemental2/airelemental2.m2: 39 displays (28 matched in retail)
+  split submeshes over 64 bones
+ancientoflore: creature/ancientoflore/ancientoflore.m2 <- creature/ancientoflore2/ancientoflore2.m2: 7 displays (6 matched in retail)
+  split submeshes over 64 bones
+ancientofwar: creature/ancientofwar/ancientofwar.m2 <- creature/ancientofwar2/ancientofwar2.m2: 9 displays (6 matched in retail, 2 on the most common skin)
+  split submeshes over 64 bones
+ancientprotector: creature/ancientprotector/ancientprotector.m2 <- creature/ancientprotector2/ancientprotector2.m2: 22 displays (17 matched in retail, 2 on the most common skin)
+  split submeshes over 64 bones
+banshee: creature/banshee/banshee.m2 <- creature/banshee2/banshee2.m2: 23 displays (23 matched in retail)
+  split submeshes over 64 bones
+battlestandard_frostwolf_a_01: creature/spells/battlestandard_frostwolf_a_01.m2 <- creature/spells/battlestandard_frostwolf_a_01.m2: 1 displays (0 matched in retail)
+  split submeshes over 64 bones
+be_broom01: creature/broom/be_broom01.m2 <- creature/broom/be_broom01.m2: 1 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [742, 744, 746, 748, 750]
+  split submeshes over 64 bones
+bear: creature/bear/bear.m2 <- creature/bear2/bear2.m2: 51 displays (50 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [524, 526, 532, 534, 536, 538, 540, 542, 544, 546, 658, 850, 1070, 1346]
+  split submeshes over 64 bones
+bearmount: creature/bearmount/bearmount.m2 <- creature/bearmount/bearmount.m2: 6 displays (6 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [524, 526, 532, 534, 536, 538, 540, 542, 544, 546, 850, 1070]
+  split submeshes over 64 bones
+boar: creature/boar/boar.m2 <- creature/boar2/boar2.m2: 35 displays (35 matched in retail)
+  split submeshes over 64 bones
+bonespider: creature/bonespider/bonespider.m2 <- creature/bonespider2/bonespider2.m2: 8 displays (7 matched in retail)
+  split submeshes over 64 bones
+carrionbird: creature/carrionbird/carrionbird.m2 <- creature/vulture/vulture.m2: 24 displays (19 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 544, 546, 548, 550, 552, 554, 556, 558, 560, 562, 564, 1146, 1304, 1306, 1308]
+  split submeshes over 64 bones
+cat: creature/cat/cat.m2 <- creature/cat2/cat2.m2: 14 displays (11 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [1324]
+  split submeshes over 64 bones
+chicken: creature/chicken/chicken.m2 <- creature/chicken2/chicken2.m2: 13 displays (9 matched in retail)
+  split submeshes over 64 bones
+crab: creature/crab/crab.m2 <- creature/crab2/crab2.m2: 38 displays (26 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [514]
+  split submeshes over 64 bones
+darkhound: creature/darkhound/darkhound.m2 <- creature/darkhound2/darkhound2.m2: 23 displays (23 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 544, 546, 1146]
+  split submeshes over 64 bones
+diablofunsized: creature/diablo/diablofunsized.m2 <- creature/diablo/diablofunsized.m2: 1 displays (1 matched in retail)
+  split submeshes over 64 bones
+diemetradon: creature/diemetradon/diemetradon.m2 <- creature/diemetradon2/diemetradon2.m2: 8 displays (5 matched in retail, 2 on the most common skin)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 544, 546]
+  split submeshes over 64 bones
+doomguard: creature/doomguard/doomguard.m2 <- creature/doomguard2/doomguard2.m2: 16 displays (16 matched in retail)
+  split submeshes over 64 bones
+draeneitotem_earth: creature/spells/draeneitotem_earth.m2 <- world/expansion06/doodads/dranaei/7dr_shaman_totem03.m2: 4 displays (0 matched in retail)
+  split submeshes over 64 bones
+druidbear: creature/druidbear/druidbear.m2 <- creature/druidbear2/druidbear2.m2: 9 displays (7 matched in retail, 1 on the most common skin)
+  animation ids above 3.3.5's 505 (never played): [524, 526, 532, 534, 536, 538, 540, 542, 544, 546, 658, 850, 1070, 1346]
+  split submeshes over 64 bones
+druidbeartauren: creature/druidbear/druidbeartauren.m2 <- creature/druidbear2/druidbeartauren2.m2: 5 displays (5 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [524, 526, 532, 534, 536, 538, 540, 542, 544, 546, 658, 850, 1070, 1346]
+  split submeshes over 64 bones
+druidcat: creature/druidcat/druidcat.m2 <- creature/druidcat2/druidcat2.m2: 10 displays (5 matched in retail, 5 on the most common skin)
+  animation ids above 3.3.5's 505 (never played): [524, 526, 532, 534, 536, 538, 540, 542, 544, 546, 658, 850, 1004, 1070, 1084]
+  split submeshes over 64 bones
+druidcattauren: creature/druidcattauren/druidcattauren.m2 <- creature/druidcat2/druidcattauren2.m2: 5 displays (5 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [524, 526, 532, 534, 536, 538, 540, 542, 544, 546, 658, 850, 1004, 1070, 1084]
+  split submeshes over 64 bones
+druidowlbear: creature/druidowlbear/druidowlbear.m2 <- creature/druidowlbear2/druidowlbear2.m2: 2 displays (2 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [524, 526]
+  split submeshes over 64 bones
+druidowlbeartauren: creature/druidowlbear/druidowlbeartauren.m2 <- creature/druidowlbear2/druidowlbeartauren2.m2: 2 displays (2 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [524, 526]
+  split submeshes over 64 bones
+dryad: creature/dryad/dryad.m2 <- creature/dryad3/dryad3.m2: 18 displays (17 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [510, 512, 1128, 1208, 1240, 1242, 1244, 1332, 1334, 1480]
+  split submeshes over 64 bones
+eagle: creature/eagle/eagle.m2 <- creature/eagle2/eagle2.m2: 16 displays (14 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [524, 530, 532, 534, 536, 538, 540, 542, 544, 546, 548, 550, 552, 554, 556, 558, 560, 562, 564, 1032, 1146, 1304, 1306, 1308, 1520, 1522, 1530, 1532, 1534, 1558, 1678, 1680, 1702, 1704, 1722, 1726, 1790]
+  split submeshes over 64 bones
+elementalearth: creature/elementalearth/elementalearth.m2 <- creature/elementalearth2/elementalearth2.m2: 67 displays (59 matched in retail)
+  split submeshes over 64 bones
+ent: creature/ent/ent.m2 <- creature/ent2/ent2.m2: 43 displays (43 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [508, 510]
+  split submeshes over 64 bones
+facelessone: creature/facelessone/facelessone.m2 <- creature/facelessone2/facelessone2.m2: 13 displays (12 matched in retail)
+  split submeshes over 64 bones
+faeriedragon: creature/faeriedragon/faeriedragon.m2 <- creature/faeriedragon2/faeriedragon2.m2: 9 displays (9 matched in retail)
+  split submeshes over 64 bones
+felguard: creature/felguard/felguard.m2 <- creature/felguard2/felguard2.m2: 28 displays (20 matched in retail)
+  split submeshes over 64 bones
+felhound: creature/felhound/felhound.m2 <- creature/felhound2/felhound2.m2: 10 displays (10 matched in retail)
+  split submeshes over 64 bones
+fireelemental: creature/fireelemental/fireelemental.m2 <- creature/fireelemental2/fireelemental2.m2: 26 displays (14 matched in retail)
+  split submeshes over 64 bones
+fleshgolem: creature/fleshgolem/fleshgolem.m2 <- creature/fleshgolem2/fleshgolem2.m2: 43 displays (37 matched in retail, 1 on the most common skin)
+  split submeshes over 64 bones
+frog: creature/frog/frog.m2 <- creature/frog2/frog2.m2: 17 displays (15 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [508]
+  split submeshes over 64 bones
+ghoul: creature/ghoul/ghoul.m2 <- creature/ghoul2/ghoul2.m2: 40 displays (34 matched in retail)
+  split submeshes over 64 bones
+giantspider: creature/giantspider/giantspider.m2 <- creature/giantspider2/giantspider2.m2: 15 displays (10 matched in retail)
+  split submeshes over 64 bones
+gnoll: creature/gnoll/gnoll.m2 <- creature/gnoll2/gnoll2.m2: 28 displays (22 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [510, 512, 836, 838, 840, 842, 1128]
+  split submeshes over 64 bones
+gnollcaster: creature/gnollcaster/gnollcaster.m2 <- creature/gnoll2/gnoll2.m2: 17 displays (15 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [510, 512, 836, 838, 840, 842, 1128]
+  split submeshes over 64 bones
+gnollmelee: creature/gnollmelee/gnollmelee.m2 <- creature/gnoll2/gnoll2.m2: 27 displays (20 matched in retail, 1 on the most common skin)
+  animation ids above 3.3.5's 505 (never played): [510, 512, 836, 838, 840, 842, 1128]
+  split submeshes over 64 bones
+golemharvest: creature/golemharvest/golemharvest.m2 <- creature/harvestgolem2/harvestgolem2.m2: 10 displays (10 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [510]
+  split submeshes over 64 bones
+golemstone: creature/golemstone/golemstone.m2 <- creature/golemstone2/golemstone2.m2: 52 displays (50 matched in retail)
+  split submeshes over 64 bones
+gorilla: creature/gorilla/gorilla.m2 <- creature/gorilla2/gorilla2.m2: 30 displays (23 matched in retail)
+  split submeshes over 64 bones
+grell: creature/grell/grell.m2 <- creature/grell2/grell2.m2: 28 displays (19 matched in retail)
+  split submeshes over 64 bones
+halfbodyofkathune: creature/halfbodyofkathune/halfbodyofkathune.m2 <- creature/halfbodyofkathune/halfbodyofkathune.m2: 1 displays (0 matched in retail)
+  split submeshes over 64 bones
+hammerhead: creature/shark/hammerhead.m2 <- creature/shark2/shark2.m2: 15 displays (12 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [1452]
+  split submeshes over 64 bones
+horse: creature/horse/horse.m2 <- creature/horse3/horse3.m2: 31 displays (15 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 544, 546, 548, 550, 552, 554, 556, 558, 560, 562, 564, 572]
+  split submeshes over 64 bones
+humanfemalekid: creature/humanfemalekid/humanfemalekid.m2 <- creature/humanfemalekid2/humanfemalekid2.m2: 10 displays (7 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [1150, 1194, 1196, 1208, 1324]
+  split submeshes over 64 bones
+humanmalekid: creature/humanmalekid/humanmalekid.m2 <- creature/humanmalekid2/humanmalekid2.m2: 15 displays (10 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [1150, 1194, 1196, 1208]
+  split submeshes over 64 bones
+hyena: creature/hyena/hyena.m2 <- creature/hyena2/hyena2.m2: 25 displays (20 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 544, 546, 1146]
+  split submeshes over 64 bones
+imp: creature/imp/imp.m2 <- creature/imp2/imp2.m2: 10 displays (7 matched in retail, 3 on the most common skin)
+  split submeshes over 64 bones
+kalecgos: creature/kalecgos/kalecgos.m2 <- creature/kalecgos2/kalecgos2.m2: 4 displays (3 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [508, 510, 512, 514, 516, 518, 520, 522, 524, 526, 584, 588, 590, 592, 600, 602, 604, 618, 646, 650, 654, 656, 660, 662, 664, 666, 668, 670, 672, 674, 676, 678, 680, 682, 684, 686, 688, 690, 692, 696, 698, 702, 704, 706, 716, 718, 720, 722, 724, 726, 728, 730, 732, 734, 736, 774, 778, 804, 806, 808, 810, 812, 814, 816, 818, 820, 822, 824, 826, 828, 830, 836, 838, 840, 842, 852, 854, 858, 860, 862, 874, 876, 878, 880, 882, 888, 890, 896, 898, 900, 904, 918, 920, 922, 926, 940, 942, 944, 948, 962, 964, 966, 968, 970, 972, 978, 982, 984, 988, 992, 994, 996, 998, 1000, 1002, 1004, 1006, 1034, 1064, 1074, 1076, 1078, 1080, 1088, 1092, 1102, 1104, 1106, 1108, 1110, 1112, 1114, 1116, 1118, 1120, 1122, 1128, 1130, 1132, 1134, 1136, 1138, 1140, 1142, 1144, 1146, 1148, 1150, 1154, 1156, 1158, 1160, 1162, 1178, 1194, 1196, 1200, 1202, 1206, 1208, 1210, 1212, 1214, 1216, 1220, 1222, 1232, 1234, 1236, 1238, 1240, 1242, 1244, 1260, 1272, 1284, 1296, 1300, 1304, 1306, 1308, 1310, 1312, 1314, 1316, 1318, 1320, 1322, 1326, 1330, 1332, 1334, 1338, 1342, 1388, 1392, 1394, 1448, 1488, 1490]
+  split submeshes over 64 bones
+keeperofthegrove: creature/keeperofthegrove/keeperofthegrove.m2 <- creature/keeperofthegrove2/keeperofthegrove2.m2: 20 displays (20 matched in retail)
+  split submeshes over 64 bones
+  2 tracks given a key at time 0
+kobold: creature/kobold/kobold.m2 <- creature/kobold2/kobold2.m2: 19 displays (13 matched in retail)
+  split submeshes over 64 bones
+kodobeast: creature/kodobeast/kodobeast.m2 <- creature/kodobeast2/kodobeast2.m2: 17 displays (17 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 544, 546, 1146]
+  split submeshes over 64 bones
+krakken: creature/krakken/krakken.m2 <- creature/krakken2/krakken2.m2: 4 displays (4 matched in retail)
+  split submeshes over 64 bones
+ladyalexstrasa: creature/alexstrasza/ladyalexstrasa.m2 <- creature/ladyalexstrasza/ladyalexstrasza.m2: 2 displays (2 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [508, 510, 512, 514, 516, 518, 520, 522, 524, 526, 650, 654, 656, 660, 662, 664, 666, 668, 670, 672, 674, 676, 678, 680, 682, 684, 686, 688, 690, 692, 698, 702, 704, 706, 716, 718, 720, 722, 724, 726, 728, 730, 732, 734, 736, 774, 804, 806, 808, 810, 812, 814, 816, 818, 820, 822, 824, 826, 828, 830, 836, 838, 840, 842, 852, 854, 858, 860, 862, 874, 876, 878, 880, 882, 888, 890, 896, 898, 900, 904, 918, 920, 922, 926, 940, 942, 944, 962, 964, 966, 968, 970, 972, 978, 982, 984, 988, 990, 992, 994, 996, 998, 1000, 1002, 1004, 1006, 1008, 1010, 1012, 1014, 1018, 1022, 1024, 1026, 1028, 1030, 1032, 1034, 1038, 1040, 1042, 1044, 1050, 1054, 1056, 1058, 1060, 1062, 1064, 1068, 1074, 1076, 1078, 1080, 1088, 1092, 1102, 1104, 1106, 1108, 1110, 1112, 1114, 1116, 1118, 1120, 1122, 1128, 1130, 1132, 1134, 1136, 1138, 1140, 1142, 1144, 1146, 1148, 1154, 1160, 1208, 1210, 1212, 1214, 1216, 1220, 1240, 1242, 1244, 1246, 1272, 1284, 1310, 1320, 1322, 1326, 1330, 1448, 1488, 1490]
+  split submeshes over 64 bones
+ladysylvanaswindrunner: creature/ladysylvanaswindrunner/ladysylvanaswindrunner.m2 <- creature/sylvanas/sylvanas.m2: 2 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [508, 510, 512, 514, 516, 518, 520, 522, 524, 526, 650, 654, 656, 660, 730, 732, 734, 806, 814, 816, 818, 820, 822, 824, 836, 838, 840, 842, 852, 854, 858, 860, 896, 918, 940, 970, 972, 978, 982, 984, 992, 994, 996, 998, 1000, 1002, 1004, 1006, 1014, 1018, 1022, 1024, 1028, 1030, 1032, 1034, 1038, 1040, 1054, 1064, 1074, 1080, 1102, 1104]
+  split submeshes over 64 bones
+ladyvashj: refused: sequence 62-0 has no .anim file
+larva: creature/larva/larva.m2 <- creature/larva2/larva2.m2: 24 displays (18 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 544, 546, 1146]
+  split submeshes over 64 bones
+lobstrok: creature/lobstrok/lobstrok.m2 <- creature/lobstrok2/lobstrok2.m2: 24 displays (24 matched in retail)
+  split submeshes over 64 bones
+manawurm: creature/manawurm/manawurm.m2 <- creature/manawurm2/manawurm2.m2: 23 displays (14 matched in retail)
+  split submeshes over 64 bones
+medivh: creature/medivh/medivh.m2 <- creature/medivh2/medivh2.m2: 2 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [508, 510, 512, 514, 516, 518, 520, 522, 524, 526, 584, 588, 618, 646, 650, 654, 656, 660, 662, 664, 666, 668, 670, 672, 674, 676, 678, 680, 682, 684, 686, 688, 690, 692, 696, 698, 702, 704, 706, 716, 718, 720, 722, 724, 726, 728, 730, 732, 734, 736, 774, 804, 806, 810, 812, 814, 816, 818, 820, 822, 824, 826, 836, 838, 840, 842, 852, 854, 858, 962, 964, 966, 968, 970, 972, 978, 982, 984, 992, 994, 996, 998, 1000, 1002, 1004, 1006, 1034, 1064, 1074, 1076, 1078, 1080, 1102]
+  split submeshes over 64 bones
+miev: creature/miev/miev.m2 <- creature/maiev/maiev.m2: 2 displays (2 matched in retail)
+  split submeshes over 64 bones
+minespider: creature/minespider/minespider.m2 <- creature/minespider2/minespider2.m2: 56 displays (30 matched in retail)
+  split submeshes over 64 bones
+murloc: creature/murloc/murloc.m2 <- creature/murloc2/murloc2.m2: 57 displays (57 matched in retail)
+  split submeshes over 64 bones
+northrendghoul: creature/northrendghoul/northrendghoul.m2 <- creature/northrendghoul2/northrendghoul2.m2: 20 displays (19 matched in retail)
+  split submeshes over 64 bones
+northrendghoulspiked: creature/northrendghoul/northrendghoulspiked.m2 <- creature/northrendghoul2spiked/northrendghoul2spiked.m2: 2 displays (2 matched in retail)
+  split submeshes over 64 bones
+pig: creature/pig/pig.m2 <- creature/babypig/babypig.m2: 8 displays (5 matched in retail)
+  split submeshes over 64 bones
+pitlord: creature/pitlord/pitlord.m2 <- creature/pitlord2/pitlord2.m2: 8 displays (8 matched in retail)
+  split submeshes over 64 bones
+prariedog: creature/prariedog/prariedog.m2 <- creature/prairiedog/prairiedog.m2: 3 displays (2 matched in retail)
+  split submeshes over 64 bones
+quillboar: creature/quillboar/quillboar.m2 <- creature/quillboar2/quillboar2.m2: 42 displays (19 matched in retail, 1 on the most common skin)
+  animation ids above 3.3.5's 505 (never played): [510, 576, 578, 580, 582, 836, 838, 840, 842, 1128]
+  split submeshes over 64 bones
+quillboarcaster: creature/quillboar/quillboarcaster.m2 <- creature/quillboar2/quillboar2.m2: 24 displays (11 matched in retail, 2 on the most common skin)
+  animation ids above 3.3.5's 505 (never played): [510, 576, 578, 580, 582, 836, 838, 840, 842, 1128]
+  split submeshes over 64 bones
+quillboarwarrior: creature/quillboar/quillboarwarrior.m2 <- creature/quillboar2/quillboar2.m2: 18 displays (11 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [510, 576, 578, 580, 582, 836, 838, 840, 842, 1128]
+  split submeshes over 64 bones
+rabbit: creature/rabbit/rabbit.m2 <- creature/rabbit2/rabbit2.m2: 22 displays (17 matched in retail)
+  split submeshes over 64 bones
+rabbitgold: creature/rabbit/rabbitgold.m2 <- creature/rabbit2/rabbitgold2.m2: 1 displays (1 matched in retail)
+  split submeshes over 64 bones
+ram: creature/ram/ram.m2 <- creature/ram2/ram2.m2: 15 displays (12 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 544, 546]
+  split submeshes over 64 bones
+rat: creature/rat/rat.m2 <- creature/rat2/rat2.m2: 10 displays (10 matched in retail)
+  split submeshes over 64 bones
+ridingkodo: creature/kodobeast/ridingkodo.m2 <- creature/kodobeast2mount/kodobeast2mount.m2: 15 displays (13 matched in retail, 2 on the most common skin)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 544, 546, 1146]
+  split submeshes over 64 bones
+ridingphoenix: creature/ridingphoenix/ridingphoenix.m2 <- creature/ridingphoenix/ridingphoenix.m2: 1 displays (1 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 548, 550, 552, 554, 556, 558, 1032, 1520, 1522, 1530, 1532, 1558, 1634, 1678, 1680, 1702, 1704, 1722, 1726]
+  dropped 15 ribbon emitters
+  split submeshes over 64 bones
+rocketchicken: creature/rocketchicken/rocketchicken.m2 <- creature/rocketchicken2/rocketchicken2.m2: 1 displays (1 matched in retail)
+  split submeshes over 64 bones
+satyr: creature/satyr/satyr.m2 <- creature/satyr2/satyr2.m2: 59 displays (59 matched in retail)
+  split submeshes over 64 bones
+sealion: creature/sealion/sealion.m2 <- creature/sealion2/sealion2.m2: 5 displays (2 matched in retail)
+  split submeshes over 64 bones
+seavrykulmale: creature/seavrykulmale/seavrykulmale.m2 <- creature/kvaldir/kvaldir.m2: 6 displays (6 matched in retail)
+  split submeshes over 64 bones
+seavrykulmale_a: creature/seavrykulmale/seavrykulmale_a.m2 <- creature/kvaldir/kvaldir.m2: 7 displays (6 matched in retail)
+  split submeshes over 64 bones
+shark: creature/shark/shark.m2 <- creature/shark2/shark2.m2: 16 displays (16 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [1452]
+  split submeshes over 64 bones
+sheep: creature/sheep/sheep.m2 <- creature/sheep2/sheep2.m2: 5 displays (5 matched in retail)
+  split submeshes over 64 bones
+silithidscarab: creature/silithidscarab/silithidscarab.m2 <- creature/silithscarab2/silithidscarab2.m2: 35 displays (34 matched in retail)
+  split submeshes over 64 bones
+skeleton: creature/skeleton/skeleton.m2 <- creature/scourgewarrior/scourgewarrior.m2: 26 displays (13 matched in retail)
+  split submeshes over 64 bones
+spirithealer: creature/spirithealer/spirithealer.m2 <- creature/spirithealer2/spirithealer2.m2: 4 displays (0 matched in retail)
+  split submeshes over 64 bones
+squirrel: creature/squirrel/squirrel.m2 <- creature/squirrel2/squirrel2.m2: 8 displays (8 matched in retail)
+  split submeshes over 64 bones
+succubus: creature/succubus/succubus.m2 <- creature/succubus2/succubus2.m2: 23 displays (21 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [1346]
+  split submeshes over 64 bones
+tallstrider: creature/tallstrider/tallstrider.m2 <- creature/tallstrider2/tallstrider2.m2: 30 displays (18 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [508, 510]
+  split submeshes over 64 bones
+tarantula: creature/tarantula/tarantula.m2 <- creature/tarantula2/tarantula2.m2: 35 displays (17 matched in retail, 1 on the most common skin)
+  split submeshes over 64 bones
+threshadon: creature/threshadon/threshadon.m2 <- creature/threshadon2/threshadon2.m2: 17 displays (15 matched in retail)
+  split submeshes over 64 bones
+thunderlizard: creature/thunderlizard/thunderlizard.m2 <- creature/thunderlizard2/thunderlizard2.m2: 35 displays (21 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 544, 546, 1146]
+  split submeshes over 64 bones
+titanfemale: creature/titanfemale/titanfemale.m2 <- creature/titanfemale2/titanfemale2.m2: 15 displays (6 matched in retail, 1 on the most common skin)
+  split submeshes over 64 bones
+troglodyte: creature/troglodyte/troglodyte.m2 <- creature/troglodyte2/troglodyte2.m2: 32 displays (29 matched in retail)
+  split submeshes over 64 bones
+trolldire: creature/trolldire/trolldire.m2 <- creature/trolldire2/trolldire2.m2: 24 displays (19 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [1128, 1346]
+  split submeshes over 64 bones
+turtle: creature/turtle/turtle.m2 <- creature/babyturtle/babyturtle.m2: 11 displays (9 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 544, 546]
+  split submeshes over 64 bones
+valkier: creature/valkier/valkier.m2 <- creature/valkier2/valkier2.m2: 10 displays (2 matched in retail, 1 on the most common skin)
+  animation ids above 3.3.5's 505 (never played): [994]
+  split submeshes over 64 bones
+valkierdark: creature/valkierdark/valkierdark.m2 <- creature/valkier2_dark/valkier2_dark.m2: 11 displays (4 matched in retail, 1 on the most common skin)
+  split submeshes over 64 bones
+velen: creature/velen/velen.m2 <- creature/velen2/velen2.m2: 3 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [508, 510, 512, 514, 516, 518, 520, 522, 524, 526, 650, 654, 656, 660, 662, 664, 666, 668, 670, 672, 674, 676, 678, 680, 682, 684, 686, 688, 690, 692, 698, 702, 704, 706, 716, 718, 720, 722, 724, 726, 728, 730, 732, 734, 736, 774, 836, 838, 840, 842, 874, 876, 878, 880, 882, 888, 890, 984, 988, 1088, 1092, 1102, 1128, 1134, 1138, 1140, 1142, 1144]
+  split submeshes over 64 bones
+voidterror: creature/voidterror/voidterror.m2 <- creature/voidterror2/voidterror2.m2: 5 displays (5 matched in retail)
+  split submeshes over 64 bones
+voidwalker: creature/voidwalker/voidwalker.m2 <- creature/voidwalker2/voidwalker2.m2: 5 displays (5 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [1332, 1334, 1336, 1338]
+  split submeshes over 64 bones
+waterelemental: creature/waterelemental/waterelemental.m2 <- creature/waterelemental2/waterelemental2.m2: 44 displays (26 matched in retail)
+  split submeshes over 64 bones
+wendigo: creature/wendigo/wendigo.m2 <- creature/wendigo2/wendigo2.m2: 29 displays (18 matched in retail)
+  split submeshes over 64 bones
+windserpent: creature/windserpent/windserpent.m2 <- creature/windserpent2/windserpent2.m2: 29 displays (24 matched in retail)
+  split submeshes over 64 bones
+woodendummy: creature/object/woodendummy.m2 <- creature/object/woodendummy.m2: 7 displays (7 matched in retail)
+  split submeshes over 64 bones
+zombie: creature/zombie/zombie.m2 <- creature/zombie2/zombie2.m2: 20 displays (17 matched in retail)
+  split submeshes over 64 bones
+zombiearm: creature/zombie/zombiearm.m2 <- creature/zombie2/zombie2.m2: 20 displays (16 matched in retail)
+  split submeshes over 64 bones
+zombiesword: creature/zombie/zombiesword.m2 <- creature/zombie2/zombie2.m2: 3 displays (2 matched in retail, 1 on the most common skin)
+  split submeshes over 64 bones
+furbolg: creature/furbolg/furbolg.m2 <- creature/furbolg2/furbolg2.m2: 60 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [508, 510, 1128]
+  split submeshes over 64 bones
+raptor: creature/raptor/raptor.m2 <- creature/raptor2/raptor2.m2: 59 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 544, 546, 1146]
+  split submeshes over 64 bones
+owl: creature/owl/owl.m2 <- creature/owl2/owl2.m2: 58 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [524, 530, 532, 534, 536, 538, 540, 542, 544, 546, 548, 550, 552, 554, 556, 558, 560, 562, 564, 1032, 1146, 1304, 1306, 1308, 1520, 1522, 1530, 1532, 1534, 1558, 1678, 1680, 1702, 1704, 1722, 1726, 1790]
+  split submeshes over 64 bones
+harpy: creature/harpy/harpy.m2 <- creature/harpy2/harpy2.m2: 56 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [548, 551, 552, 553, 554, 555, 556, 558, 562, 563, 564]
+  split submeshes over 64 bones
+mountaingiant: creature/mountaingiant/mountaingiant.m2 <- creature/mountaingiant2/mountaingiant2.m2: 33 displays (0 matched in retail)
+  split submeshes over 64 bones
+bogbeast: creature/bogbeast/bogbeast.m2 <- creature/bogbeast2/bogbeast2.m2: 38 displays (0 matched in retail)
+  split submeshes over 64 bones
+dragonwhelp: creature/dragonwhelp/dragonwhelp.m2 <- creature/dragonwhelp3/dragonwhelp3.m2: 38 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [1532, 1534, 1558, 1634, 1680, 1702, 1706, 1726]
+  split submeshes over 64 bones
+lasherorchid: creature/lasherorchid/lasherorchid.m2 <- creature/lasherorchid2/lasherorchid2.m2: 38 displays (0 matched in retail)
+  split submeshes over 64 bones
+mammoth: creature/mammoth/mammoth.m2 <- creature/mammoth2/mammoth2.m2: 35 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540]
+  split submeshes over 64 bones
+ghost: creature/ghost/ghost.m2 <- creature/ghost2/ghost2.m2: 34 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [548, 550, 556, 558, 560, 564, 572, 742, 744, 746, 748, 750]
+  split submeshes over 64 bones
+basilisk: creature/basilisk/basilisk.m2 <- creature/basilisk2/basilisk2.m2: 28 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 544, 546, 1146]
+  split submeshes over 64 bones
+arcanegolem: creature/arcanegolem/arcanegolem.m2 <- creature/arcanegolem2/arcanegolem2.m2: 28 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 544, 546, 548, 550, 552, 554, 556, 558, 560, 562, 564, 572, 574, 1032, 1520, 1522, 1528, 1530, 1532, 1534, 1558, 1588, 1634, 1638, 1678, 1680, 1702, 1704, 1706, 1722, 1726]
+  split submeshes over 64 bones
+felbat: creature/felbat/felbat.m2 <- creature/felbat2/felbat2.m2: 27 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [512, 548, 550, 552, 554, 556, 558, 560, 562, 564, 1032, 1346, 1520, 1522, 1530, 1532, 1558, 1634, 1678, 1680, 1702, 1704, 1722, 1726]
+  split submeshes over 64 bones
+shivan: creature/shivan/shivan.m2 <- creature/shivan2/shivan2.m2: 26 displays (0 matched in retail)
+  split submeshes over 64 bones
+dragonspawn: creature/dragonspawn/dragonspawn.m2 <- creature/dragonspawn2/dragonspawn2.m2: 25 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [510, 512, 734, 1128, 1150, 1208, 1210, 1212]
+  split submeshes over 64 bones
+  skin 1 (lighter LOD): heavier ones exceed 65535 indices
+oracle: creature/oracle/oracle.m2 <- creature/oracle2/oracle2.m2: 24 displays (0 matched in retail)
+  split submeshes over 64 bones
+warpstalker: creature/warpstalker/warpstalker.m2 <- creature/warpstalker2/warpstalker2.m2: 23 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 544, 1496]
+  split submeshes over 64 bones
+dreadlord: creature/dreadlord/dreadlord.m2 <- creature/dreadlord2/dreadlord2.m2: 22 displays (0 matched in retail)
+  split submeshes over 64 bones
+fleshbeast: creature/fleshbeast/fleshbeast.m2 <- creature/fleshbeast2/fleshbeast2.m2: 22 displays (0 matched in retail)
+  split submeshes over 64 bones
+seagiant: creature/seagiant/seagiant.m2 <- creature/seagiant2/seagiant2.m2: 20 displays (0 matched in retail)
+  split submeshes over 64 bones
+cryptfiend: creature/cryptfiend/cryptfiend.m2 <- creature/cryptfiend2/cryptfiend2.m2: 20 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [508, 510, 1128]
+  split submeshes over 64 bones
+gargoyle: creature/gargoyle/gargoyle.m2 <- creature/gargoyle2/gargoyle2.m2: 20 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [508, 510, 512, 514, 549, 553, 555, 563, 852, 1032, 1056, 1058, 1060, 1062, 1102, 1128, 1472, 1474, 1476, 1478, 1486]
+  split submeshes over 64 bones
+  skin 1 (lighter LOD): heavier ones exceed 65535 indices
+necromancer: creature/necromancer/necromancer.m2 <- creature/necromancer2/necromancer2.m2: 20 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [508, 510, 512, 514, 516, 518, 520, 522, 524, 526, 576, 578, 580, 582, 650, 654, 656, 660, 662, 664, 666, 668, 670, 672, 674, 676, 678, 680, 682, 684, 686, 688, 690, 692, 698, 702, 704, 706, 716, 718, 720, 722, 724, 726, 728, 730, 732, 734, 736, 774, 804, 806, 808, 810, 812, 814, 816, 818, 820, 822, 824, 826, 828, 830, 836, 838, 840, 842, 852, 854, 858, 860, 862, 874, 876, 878, 880, 882, 888, 890, 896, 898, 900, 904, 918, 920, 922, 926, 940, 942, 944, 962, 964, 966, 968, 970, 972, 978, 982, 984, 988, 992, 994, 996, 998, 1000, 1002, 1004, 1006, 1034, 1054, 1064, 1074, 1076, 1078, 1080, 1088, 1092, 1102, 1104, 1106, 1108, 1110, 1112, 1114, 1116, 1120, 1122, 1128, 1130, 1132, 1134, 1136, 1138, 1140, 1142, 1144, 1146, 1148, 1150, 1168, 1172, 1174, 1176, 1178, 1180, 1182, 1194, 1208, 1210, 1212, 1214, 1216, 1224, 1226, 1228, 1230, 1232, 1234, 1236, 1238, 1240, 1242, 1244, 1246, 1274, 1276, 1284, 1286, 1296, 1302, 1304, 1306, 1308, 1312, 1314, 1316, 1320, 1322, 1326, 1330, 1332, 1336, 1338, 1342, 1448]
+  split submeshes over 64 bones
+wrathguard: creature/wrathguard/wrathguard.m2 <- creature/wrathguard2/wrathguard2.m2: 20 displays (0 matched in retail)
+  split submeshes over 64 bones
+infernal: creature/infernal/infernal.m2 <- creature/infernal2/infernal2.m2: 17 displays (0 matched in retail)
+  split submeshes over 64 bones
+cryptlord: creature/cryptlord/cryptlord.m2 <- creature/cryptlord2/cryptlord2.m2: 17 displays (0 matched in retail)
+  split submeshes over 64 bones
+gnomebot: creature/gnomespidertank/gnomebot.m2 <- creature/gnomebot2/gnomebot2.m2: 16 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [510, 806, 1150, 1208, 1210, 1284]
+  split submeshes over 64 bones
+arakkoa: refused: no skin light enough for 3.3.5
+fungalgiant: creature/fungalgiant/fungalgiant.m2 <- creature/fungalgiant2/fungalgiant2.m2: 16 displays (0 matched in retail)
+  split submeshes over 64 bones
+hippogryph: creature/hippogryph/hippogryph.m2 <- creature/hippogryph2/hippogryph2.m2: 15 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 544, 546, 548, 550, 552, 554, 556, 558, 560, 562, 564, 572, 574, 1032, 1146, 1520, 1522, 1530, 1532, 1558, 1634, 1678, 1680, 1702, 1704, 1722, 1726]
+  split submeshes over 64 bones
+superzombie: creature/superzombie/superzombie.m2 <- creature/superzombie2/superzombie2.m2: 15 displays (0 matched in retail)
+  split submeshes over 64 bones
+felreaver: creature/felreaver/felreaver.m2 <- creature/felreaver2/felreaver2.m2: 12 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [1332, 1334, 1336, 1338, 1346]
+  split submeshes over 64 bones
+nerubianpriest: creature/nerubianpriest/nerubianpriest.m2 <- creature/nerubianpriest2/nerubianpriest2.m2: 12 displays (0 matched in retail)
+  split submeshes over 64 bones
+stag: creature/stag/stag.m2 <- creature/stag2/stag2.m2: 11 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 546]
+  split submeshes over 64 bones
+chimera: creature/chimera/chimera.m2 <- creature/chimera2/chimera2.m2: 11 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [512, 532, 534, 536, 538, 540, 544, 548, 550, 552, 554, 556, 558, 560, 562, 564, 620, 634, 638, 640, 642, 644, 1032, 1474, 1476, 1478, 1486, 1520, 1522, 1530, 1532, 1558, 1634, 1678, 1680, 1702, 1704, 1722, 1726]
+  split submeshes over 64 bones
+voidlord: creature/voidlord/voidlord.m2 <- creature/voidlord2/voidlord2.m2: 11 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [1332, 1334, 1336, 1338]
+  split submeshes over 64 bones
+babymurloc: creature/murloc/babymurloc.m2 <- creature/babymurloc3/babymurloc3.m2: 10 displays (0 matched in retail)
+  split submeshes over 64 bones
+ridingsilithid: creature/ridingsilithid/ridingsilithid.m2 <- creature/ridingsilithid2/ridingsilithid2.m2: 10 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 544, 546]
+  split submeshes over 64 bones
+flyingnerubian: creature/flyingnerubian/flyingnerubian.m2 <- creature/flyingnerubian2/flyingnerubian2.m2: 10 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 544, 546, 548, 550, 552, 554, 556, 558, 560, 562, 1146]
+  split submeshes over 64 bones
+nerubianspiderling: creature/nerubianspiderling/nerubianspiderling.m2 <- creature/nerubianspiderling2/nerubianspiderling2.m2: 10 displays (0 matched in retail)
+  split submeshes over 64 bones
+sporebat: creature/sporebat/sporebat.m2 <- creature/sporebat3/sporebat3.m2: 9 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [508, 509, 510, 511, 516, 517, 548, 552, 554, 556, 558, 560, 562, 564, 1032, 1472, 1474, 1476, 1478, 1520, 1522, 1530, 1532, 1534, 1558, 1678, 1680, 1702, 1704, 1722, 1726]
+  split submeshes over 64 bones
+tripod: creature/tripod/tripod.m2 <- creature/tripod2/tripod2.m2: 8 displays (0 matched in retail)
+  split submeshes over 64 bones
+madscientist: creature/madscientist/madscientist.m2 <- creature/madscientist2/madscientist2.m2: 7 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [508, 510, 512, 514, 516, 518, 520, 522, 524, 526, 650, 654, 656, 660, 662, 664, 666, 668, 670, 672, 674, 676, 678, 680, 682, 684, 686, 688, 690, 692, 698, 702, 704, 706, 716, 718, 720, 722, 724, 726, 728, 730, 732, 734, 736, 774, 794, 796, 798, 804, 806, 808, 810, 812, 814, 816, 818, 820, 822, 824, 826, 828, 830, 836, 838, 840, 842, 852, 854, 858, 860, 862, 874, 876, 878, 880, 882, 888, 890, 896, 898, 900, 904, 918, 920, 922, 926, 940, 942, 944, 962, 964, 966, 968, 970, 972, 978, 982, 984, 988, 992, 994, 996, 998, 1000, 1002, 1004, 1006, 1034, 1064, 1074, 1076, 1078, 1080, 1088, 1092, 1102, 1104, 1106, 1108, 1110, 1112, 1114, 1116, 1118, 1120, 1122, 1128, 1130, 1132, 1134, 1136, 1138, 1140, 1142, 1144, 1146, 1148, 1150, 1208, 1240, 1242, 1244, 1246, 1320, 1322, 1326, 1330, 1448]
+  split submeshes over 64 bones
+voidcaller: creature/voidcaller/voidcaller.m2 <- creature/voidcaller2/voidcaller2.m2: 7 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [1332, 1334, 1336, 1338]
+  split submeshes over 64 bones
+cockroach: creature/cockroach/cockroach.m2 <- creature/cockroach2/cockroach2.m2: 6 displays (0 matched in retail)
+  split submeshes over 64 bones
+dragonwhelpoutland: creature/dragonwhelpoutland/dragonwhelpoutland.m2 <- creature/dragonwhelpoutland2/dragonwhelpoutland2.m2: 6 displays (0 matched in retail)
+  split submeshes over 64 bones
+dragon: creature/dragon/dragon.m2 <- creature/dragon2/dragon2.m2: 6 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 540, 542, 546, 552, 554, 564, 566, 568, 572]
+  split submeshes over 64 bones
+pterrordax: creature/pterrordax/pterrordax.m2 <- creature/pterrordax2/pterrordax2.m2: 5 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 544, 546, 548, 550, 552, 554, 556, 558, 560, 562, 564, 1146, 1278, 1304, 1306, 1308]
+  split submeshes over 64 bones
+rocketmount: creature/rocketmount/rocketmount.m2 <- creature/rocketmount5/rocketmount5.m2: 5 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [532, 534, 536, 538, 540, 542, 544, 546, 548, 550, 552, 554, 556, 558, 560, 562, 564, 566, 572, 574, 1032, 1146, 1520, 1522, 1530, 1532, 1534, 1558, 1678, 1680, 1702, 1704, 1726]
+obsidiandestroyer: creature/obsidiandestroyer/obsidiandestroyer.m2 <- creature/obsidiandestroyer2/obsidiandestroyer2.m2: 4 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [1346]
+  split submeshes over 64 bones
+snowman: creature/snowman/snowman.m2 <- creature/snowman2/snowman2.m2: 4 displays (0 matched in retail)
+  split submeshes over 64 bones
+skunk: creature/skunk/skunk.m2 <- creature/skunk2/skunk2.m2: 4 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [524, 526, 532, 534, 536, 538, 540, 542, 544, 546, 658, 850, 1070, 1346]
+  split submeshes over 64 bones
+vrykulfemale: creature/vrykulfemale/vrykulfemale.m2 <- creature/vrykulfemale2/vrykulfemale2.m2: 4 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [994]
+  split submeshes over 64 bones
+  skin 2 (lighter LOD): heavier ones exceed 65535 indices
+dragonhawk: creature/dragonhawk/dragonhawk.m2 <- creature/dragonhawk2/dragonhawk2.m2: 25 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [508, 509, 510, 511, 516, 517, 548, 552, 554, 556, 558, 560, 562, 564, 1032, 1472, 1474, 1476, 1478, 1520, 1522, 1530, 1532, 1534, 1558, 1678, 1680, 1702, 1704, 1722, 1726]
+  split submeshes over 64 bones
+druidcat_legacy: creature/druidcat/druidcat_legacy.m2 <- creature/eversonglynx/eversonglynx.m2: 10 displays (0 matched in retail)
+  animation ids above 3.3.5's 505 (never played): [524, 526, 532, 534, 536, 538, 540, 542, 544, 546, 658, 850, 1004, 1070, 1084]
+  split submeshes over 64 bones
+wrote /home/marcus/Git/wotlk-hd/out/patch-4.MPQ and /home/marcus/Git/wotlk-hd/out/patch-enUS-4.MPQ: 2760 files, 438592 KiB
