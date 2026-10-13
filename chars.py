@@ -678,6 +678,21 @@ def glue_lighting():
                                    f"{old}\trace = STAGE_LIGHTING[race] or race;\r\n").encode("latin1")}
 
 
+def unbaked_npcs(report):
+    """CreatureDisplayInfoExtra without the baked texture (its last field) for the HD races: those are
+    256x256 in 3.3.5's layout; without one the client composites the NPC like a player (retail
+    bakes none either)."""
+    table = build.Dbc(Client().read("DBFilesClient\\CreatureDisplayInfoExtra.dbc"))
+    races = {race for race, _, _, _ in RACES}
+    count = 0
+    for r in table.rows:
+        if r[1] in races and r[-1]:
+            r[-1] = 0
+            count += 1
+    report.append(f"CreatureDisplayInfoExtra: {count} NPC looks composited instead of baked")
+    return table.bytes()
+
+
 def race_archive(race_dir):
     return os.path.join(build.OUT, f"patch-{race_dir}.MPQ")
 
@@ -712,6 +727,7 @@ def main(selected):
     files["DBFilesClient\\CharacterFacialHairStyles.dbc"] = facial_styles(report).bytes()
     files.update(creation_backdrops(report))
     files.update(glue_lighting())
+    files["DBFilesClient\\CreatureDisplayInfoExtra.dbc"] = unbaked_npcs(report)
     print("\n".join(report))
     print(build.write_patch(6, files))
     for race_dir, own in race_files.items():

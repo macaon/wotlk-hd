@@ -151,6 +151,51 @@ static void glue_patches(void) {
     wlog("glue patches: %u sites applied (GlueXML signature, death knight backdrops)", n);
 }
 
+/* NPCs composited like players. 3.3.5 creates an NPC's character component, then fills it in
+ * (model, looks, items) only for a few special units or when CreatureDisplayInfoExtra names a
+ * baked texture; with neither it returns, leaving an empty component (no model: a crash in the
+ * geoset update) and an invisible NPC. chars.py blanks the bake names of the HD races, so an empty
+ * name takes the special units' path instead: the component composites skin, face, hair and
+ * items like a player's. Two functions: the display setup (0x71d010) and its refresh (0x730320). */
+__attribute__((naked)) static void bake_flag_thunk(void) {
+    __asm__ volatile("cmpb $0, (%eax)\n\t" /* eax: the bake name */
+                     "je 1f\n\t"
+                     "orl $1, -0x178(%ebp)\n\t" /* baked: use the file, no compositing */
+                     "1: pushl $0x0073039D\n\t"
+                     "ret\n\t");
+}
+
+static void npc_composite_patches(void) {
+    static const struct { unsigned va, len; const char *orig, *patch; } sites[] = {
+        /* 0x71d010: no bake name, on past the file name (0x71d149), not return 0 (0x71d1d8) */
+        {0x0071D114u, 6, "\x0F\x84\xBE\x00\x00\x00", "\x0F\x84\x2F\x00\x00\x00"},
+        {0x0071D11Du, 6, "\x0F\x84\xB5\x00\x00\x00", "\x0F\x84\x26\x00\x00\x00"},
+        /* 0x730320: an empty name no longer returns; the baked flag only with a name (thunk) */
+        {0x00730345u, 6, "\x0F\x84\x49\x04\x00\x00", "\x90\x90\x90\x90\x90\x90"},
+        {0x00730396u, 7, "\x83\x8D\x88\xFE\xFF\xFF\x01", NULL}};
+    unsigned i, n = sizeof(sites) / sizeof(sites[0]);
+    for (i = 0; i < n; i++)
+        if (memcmp((void *)(UINT_PTR)sites[i].va, sites[i].orig, sites[i].len) != 0) {
+            wlog("npc compositing: site %08x not as expected, none applied", sites[i].va);
+            return;
+        }
+    for (i = 0; i < n; i++) {
+        DWORD old;
+        BYTE *at = (BYTE *)(UINT_PTR)sites[i].va;
+        VirtualProtect(at, sites[i].len, PAGE_EXECUTE_READWRITE, &old);
+        if (sites[i].patch)
+            memcpy(at, sites[i].patch, sites[i].len);
+        else {
+            at[0] = 0xE9;
+            *(int *)(at + 1) = (int)((BYTE *)bake_flag_thunk - (at + 5));
+            at[5] = at[6] = 0x90;
+        }
+        VirtualProtect(at, sites[i].len, old, &old);
+    }
+    FlushInstructionCache(GetCurrentProcess(), NULL, 0);
+    wlog("npc compositing: %u sites applied (NPCs without a baked texture composite like players)", n);
+}
+
 /* Memory census (docs/client-roadmap.md, "Memory"): once a minute, the address space by kind
  * (image = exe and DLLs, mapped = files and shared sections, private = heaps, textures, driver
  * buffers), and the largest free block, which is what a big allocation needs. */
@@ -203,6 +248,7 @@ BOOL WINAPI DllMain(HINSTANCE dll, DWORD reason, LPVOID reserved) {
             apply_character_patches();
             allow_named_patches();
             glue_patches();
+            npc_composite_patches();
             mpq_hooks();
             face_hooks();
         }
