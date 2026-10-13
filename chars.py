@@ -52,6 +52,8 @@ RACES = [
     (4, "nightelf", "NightElf", {0: "character/nightelf/male/nightelfmale_hd.m2",
                                  1: "character/nightelf/female/nightelffemale_hd.m2"}),
     (7, "gnome", "Gnome", {0: "character/gnome/male/gnomemale_hd.m2", 1: "character/gnome/female/gnomefemale_hd.m2"}),
+    (11, "draenei", "Draenei", {0: "character/draenei/male/draeneimale_hd.m2",
+                                1: "character/draenei/female/draeneifemale_hd.m2"}),
 ]
 SEXES = {0: ("male", "Male"), 1: ("female", "Female")}
 SEXES_BY_PATH = {upper: sex for sex, (_, upper) in SEXES.items()}
@@ -63,7 +65,7 @@ JOIN = {2001: 501, 2301: 401, 2201: 0, 3202: 0, 3301: 0, 3401: 0,  # 3202 is the
 RENAME = {r: {1701: 1702, 1702: None, 1703: None, 1704: None, 1705: None} for r in (5,)}
 # only the DK glow, 1703: blood elf and night elf eyes in retail are the Eye Color texture alone (no
 # glow mesh; ours is retail's choice 0), so 3.3.5's own glow slot 1702 stays empty for them
-RENAME[8] = RENAME[1] = RENAME[3] = RENAME[10] = RENAME[4] = RENAME[7] = {1701: 1703, 1702: None, 1703: None, 1704: None,
+RENAME[8] = RENAME[1] = RENAME[3] = RENAME[10] = RENAME[4] = RENAME[7] = RENAME[11] = {1701: 1703, 1702: None, 1703: None, 1704: None,
                                                               1705: None}
 KEEP_GROUPS = {0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 15, 17, 18}
 ARMOUR_GROUPS = {4, 5, 8, 9, 10, 11, 12, 13, 15}
@@ -74,7 +76,7 @@ CS_RACE, CS_SEX, CS_SECTION, CS_TEX, CS_VARIATION, CS_COLOR = 1, 2, 3, 4, 8, 9
 SKIN, FACE, FACIAL_HAIR, HAIR, UNDERWEAR = range(5)
 CHR_DISPLAY = 4  # ChrRaces: male display, then female
 COMPOSITE, THROAT_BOX = (1024, 512), (0, 320, 256, 512)  # patch_exe.py's composite, face lower region
-THROAT_RACES = {6, 5}  # races whose HD mesh samples the face lower block (tauren throat, undead bones)
+THROAT_RACES = {6, 5, 11}  # races whose HD mesh samples the face lower block (tauren throat, undead bones, draenei tendrils)
 CMD_SCALE = 4    # CreatureModelData: ModelScale
 
 
@@ -215,12 +217,34 @@ def gnome_geosets(sid, allowed):
     return NotImplemented
 
 
+def draenei_geosets(sid, allowed):
+    """Draenei (the male's 3.3.5 skin has tendrils, 2xx; the female's has none):
+    male hair and facial hair: retail's ids are 3.3.5's plus one, in 3.3.5's order (hair 3-15 =
+    2-14 by shape too; facial hair 101-107 = 102-108, 3.3.5's 101 being the tiny Bare piece, 100 in
+    retail). Male tendrils keep their ids. Female facial styles are horns: 2401-2408 = 101-108
+    (by shape). 3.3.5's tails and the female's tendrils are in the body; retail made them options,
+    their defaults (tail 3801, thin tendrils 201) drawn always."""
+    male = any(a // 100 == 2 for a in allowed)
+    if male and 1 < sid < 100:
+        return sid - 1 if sid > 2 and sid - 1 in allowed else None
+    if male and 100 < sid < 200:
+        return sid + 1 if sid + 1 in allowed and sid < 108 else None
+    if 200 < sid < 300:
+        return sid if sid in allowed else 0 if sid == 201 and not male else None
+    if 2400 < sid < 2500:
+        return sid - 2300 if sid - 2300 in allowed else None
+    if 3800 < sid < 3900:
+        return 0 if sid == 3801 else None
+    return NotImplemented
+
+
 # gnome male facial style -> retail moustache (best fit to the classic beard minus retail's beard;
 # styles 3 and 4 close calls against 305 and 303). Never 301: the client shows x01 where a helmet
 # hides facial hair (0x4ef1ec), so style 2 takes its runner-up 305 (0.087 against 301's 0.084).
 GNOME_MUSTACHES = {2: 305, 3: 303, 4: 310, 5: 305, 6: 305, 7: 305}
 RACE_GEOSETS = {6: tauren_geosets, 2: orc_geosets, 5: undead_geosets, 8: troll_geosets, 1: human_geosets,
-                3: dwarf_geosets, 4: nightelf_geosets, 7: gnome_geosets}
+                3: dwarf_geosets, 4: nightelf_geosets, 7: gnome_geosets,
+                11: draenei_geosets}
 # Horn Color choices (ChrCustomizationElement -> Material -> TextureFileData), by 3.3.5 hair colour
 HORN_TEXTURES = {0: ["01", "02", "03", "01", "07", "07", "07"], 1: ["01", "02", "03", "04", "10", "10", "10", "10"]}
 
@@ -359,9 +383,11 @@ def choice_textures(hd_path, option, target):
 
 
 def face_textures(hd_path):
-    """{(face, skin colour): file id} from retail's Face choices, whose materials (texture target 5,
-    the face) come per Skin Color choice (RelatedChrCustomizationChoiceID): CharSections' face rows
-    by variation and colour. Positions in retail's choice order, as for skins and hair colours."""
+    """{(face, skin colour): file id} from retail's Face choices, whose materials (the face sheet's
+    texture target: the one most Face materials use, 5 on most models, 4 on the draenei's layout,
+    where 4 is otherwise a small overlay) come per Skin Color choice (RelatedChrCustomizationChoiceID):
+    CharSections' face rows by variation and colour. Positions in retail's choice order, as for
+    skins and hair colours."""
     cm = chr_model(hd_path)
     opts = {o["ID"]: o["Name_lang"] for o in table("ChrCustomizationOption") if o["ChrModelID"] == cm}
     order = {}
@@ -369,13 +395,19 @@ def face_textures(hd_path):
         cs = sorted((c for c in table("ChrCustomizationChoice")
                      if opts.get(c["ChrCustomizationOptionID"]) == name), key=lambda c: int(c["OrderIndex"]))
         order[name] = {c["ID"]: i for i, c in enumerate(cs)}
+    targets = {r["ID"]: r["ChrModelTextureTargetID"] for r in table("ChrCustomizationMaterial")}
+    elements = [e for e in table("ChrCustomizationElement") if e["ChrCustomizationChoiceID"] in order["Face"]
+                and e["ChrCustomizationMaterialID"] in targets]
+    if not elements:
+        return {}
+    face_target = collections.Counter(targets[e["ChrCustomizationMaterialID"]] for e in elements).most_common(1)[0][0]
     mat = {r["ID"]: r["MaterialResourcesID"] for r in table("ChrCustomizationMaterial")
-           if r["ChrModelTextureTargetID"] == "5"}
+           if r["ChrModelTextureTargetID"] == face_target}
     files = {}
     for r in table("TextureFileData"):
         files.setdefault(r["MaterialResourcesID"], int(r["FileDataID"]))
     out = {}
-    for e in table("ChrCustomizationElement"):
+    for e in elements:
         face, skin = order["Face"].get(e["ChrCustomizationChoiceID"]), order["Skin Color"].get(e["RelatedChrCustomizationChoiceID"])
         if face is not None and skin is not None and files.get(mat.get(e["ChrCustomizationMaterialID"])):
             out[face, skin] = files[mat[e["ChrCustomizationMaterialID"]]]

@@ -185,7 +185,7 @@ block, the limit for any big allocation (high-res textures).
 
 ## Adding a race (HD character models)
 
-Blood elves, orcs, tauren, undead, trolls, humans, dwarves, night elves and gnomes are done; each race is an entry in `chars.py` `RACES` plus, where retail
+Blood elves, orcs, tauren, undead, trolls, humans, dwarves, night elves, gnomes and draenei are done; each race is an entry in `chars.py` `RACES` plus, where retail
 reorganised it, a geoset function in `RACE_GEOSETS`. Order of work:
 
 1. `charcheck.py options <dir> <sex>`: retail's customization options, each choice's geosets, in
@@ -194,20 +194,20 @@ reorganised it, a geoset function in `RACE_GEOSETS`. Order of work:
    facial style tables (facial columns are 1xx, 3xx, 2xx) and the 3.3.5 display x model scale.
 2. Map what moved: same ids need nothing (orc hair, beards); pieces split into new options get a
    geoset function (tauren: horns 24xx and foremane under one 3.3.5 style id, nose rings 16xx for
-   3xx; troll: tusks 3xx moved to 40xx; human: female piercings 3xx moved to 35xx; dwarf: female 3xx to earrings 35xx and a nose ring 16xx, ears 702 always drawn; night elf: ears 701 (Thin) as 702, male moustaches 305/306 borrow 304/302; gnome: female earrings 2xx moved to 35xx, male beards 102-108 split into retail beards 101-107 plus a moustache per style (`CharacterFacialHairStyles` 3xx, never x01: helmets force it), male brows none, mesh shrunk by 1.15; orc: tusks 40xx always drawn, piercings as earring 35xx + nose ring 16xx). A geoset map may
+   3xx; troll: tusks 3xx moved to 40xx; human: female piercings 3xx moved to 35xx; dwarf: female 3xx to earrings 35xx and a nose ring 16xx, ears 702 always drawn; night elf: ears 701 (Thin) as 702, male moustaches 305/306 borrow 304/302; gnome: female earrings 2xx moved to 35xx, male beards 102-108 split into retail beards 101-107 plus a moustache per style (`CharacterFacialHairStyles` 3xx, never x01: helmets force it), male brows none, mesh shrunk by 1.15; draenei: male hair and facial hair ids one higher in retail (3-15 = 2-14, 101-107 = 102-108), female horns 2401-2408 = 101-108, tail 3801 and female tendrils 201 always drawn (body in 3.3.5); orc: tusks 40xx always drawn, piercings as earring 35xx + nose ring 16xx). A geoset map may
    return a tuple (one retail piece drawn for several styles) or 0 (always drawn).
    When ids or order do not settle it, `charcheck.py match <dir> <sex> <3.3.5 ids> [groups]`
    (needs numpy and scipy) ranks retail pieces by shape; beards redesigned in HD match nothing well.
 3. Add the race to `RACES`, run `chars.py <race dir>` (that race only; the others keep their out/patch-<race dir>.MPQ; after `build.py` only matters for the creature patch),
    then `charcheck.py built <dir> <sex>`: skin-textured vertices outside 3.3.5's regions draw black
-   (tauren throat, undead fingers and bones: `THROAT_RACES`, the face lower region), keyframes in missing .anim files or
+   (tauren throat, undead fingers and bones, draenei tendrils: `THROAT_RACES`, the face lower region), keyframes in missing .anim files or
    starting after 0 crash the client (the converter fixes both; this confirms it).
 4. In game: character select size (meshes are shrunk by the 3.3.5 scale, `native_scale`), every
    hair, facial and colour choice, and NPCs on the race's model (they play animations players
    do not: the Lazy Peon's lie-down found the alias bug).
 
 Textures come from retail's materials, not file names: skins, underwear (targets 13, 14) and hair
-from Skin Color and Hair Color, faces from Face x Skin Color (target 5); names only for 3.3.5
+from Skin Color and Hair Color, faces from Face x Skin Color (the face sheet's target: 5, 4 on draenei); names only for 3.3.5
 choices retail lacks. Eyes are retail's Eye Color choice 0; no glow mesh except the death knight's
 (1703), and undead's 1702.
 
