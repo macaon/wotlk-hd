@@ -57,7 +57,9 @@ RACES = [
 ]
 SEXES = {0: ("male", "Male"), 1: ("female", "Female")}
 SEXES_BY_PATH = {upper: sex for sex, (_, upper) in SEXES.items()}
-JOIN = {2001: 501, 2301: 401, 2201: 0, 3202: 0, 3301: 0, 3401: 0,  # 3202 is the face (3201 a small cap)
+# 2001, the bare feet: retail draws them under boots too (its 502-504 stop at the ankle, 505 reaches
+# the ground), 3.3.5 has its feet in 501 (no boots) only, so they go with every 501-504
+JOIN = {2001: (501, 502, 503, 504), 2301: 401, 2201: 0, 3202: 0, 3301: 0, 3401: 0,  # 3202 is the face (3201 a small cap)
         1801: 0}  # bare waist under belts; 3.3.5's own model has none, its waist is in the body
 # Eye glow: 3.3.5 shows 1702 on undead (and 1703 for death knights); retail's 1702-1705 are large
 # flame flares (228 vertices, the Primalist eye styles), its plain in-eye glow is 1701 (60). So
@@ -270,6 +272,8 @@ def geoset_map(old_skin, race):
         if sid in rename:
             return rename[sid] if rename[sid] in allowed else None
         sid = JOIN.get(sid, sid)
+        if isinstance(sid, tuple):
+            return tuple(k for k in sid if k in allowed) or None
         return sid if sid in allowed and sid // 100 in KEEP_GROUPS else None
     return remap
 
