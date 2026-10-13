@@ -26,6 +26,7 @@ through convert.py (their skeletons are .skel files); then:
 import collections
 import csv
 import io
+import math
 import os
 import struct
 import sys
@@ -626,6 +627,27 @@ def face_bones(race, sex, hd_path, report):
     return b"".join(out)
 
 
+# character creation's backdrops (troll and gnome use the orc's and dwarf's): their camera frames the
+# character tightly, and retail's taller hair and horns go past the top of a 16:9 screen
+CREATION_BACKDROPS = ("BloodElf", "Draenei", "Dwarf", "Human", "NightElf", "Orc", "Scourge", "Tauren")
+CREATION_ZOOM_OUT = 1.3  # visible height x this; character creation only, the backdrops are used nowhere else
+
+
+def creation_cameras():
+    """The backdrops with each camera's field of view widened by CREATION_ZOOM_OUT (zooms out around
+    the screen centre, where the character stands)."""
+    client, out = Client(), {}
+    for race in CREATION_BACKDROPS:
+        path = f"Interface\\Glues\\Models\\UI_{race}\\UI_{race}.m2"
+        m = bytearray(client.read(path))
+        n, off = struct.unpack_from("<II", m, 0x110)
+        for i in range(n):  # M2Camera, 100 bytes: type, fov, ...
+            fov, = struct.unpack_from("<f", m, off + 100 * i + 4)
+            struct.pack_into("<f", m, off + 100 * i + 4, 2 * math.atan(CREATION_ZOOM_OUT * math.tan(fov / 2)))
+        out[path] = bytes(m)
+    return out
+
+
 def race_archive(race_dir):
     return os.path.join(build.OUT, f"patch-{race_dir}.MPQ")
 
@@ -658,6 +680,7 @@ def main(selected):
     if hair_tables:  # ponytail: one race with dropped styles so far; merge tables when there are more
         files["DBFilesClient\\CharHairGeosets.dbc"] = hair_tables[-1].bytes()
     files["DBFilesClient\\CharacterFacialHairStyles.dbc"] = facial_styles(report).bytes()
+    files.update(creation_cameras())
     print("\n".join(report))
     print(build.write_patch(6, files))
     for race_dir, own in race_files.items():
