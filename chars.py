@@ -26,7 +26,6 @@ through convert.py (their skeletons are .skel files); then:
 import collections
 import csv
 import io
-import math
 import os
 import struct
 import sys
@@ -627,24 +626,33 @@ def face_bones(race, sex, hd_path, report):
     return b"".join(out)
 
 
-# character creation's backdrops (troll and gnome use the orc's and dwarf's): their camera frames the
-# character tightly, and retail's taller hair and horns go past the top of a 16:9 screen
-CREATION_BACKDROPS = ("BloodElf", "Draenei", "Dwarf", "Human", "NightElf", "Orc", "Scourge", "Tauren")
-CREATION_ZOOM_OUT = 1.3  # visible height x this; character creation only, the backdrops are used nowhere else
+# Character creation and select show Interface\\Glues\\Models\\UI_<race>\\UI_<race>.m2 (troll and gnome
+# the orc's and dwarf's); retail's creation uses one stage per faction, so both screens get those.
+# 3.3.5's racial backdrops framed the HD characters too tightly (taller hair and horns past the top).
+CREATION_STAGES = {"interface/glues/models/ui_horde/ui_horde.m2": ("BloodElf", "Orc", "Scourge", "Tauren"),
+                   "interface/glues/models/ui_alliance/ui_alliance.m2": ("Draenei", "Dwarf", "Human", "NightElf")}
 
 
-def creation_cameras():
-    """The backdrops with each camera's field of view widened by CREATION_ZOOM_OUT (zooms out around
-    the screen centre, where the character stands)."""
-    client, out = Client(), {}
-    for race in CREATION_BACKDROPS:
-        path = f"Interface\\Glues\\Models\\UI_{race}\\UI_{race}.m2"
-        m = bytearray(client.read(path))
-        n, off = struct.unpack_from("<II", m, 0x110)
-        for i in range(n):  # M2Camera, 100 bytes: type, fov, ...
-            fov, = struct.unpack_from("<f", m, off + 100 * i + 4)
-            struct.pack_into("<f", m, off + 100 * i + 4, 2 * math.atan(CREATION_ZOOM_OUT * math.tan(fov / 2)))
-        out[path] = bytes(m)
+def creation_backdrops(report):
+    """Retail's faction stages converted, under each race's backdrop name."""
+    out = {}
+
+    def texture_name(fid):
+        path = build.mpq_path(fetch.name(fid))
+        out[path] = fetch.get(fid)
+        return path
+    for stage, races in CREATION_STAGES.items():
+        name = stage.rsplit("/", 1)[1][:-3]
+        m2, skins, anims, warnings = convert.convert_model_fitting(fetch.get(fetch.fdid(stage)), name, texture_name,
+                                                                   fetch.get)
+        convert.check(m2, skins)
+        assert not anims, f"{stage}: external animations"
+        for race in races:
+            base = f"Interface\\Glues\\Models\\UI_{race}\\UI_{race}"
+            out[base + ".m2"] = m2
+            for i, skin in enumerate(skins):
+                out[f"{base}{i:02d}.skin"] = skin
+        report.append(f"creation stage {name} for {', '.join(races)}" + (f": {'; '.join(warnings)}" if warnings else ""))
     return out
 
 
@@ -680,7 +688,7 @@ def main(selected):
     if hair_tables:  # ponytail: one race with dropped styles so far; merge tables when there are more
         files["DBFilesClient\\CharHairGeosets.dbc"] = hair_tables[-1].bytes()
     files["DBFilesClient\\CharacterFacialHairStyles.dbc"] = facial_styles(report).bytes()
-    files.update(creation_cameras())
+    files.update(creation_backdrops(report))
     print("\n".join(report))
     print(build.write_patch(6, files))
     for race_dir, own in race_files.items():
