@@ -189,6 +189,11 @@ afterwards. `WOTLKHD_EFFECTS=smaa`, `cas` or `off` picks the effects (default bo
 committed `client/shaders.h` by `client/shaders.sh`, which runs Microsoft's d3dcompiler_47.dll
 (fetched from the Windows SDK, build time only) under Proton's Wine.
 
+Portraits (`client/portraits.c`): unit frame portraits render at 256x256 instead of 64x64.
+SetPortraitTexture (0x619580) draws the model into a "Portrait1" texture when the device can render
+to textures and masks it with a quad, so only the texture (0x619b72) and the portrait depth target
+(0x6180e8) carry the size; the read-back fallback without render to texture keeps 64.
+
 The DLL also logs a memory census once a minute: committed memory by kind and the largest free
 block, the limit for any big allocation (high-res textures).
 
