@@ -1,14 +1,20 @@
 #!/bin/sh
 # Builds client/dinput8.dll (32-bit Windows) with the Zig toolchain in cache/ (see README), with
-# StormLib (MIT, fetched into cache/ at a pinned commit and compiled once) linked in.
+# StormLib (MIT, fetched into cache/ at a pinned commit and compiled once) linked in, and SMAA's
+# lookup tables (MIT, fetched likewise) for effects.cpp. Shaders: shaders.sh, into shaders.h.
 set -e
 cd "$(dirname "$0")"
 ZIG="${ZIG:-../cache/zig-linux-x86_64-0.13.0/zig}"
 STORMLIB=../cache/StormLib STORMLIB_COMMIT=44ebfbf
+SMAA=../cache/smaa SMAA_COMMIT=71c806a
 OBJ=../cache/stormlib-obj
 if [ ! -d "$STORMLIB" ]; then
     git clone -q https://github.com/ladislav-zezula/StormLib.git "$STORMLIB"
     git -C "$STORMLIB" checkout -q "$STORMLIB_COMMIT"
+fi
+if [ ! -d "$SMAA" ]; then
+    git clone -q https://github.com/iryoku/smaa.git "$SMAA"
+    git -C "$SMAA" checkout -q "$SMAA_COMMIT"
 fi
 if [ ! -f "$OBJ/done" ]; then
     rm -rf "$OBJ" && mkdir -p "$OBJ"
@@ -22,7 +28,7 @@ if [ ! -f "$OBJ/done" ]; then
     done | xargs -P"$(nproc)" -I{} sh -c '{}'
     touch "$OBJ/done"
 fi
-"$ZIG" c++ -target x86-windows-gnu -O2 -shared -w -I "$STORMLIB/src" -o dinput8.dll dinput8.c mpq.c faces.c dinput8.def \
+"$ZIG" c++ -target x86-windows-gnu -O2 -shared -w -I "$STORMLIB/src" -o dinput8.dll dinput8.c mpq.c faces.c effects.cpp dinput8.def \
     "$OBJ"/*.o -lwininet
 rm -f dinput8.lib dinput8.pdb
 echo "built $(pwd)/dinput8.dll"

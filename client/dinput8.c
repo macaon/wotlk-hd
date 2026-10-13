@@ -18,6 +18,7 @@ static FILE *log_file;
 
 void mpq_hooks(void);  /* mpq.c */
 void face_hooks(void); /* faces.c */
+void effects_hooks(void); /* effects.cpp */
 
 void wlog(const char *fmt, ...) {
     if (!log_file)
@@ -251,6 +252,7 @@ BOOL WINAPI DllMain(HINSTANCE dll, DWORD reason, LPVOID reserved) {
             npc_composite_patches();
             mpq_hooks();
             face_hooks();
+            effects_hooks();
         }
         CloseHandle(CreateThread(NULL, 0, memory_census, NULL, 0, NULL));
     } /* no census at exit: the client ends without DLL_PROCESS_DETACH */
