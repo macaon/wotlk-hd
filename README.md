@@ -180,6 +180,15 @@ face when its geosets are set up (0x4ed951: component race +0x18, sex +0x1c, fac
 +0x38) and, where the animate function multiplies a bone's local matrix by its parent's (0x82fe4f),
 applies T(-pivot) x offset x T(pivot) to face bones, so children follow.
 
+Post-processing (`client/effects.cpp`, D3D9 only): SMAA, then AMD's CAS sharpening, on the world but
+not the UI. The world frame ends with the client's own full-frame effects (0x8c1010, called at
+0x4f9281) before the UI draws; the DLL hooks that call and runs its passes on the back buffer there,
+on the client's device (gx device 0xc5df88, IDirect3DDevice9 at +0x397c), restoring the device state
+afterwards. `WOTLKHD_EFFECTS=smaa`, `cas` or `off` picks the effects (default both). The shaders are
+`client/post.hlsl` (SMAA from iryoku/smaa, MIT, fetched into cache/ by `build.sh`), compiled into the
+committed `client/shaders.h` by `client/shaders.sh`, which runs Microsoft's d3dcompiler_47.dll
+(fetched from the Windows SDK, build time only) under Proton's Wine.
+
 The DLL also logs a memory census once a minute: committed memory by kind and the largest free
 block, the limit for any big allocation (high-res textures).
 
