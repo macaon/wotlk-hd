@@ -656,6 +656,24 @@ def creation_backdrops(report):
     return out
 
 
+# GlueParent.lua lights and fogs each backdrop by its race name (RaceLights, CharModelFogInfo: undead
+# under a near teal fog, tauren without ambient light); on the faction stages every race gets the
+# lighting of the race whose screen the stage replaced (Orgrimmar's, the orc's, looks right).
+# Loads with client/dinput8.c's GlueXML signature patch. Troll and gnome arrive as ORC and DWARF.
+STAGE_LIGHTING = {"BLOODELF": "ORC", "SCOURGE": "ORC", "TAUREN": "ORC",
+                  "DRAENEI": "HUMAN", "DWARF": "HUMAN", "NIGHTELF": "HUMAN"}
+
+
+def glue_lighting():
+    path = "Interface\\GlueXML\\GlueParent.lua"
+    lua = Client().read(path).decode("latin1")
+    old = "function SetLighting(model, race)\r\n"
+    assert old in lua, f"{path}: no SetLighting"
+    table = ", ".join(f"{k} = \"{v}\"" for k, v in STAGE_LIGHTING.items())
+    return {path: lua.replace(old, f"-- wotlk-hd: faction stages (chars.py)\r\nSTAGE_LIGHTING = {{ {table} }};\r\n"
+                                   f"{old}\trace = STAGE_LIGHTING[race] or race;\r\n").encode("latin1")}
+
+
 def race_archive(race_dir):
     return os.path.join(build.OUT, f"patch-{race_dir}.MPQ")
 
@@ -689,6 +707,7 @@ def main(selected):
         files["DBFilesClient\\CharHairGeosets.dbc"] = hair_tables[-1].bytes()
     files["DBFilesClient\\CharacterFacialHairStyles.dbc"] = facial_styles(report).bytes()
     files.update(creation_backdrops(report))
+    files.update(glue_lighting())
     print("\n".join(report))
     print(build.write_patch(6, files))
     for race_dir, own in race_files.items():

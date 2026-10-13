@@ -123,6 +123,34 @@ static void allow_named_patches(void) {
     }
 }
 
+/* Glue screens: our GlueXML loads (chars.py ships GlueParent.lua with faction-stage lighting), and
+ * death knights get their race's backdrop, retail's faction stage, not UI_DeathKnight. All or nothing. */
+static void glue_patches(void) {
+    static const struct { unsigned va, len; const char *orig, *patch; } sites[] = {
+        /* GlueXML.toc's signature status (0x8165e0: 3 signed, else missing/corrupt/modified):
+         * always the signed path, then ignore its hash comparison */
+        {0x004DA7E5u, 5, "\x83\xF8\x03\x77\x34", "\xE9\x4B\x00\x00\x00"},
+        {0x004DA8EBu, 6, "\x0F\x85\x2D\xFF\xFF\xFF", "\x90\x90\x90\x90\x90\x90"},
+        /* GetCreateBackgroundModel / GetSelectBackgroundModel: class 6 returns the class backdrop */
+        {0x004E0DFCu, 2, "\x75\x46", "\xEB\x46"},
+        {0x004E369Cu, 2, "\x75\x2A", "\xEB\x2A"}};
+    unsigned i, n = sizeof(sites) / sizeof(sites[0]);
+    for (i = 0; i < n; i++)
+        if (memcmp((void *)(UINT_PTR)sites[i].va, sites[i].orig, sites[i].len) != 0) {
+            wlog("glue patches: site %08x not as expected, none applied", sites[i].va);
+            return;
+        }
+    for (i = 0; i < n; i++) {
+        DWORD old;
+        BYTE *at = (BYTE *)(UINT_PTR)sites[i].va;
+        VirtualProtect(at, sites[i].len, PAGE_EXECUTE_READWRITE, &old);
+        memcpy(at, sites[i].patch, sites[i].len);
+        VirtualProtect(at, sites[i].len, old, &old);
+    }
+    FlushInstructionCache(GetCurrentProcess(), NULL, 0);
+    wlog("glue patches: %u sites applied (GlueXML signature, death knight backdrops)", n);
+}
+
 /* Memory census (docs/client-roadmap.md, "Memory"): once a minute, the address space by kind
  * (image = exe and DLLs, mapped = files and shared sections, private = heaps, textures, driver
  * buffers), and the largest free block, which is what a big allocation needs. */
@@ -174,6 +202,7 @@ BOOL WINAPI DllMain(HINSTANCE dll, DWORD reason, LPVOID reserved) {
         if (stamp == 0x4c2452fe) {
             apply_character_patches();
             allow_named_patches();
+            glue_patches();
             mpq_hooks();
             face_hooks();
         }
