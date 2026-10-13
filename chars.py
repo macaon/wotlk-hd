@@ -11,8 +11,8 @@ models' UVs and retail's HD skin, face and underwear textures fit unchanged. The
 through convert.py (their skeletons are .skel files); then:
 
 - geosets: 3.3.5 shows hair (0xx), facial hair (1xx), ears (7xx) and armour (4xx-18xx) itself.
-  Retail's new groups are set by its client: feet (20xx) and hands (23xx) show without boots and
-  gloves, so they join 501 and 401; torso (2201), face, eyes and brows (3202, 3301, 3401) always
+  Retail's new groups are set by its client: feet (20xx) and hands (23xx) show under boots and
+  gloves too, so they join every 501-504 and 401-404; torso (2201), face, eyes and brows (3202, 3301, 3401) always
   show, so they join the base 0. Other groups (eyesight, blindfolds, tattoos...) are left out.
   Hair styles and facial hair keep classic numbering in retail, so CharHairGeosets and
   CharacterFacialHairStyles stay as they are.
@@ -59,8 +59,10 @@ RACES = [
 SEXES = {0: ("male", "Male"), 1: ("female", "Female")}
 SEXES_BY_PATH = {upper: sex for sex, (_, upper) in SEXES.items()}
 # 2001, the bare feet: retail draws them under boots too (its 502-504 stop at the ankle, 505 reaches
-# the ground), 3.3.5 has its feet in 501 (no boots) only, so they go with every 501-504
-JOIN = {2001: (501, 502, 503, 504), 2301: 401, 2201: 0, 3202: 0, 3301: 0, 3401: 0,  # 3202 is the face (3201 a small cap)
+# the ground), 3.3.5 has its feet in 501 (no boots) only, so they go with every 501-504. 2301, the
+# hands, likewise: retail's 402-404 are glove cuffs that stop at the wrist, the glove's hand texture
+# goes on 2301 (with 401 only, any gloves hid the hands: the Ghostlands Guardian's)
+JOIN = {2001: (501, 502, 503, 504), 2301: (401, 402, 403, 404), 2201: 0, 3202: 0, 3301: 0, 3401: 0,  # 3202 is the face (3201 a small cap)
         1801: 0}  # bare waist under belts; 3.3.5's own model has none, its waist is in the body
 # Eye glow: 3.3.5 shows 1702 on undead (and 1703 for death knights); retail's 1702-1705 are large
 # flame flares (228 vertices, the Primalist eye styles), its plain in-eye glow is 1701 (60). So

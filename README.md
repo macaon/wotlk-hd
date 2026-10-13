@@ -228,9 +228,7 @@ out our own patches (read out/patch-<race dir>.MPQ explicitly, as charcheck does
 ## To fix later
 
 - Blood elf eye glow colour: retail's plain glow (1701) shows cyan rather than fel green.
-- NPC looks (`chars.py` `NPC_LOOKS`): the Ghostlands Guardian has no hands (its gloves, retail
-  item display 176143 with geoset group 1, probably pick a 4xx the HD model lacks), and NPCs carry
-  no shields or weapons yet. Belt buckles (retail waist models) have no slot in 3.3.5.
+- NPC looks (`chars.py` `NPC_LOOKS`): NPCs carry no shields or weapons yet. Belt buckles (retail waist models) have no slot in 3.3.5.
 - Face shapes: whether retail applies the .bone offset before or after the bone's animation is a
   guess (before: the shape rotates with jaw and lips); check faces while talking. NPCs on player
   models (CreatureDisplayInfoExtra) may not pass the geoset update that records the face.
