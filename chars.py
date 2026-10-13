@@ -51,6 +51,7 @@ RACES = [
     (3, "dwarf", "Dwarf", {0: "character/dwarf/male/dwarfmale_hd.m2", 1: "character/dwarf/female/dwarffemale_hd.m2"}),
     (4, "nightelf", "NightElf", {0: "character/nightelf/male/nightelfmale_hd.m2",
                                  1: "character/nightelf/female/nightelffemale_hd.m2"}),
+    (7, "gnome", "Gnome", {0: "character/gnome/male/gnomemale_hd.m2", 1: "character/gnome/female/gnomefemale_hd.m2"}),
 ]
 SEXES = {0: ("male", "Male"), 1: ("female", "Female")}
 SEXES_BY_PATH = {upper: sex for sex, (_, upper) in SEXES.items()}
@@ -62,7 +63,7 @@ JOIN = {2001: 501, 2301: 401, 2201: 0, 3202: 0, 3301: 0, 3401: 0,  # 3202 is the
 RENAME = {r: {1701: 1702, 1702: None, 1703: None, 1704: None, 1705: None} for r in (5,)}
 # only the DK glow, 1703: blood elf and night elf eyes in retail are the Eye Color texture alone (no
 # glow mesh; ours is retail's choice 0), so 3.3.5's own glow slot 1702 stays empty for them
-RENAME[8] = RENAME[1] = RENAME[3] = RENAME[10] = RENAME[4] = {1701: 1703, 1702: None, 1703: None, 1704: None,
+RENAME[8] = RENAME[1] = RENAME[3] = RENAME[10] = RENAME[4] = RENAME[7] = {1701: 1703, 1702: None, 1703: None, 1704: None,
                                                               1705: None}
 KEEP_GROUPS = {0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 15, 17, 18}
 ARMOUR_GROUPS = {4, 5, 8, 9, 10, 11, 12, 13, 15}
@@ -131,16 +132,19 @@ def undead_geosets(sid, allowed):
 # 3.3.5 undead female facial style -> 2xx jaw: retail pairs the jaw textures 03 (style 4) and 04
 # (style 5) with Bonejawed and Toothy; the other styles' textures go on the intact jaw
 UNDEAD_FEMALE_JAWS = {4: 3, 5: 4}
-FHS_2XX = 5  # CharacterFacialHairStyles: race, sex, style, then geosets 1xx, 3xx, 2xx, 16xx, 17xx
+FHS_3XX, FHS_2XX = 4, 5  # CharacterFacialHairStyles: race, sex, style, then geosets 1xx, 3xx, 2xx, 16xx, 17xx
 
 
 def facial_styles(report):
-    """CharacterFacialHairStyles with the undead female styles switching retail's jaws."""
+    """CharacterFacialHairStyles with the undead female styles switching retail's jaws and the gnome
+    male ones adding retail's moustaches."""
     table = build.Dbc(Client().read("DBFilesClient\\CharacterFacialHairStyles.dbc"))
     for r in table.rows:
         if r[0] == 5 and r[1] == 1:
             r[FHS_2XX] = UNDEAD_FEMALE_JAWS.get(r[2], 2)
-    report.append("CharacterFacialHairStyles: undead female jaws")
+        if r[0] == 7 and r[1] == 0 and r[2] in GNOME_MUSTACHES:
+            r[FHS_3XX] = GNOME_MUSTACHES[r[2]] - 300
+    report.append("CharacterFacialHairStyles: undead female jaws, gnome male moustaches")
     return table
 
 
@@ -189,8 +193,34 @@ def nightelf_geosets(sid, allowed):
 
 
 NIGHTELF_MUSTACHES = {302: (302, 306), 304: (304, 305)}
+
+
+def gnome_geosets(sid, allowed):
+    """3.3.5's gnome female facial styles are earrings (2xx); retail moved them to Earrings (35xx),
+    its first choices in 3.3.5's order (3501-3506 = 202-207; by shape 206 and 207 are the right and
+    left ones, as in retail). Male eyebrows: retail's default is none (3400), 3.3.5 has no brow mesh.
+    3.3.5's male beards (102-108) have the moustache built in; retail split them into Beard, its
+    first choices in 3.3.5's order (101-107 = 102-108, by shape too), and Moustache: the moustache
+    closest in shape to the rest of each classic beard (GNOME_MUSTACHES) is kept under its own id."""
+    if 100 < sid < 108:
+        return sid + 1 if sid + 1 in allowed else None
+    if sid == 108:
+        return None
+    if 300 < sid < 400:
+        return sid if sid in GNOME_MUSTACHES.values() else None
+    if 3500 < sid < 3600:
+        return sid - 3299 if sid - 3299 in allowed else None
+    if 3400 < sid < 3500:
+        return None
+    return NotImplemented
+
+
+# gnome male facial style -> retail moustache (best fit to the classic beard minus retail's beard;
+# styles 3 and 4 close calls against 305 and 303). Never 301: the client shows x01 where a helmet
+# hides facial hair (0x4ef1ec), so style 2 takes its runner-up 305 (0.087 against 301's 0.084).
+GNOME_MUSTACHES = {2: 305, 3: 303, 4: 310, 5: 305, 6: 305, 7: 305}
 RACE_GEOSETS = {6: tauren_geosets, 2: orc_geosets, 5: undead_geosets, 8: troll_geosets, 1: human_geosets,
-                3: dwarf_geosets, 4: nightelf_geosets}
+                3: dwarf_geosets, 4: nightelf_geosets, 7: gnome_geosets}
 # Horn Color choices (ChrCustomizationElement -> Material -> TextureFileData), by 3.3.5 hair colour
 HORN_TEXTURES = {0: ["01", "02", "03", "01", "07", "07", "07"], 1: ["01", "02", "03", "04", "10", "10", "10", "10"]}
 
