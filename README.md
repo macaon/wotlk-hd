@@ -194,6 +194,15 @@ SetPortraitTexture (0x619580) draws the model into a "Portrait1" texture when th
 to textures and masks it with a quad, so only the texture (0x619b72) and the portrait depth target
 (0x6180e8) carry the size; the read-back fallback without render to texture keeps 64.
 
+NPC weapons (`client/npcitems.c`): NPCs moved onto HD character models (`NPC_LOOKS`) lose the weapons
+their old creature models had in the mesh, and the server sends none. `chars.py` `NPC_WEAPONS` picks
+retail item displays per 3.3.5 display (retail has no table: its servers send NPC weapons), imports
+them as Item.dbc rows from 60000 and writes `Character\wotlk-hd\npc-items.bin`. After the display
+setup of an NPC with a look (0x71d010, called at 0x730199), the DLL fills its empty
+UNIT_VIRTUAL_ITEM_SLOT_ID fields and calls the unit's virtual item handler (0x725010), which the
+client otherwise runs only when the server changes those fields. Client-only on purpose: a stock
+client keeps the old model with its own weapons.
+
 The DLL also logs a memory census once a minute: committed memory by kind and the largest free
 block, the limit for any big allocation (high-res textures).
 
@@ -233,7 +242,7 @@ out our own patches (read out/patch-<race dir>.MPQ explicitly, as charcheck does
 ## To fix later
 
 - Blood elf eye glow colour: retail's plain glow (1701) shows cyan rather than fel green.
-- NPC looks (`chars.py` `NPC_LOOKS`): NPCs carry no shields or weapons yet. Belt buckles (retail waist models) have no slot in 3.3.5.
+- NPC looks (`chars.py` `NPC_LOOKS`): belt buckles (retail waist models) have no slot in 3.3.5.
 - Face shapes: whether retail applies the .bone offset before or after the bone's animation is a
   guess (before: the shape rotates with jaw and lips); check faces while talking. NPCs on player
   models (CreatureDisplayInfoExtra) may not pass the geoset update that records the face.

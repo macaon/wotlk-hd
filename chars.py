@@ -698,6 +698,16 @@ def unbaked_npcs(table, report):
 # a creature model of its own onto an HD character model with an NPC look and armour (the
 # Ghostlands Guardian: display 15511, BloodElfMale_Guard.mdx, is display 89418 in retail).
 NPC_LOOKS = {15511: 89418}
+# Their weapons: retail sends NPC weapons as server equipment, so no table lists them; the old models
+# had them in the mesh (the Guardian's glaive and shield). 3.3.5 display -> retail ItemDisplayInfo
+# (main hand, off hand, ranged; 0 none). Each becomes an Item.dbc row from NPC_ITEM_BASE (above every
+# 3.3.5 and AzerothCore item) and Character\wotlk-hd\npc-items.bin tells client/npcitems.c to show
+# them as the unit's virtual items where the server sends none.
+NPC_WEAPONS = {15511: (176311, 176312, 0)}  # glaive_1h_bloodelfguard_d_01, shield_1h_bloodelfguard_d_01
+NPC_ITEM_BASE = 60000
+NPC_ITEMS_FILE = "Character\\wotlk-hd\\npc-items.bin"
+# 3.3.5 Item.dbc: ID, class, subclass, sound override subclass, material, display, inventory type, sheathe
+ITEM_ROWS = {0: (2, 7, 21, 3), 1: (4, 6, 14, 4), 2: (2, 2, 15, 0)}  # main-hand sword, shield, bow
 # 3.3.5 CreatureDisplayInfoExtra: ID, race, sex, skin, face, hair style, hair colour, facial hair,
 # 11 item displays (head, shoulder, shirt, chest, belt, legs, boots, wrist, gloves, tabard, cape:
 # retail's NPCModelItemSlotDisplayInfo ItemSlot order), flags, bake name
@@ -770,6 +780,24 @@ def npc_looks(cdx, files, report):
         report.append(f"NPC look: display {old_id} -> HD {race_dir} {upper.lower()} (retail display {new_id}), "
                       f"looks {look}, items {row[CDX_ITEMS:CDX_ITEMS + 11]}")
         next_cdx += 1
+    item = build.Dbc(Client().read("DBFilesClient\\Item.dbc"))
+    table_rows, next_item = [], NPC_ITEM_BASE
+    for display, weapons in NPC_WEAPONS.items():
+        ids = [0, 0, 0]
+        for slot, rid in enumerate(weapons):
+            if not rid:
+                continue
+            if rid not in imported:
+                imported[rid] = import_item(rid, next_idi, idi, files, report)
+                next_idi += imported[rid] is not None
+            if imported[rid]:
+                cls, sub, inv, sheathe = ITEM_ROWS[slot]
+                item.rows.append([next_item, cls, sub, 0xFFFFFFFF, 1, imported[rid], inv, sheathe])
+                ids[slot], next_item = next_item, next_item + 1
+        table_rows.append(struct.pack("<4I", display, *ids))
+        report.append(f"NPC weapons: display {display} -> items {ids} (retail item displays {list(weapons)})")
+    files[NPC_ITEMS_FILE] = b"NPCI" + struct.pack("<I", len(table_rows)) + b"".join(table_rows)
+    files["DBFilesClient\\Item.dbc"] = item.bytes()
     files["DBFilesClient\\CreatureDisplayInfo.dbc"] = cdi.bytes()
     files["DBFilesClient\\ItemDisplayInfo.dbc"] = idi.bytes()
 
