@@ -469,6 +469,7 @@ def char_sections(cs, race, race_dir, sex, files, report):
         return path
     hair = choice_textures(f"{prefix}_hd.m2", "Hair Color", 10)
     skin_fids = choice_textures(f"{prefix}_hd.m2", "Skin Color", 1)
+    extra_fids = choice_textures(f"{prefix}_hd.m2", "Skin Color", 2)  # tauren fur, draenei male horns
     faces = face_textures(f"{prefix}_hd.m2")
     # Skin Color's underwear: target 13 pelvis, 14 torso
     underwear = [choice_textures(f"{prefix}_hd.m2", "Skin Color", t) for t in (13, 14)]
@@ -477,9 +478,11 @@ def char_sections(cs, race, race_dir, sex, files, report):
         if r[CS_RACE] != race or r[CS_SEX] != sex:
             continue
         names = [original.string(t) if t else "" for t in old_rows[r[0]][CS_TEX:CS_TEX + 3]]
-        if r[CS_SECTION] == SKIN:  # retail's Skin Color skin; the extra (tauren fur) drawn directly
+        if r[CS_SECTION] == SKIN:  # retail's Skin Color skin; the extra (texture type 8) drawn directly
             fid = skin_fids[r[CS_COLOR]] if r[CS_COLOR] < len(skin_fids) else None
-            want = [hd(fetch.name(fid)) if fid else None, skin_extra(names[0]) if names[1] else None, None]
+            extra = extra_fids[r[CS_COLOR]] if r[CS_COLOR] < len(extra_fids) else None
+            extra = hd(fetch.name(extra), composited=False) if extra else skin_extra(names[0]) if names[1] else None
+            want = [hd(fetch.name(fid)) if fid else None, extra, None]
         elif r[CS_SECTION] == FACE:  # upper: the HD face sheet; lower: the throat block (tauren)
             fid = faces.get((r[CS_VARIATION], r[CS_COLOR]))
             face = hd(fetch.name(fid)) if fid else hd_of(names[1] or names[0])  # names: faces retail lacks
