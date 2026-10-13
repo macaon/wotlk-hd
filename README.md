@@ -198,7 +198,7 @@ reorganised it, a geoset function in `RACE_GEOSETS`. Order of work:
    return a tuple (one retail piece drawn for several styles) or 0 (always drawn).
    When ids or order do not settle it, `charcheck.py match <dir> <sex> <3.3.5 ids> [groups]`
    (needs numpy and scipy) ranks retail pieces by shape; beards redesigned in HD match nothing well.
-3. Add the race to `RACES`, run `chars.py <race dir>` (that race only; the others keep their out/patch-<race dir>.MPQ; after `build.py` only matters for the creature patch),
+3. Add the race to `RACES`, run `chars.py <race dir>` (that race only; the others keep their out/patch-<race dir>.MPQ; run it again after every `build.py`: its CreatureDisplayInfo.dbc starts from build.py's and overrides it),
    then `charcheck.py built <dir> <sex>`: skin-textured vertices outside 3.3.5's regions draw black
    (tauren throat, undead fingers and bones, draenei tendrils: `THROAT_RACES`, the face lower region), keyframes in missing .anim files or
    starting after 0 crash the client (the converter fixes both; this confirms it).
@@ -219,7 +219,9 @@ out our own patches (read out/patch-<race dir>.MPQ explicitly, as charcheck does
 ## To fix later
 
 - Blood elf eye glow colour: retail's plain glow (1701) shows cyan rather than fel green.
-- Humanoid NPCs on HD character models need retail's HD baked textures (CreatureDisplayInfoExtra).
+- NPC looks (`chars.py` `NPC_LOOKS`): the Ghostlands Guardian has no hands (its gloves, retail
+  item display 176143 with geoset group 1, probably pick a 4xx the HD model lacks), and NPCs carry
+  no shields or weapons yet. Belt buckles (retail waist models) have no slot in 3.3.5.
 - Face shapes: whether retail applies the .bone offset before or after the bone's animation is a
   guess (before: the shape rotates with jaw and lips); check faces while talking. NPCs on player
   models (CreatureDisplayInfoExtra) may not pass the geoset update that records the face.

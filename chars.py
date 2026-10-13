@@ -34,6 +34,7 @@ import blp
 import build
 import convert
 import fetch
+import mpq
 from mpq import Client, write_archive
 from PIL import Image
 
@@ -678,11 +679,10 @@ def glue_lighting():
                                    f"{old}\trace = STAGE_LIGHTING[race] or race;\r\n").encode("latin1")}
 
 
-def unbaked_npcs(report):
+def unbaked_npcs(table, report):
     """CreatureDisplayInfoExtra without the baked texture (its last field) for the HD races: those are
     256x256 in 3.3.5's layout; without one the client composites the NPC like a player (retail
-    bakes none either)."""
-    table = build.Dbc(Client().read("DBFilesClient\\CreatureDisplayInfoExtra.dbc"))
+    bakes none either; client/dinput8.c lets 3.3.5 do that for any NPC)."""
     races = {race for race, _, _, _ in RACES}
     count = 0
     for r in table.rows:
@@ -690,7 +690,162 @@ def unbaked_npcs(report):
             r[-1] = 0
             count += 1
     report.append(f"CreatureDisplayInfoExtra: {count} NPC looks composited instead of baked")
-    return table.bytes()
+
+
+# 3.3.5 creature display -> the retail display that creature uses now, where retail moved it from
+# a creature model of its own onto an HD character model with an NPC look and armour (the
+# Ghostlands Guardian: display 15511, BloodElfMale_Guard.mdx, is display 89418 in retail).
+NPC_LOOKS = {15511: 89418}
+# 3.3.5 CreatureDisplayInfoExtra: ID, race, sex, skin, face, hair style, hair colour, facial hair,
+# 11 item displays (head, shoulder, shirt, chest, belt, legs, boots, wrist, gloves, tabard, cape:
+# retail's NPCModelItemSlotDisplayInfo ItemSlot order), flags, bake name
+CDX_LOOKS, CDX_ITEMS = 3, 8
+LOOK_OPTIONS = ("Skin Color", "Face", "Hair Style", "Hair Color", ("Facial Hair", "Earrings"))
+# 3.3.5 ItemDisplayInfo: ID, model name x2, model texture x2, icon x2, geoset group x3, flags,
+# spell visual, group sound, helmet geoset vis x2, texture x8 (component sections 0-7), item visual,
+# particle colour
+IDI_MODEL, IDI_MODEL_TEX, IDI_GEOSETS, IDI_TEX = 1, 3, 7, 15
+OBJECT_FOLDERS = {"head": "Head", "shoulder": "Shoulder", "weapon": "Weapon", "shield": "Shield",
+                  "cape": "Cape", "quiver": "Quiver", "ammo": "Ammo"}  # 3.3.5 has no waist models
+RACE_SUFFIX = {1: "Hu", 2: "Or", 3: "Dw", 4: "Ni", 5: "Sc", 6: "Ta", 7: "Gn", 8: "Tr", 10: "Be", 11: "Dr"}
+
+
+def npc_looks(cdx, files, report):
+    """NPC_LOOKS: the 3.3.5 display redirected to the HD character model with a new NPC look
+    (retail's customization choices as 3.3.5 indices) and retail's armour imported as new
+    ItemDisplayInfo rows (models converted, texture components re-encoded for the compositor).
+    CreatureDisplayInfo starts from build.py's (out/patch-enUS-4.MPQ), which this one overrides."""
+    if not NPC_LOOKS:
+        return
+    client = Client(chain=[os.path.join(build.OUT, "patch-enUS-4.MPQ")] + mpq.CHAIN)
+    cdi = build.Dbc(client.read("DBFilesClient\\CreatureDisplayInfo.dbc"))
+    cmd = build.Dbc(client.read("DBFilesClient\\CreatureModelData.dbc"))
+    idi = build.Dbc(Client().read("DBFilesClient\\ItemDisplayInfo.dbc"))
+    models = {cmd.string(r[2]).lower(): r[0] for r in cmd.rows}
+    r_cdi = {r["ID"]: r for r in table("CreatureDisplayInfo")}
+    r_cmd = {r["ID"]: r for r in table("CreatureModelData")}
+    r_cdx = {r["ID"]: r for r in table("CreatureDisplayInfoExtra")}
+    slots = collections.defaultdict(dict)
+    for r in table("NPCModelItemSlotDisplayInfo"):
+        slots[r["NpcModelID"]][int(r["ItemSlot"])] = r["ItemDisplayInfoID"]
+    options = collections.defaultdict(dict)
+    for r in table("CreatureDisplayInfoOption"):
+        options[r["CreatureDisplayInfoExtraID"]][r["ChrCustomizationOptionID"]] = r["ChrCustomizationChoiceID"]
+    by_option = collections.defaultdict(list)
+    for c in table("ChrCustomizationChoice"):
+        by_option[c["ChrCustomizationOptionID"]].append(c)
+    option_names = {o["ID"]: (o["Name_lang"], o["ChrModelID"]) for o in table("ChrCustomizationOption")}
+    imported = {}
+    next_idi, next_cdx = max(r[0] for r in idi.rows) + 1, max(r[0] for r in cdx.rows) + 1
+    for old_id, new_id in NPC_LOOKS.items():
+        rd = r_cdi[str(new_id)]
+        hd_m2 = fetch.name(int(r_cmd[rd["ModelID"]]["FileDataID"]))
+        race, race_dir, old_dir, sex = next((race, d, o, sx) for race, d, o, paths in RACES
+                                            for sx, p in paths.items() if p == hd_m2)
+        upper = SEXES[sex][1]
+        x = r_cdx[rd["ExtendedDisplayInfoID"]]
+        look = [0] * 5
+        cm = chr_model(hd_m2)
+        for opt, choice in options[x["ID"]].items():
+            name, model = option_names[opt]
+            k = next((i for i, n in enumerate(LOOK_OPTIONS) if name == n or name in n), None)
+            if k is None or model != str(cm):
+                continue
+            order = sorted(by_option[opt], key=lambda c: int(c["OrderIndex"]))
+            look[k] = next(i for i, c in enumerate(order) if c["ID"] == choice)
+        row = [next_cdx, race, sex] + look + [0] * 11 + [0, 0]
+        for slot, item in slots[x["ID"]].items():
+            if slot < 11:
+                if item not in imported:
+                    imported[item] = import_item(item, next_idi, idi, files, report)
+                    next_idi += imported[item] is not None
+                row[CDX_ITEMS + slot] = imported[item] or 0
+        cdx.rows.append(row)
+        old = next(r for r in cdi.rows if r[0] == old_id)
+        old[CDI_MODEL_FIELD] = models[f"character\\{old_dir}\\{upper}\\{old_dir}{upper}.mdx".lower()]
+        old[CDI_EXTRA_FIELD] = next_cdx
+        old[CDI_TEX_FIELD:CDI_TEX_FIELD + 3] = [0, 0, 0]
+        report.append(f"NPC look: display {old_id} -> HD {race_dir} {upper.lower()} (retail display {new_id}), "
+                      f"looks {look}, items {row[CDX_ITEMS:CDX_ITEMS + 11]}")
+        next_cdx += 1
+    files["DBFilesClient\\CreatureDisplayInfo.dbc"] = cdi.bytes()
+    files["DBFilesClient\\ItemDisplayInfo.dbc"] = idi.bytes()
+
+
+CDI_MODEL_FIELD, CDI_EXTRA_FIELD, CDI_TEX_FIELD = 1, 3, 6
+
+
+def import_item(rid, new_id, idi, files, report):
+    """Retail ItemDisplayInfo rid as 3.3.5 row new_id (appended to idi), its files in `files`; None
+    for a piece with nothing 3.3.5 can show."""
+    r = next((x for x in table("ItemDisplayInfo") if x["ID"] == str(rid)), None)
+    if r is None:
+        return None
+    row = [new_id] + [0] * 24
+    tfd = collections.defaultdict(list)
+    for t in table("TextureFileData"):
+        tfd[t["MaterialResourcesID"]].append(int(t["FileDataID"]))
+    component = {x["ID"]: x for x in table("ComponentModelFileData")}
+    model_files = collections.defaultdict(list)
+    for m in table("ModelFileData"):
+        model_files[m["ModelResourcesID"]].append(int(m["FileDataID"]))
+    shown = False
+    for k in range(2):
+        res = r[f"ModelResourcesID_{k}"]
+        if res == "0":
+            continue
+        for fid in model_files[res]:
+            path = fetch.name(fid)
+            folder = OBJECT_FOLDERS.get(path.split("/")[2])
+            if folder is None:
+                report.append(f"item {rid}: {path}: no such model slot in 3.3.5, left out")
+                continue
+            stem = path.rsplit("/", 1)[1][:-3]
+            c = component.get(str(fid), {})
+            name = stem
+            if folder == "Head" and c.get("RaceID", "0") != "0":  # 3.3.5 appends _<race><sex>
+                stem = stem.rsplit("_", 2)[0]
+                race, gender = int(c["RaceID"]), int(c["GenderIndex"])
+                if race not in RACE_SUFFIX:
+                    continue
+                name = f"{stem}_{RACE_SUFFIX[race]}{'MF'[gender]}"
+            elif c.get("PositionIndex", "-1") in ("0", "1"):
+                k = int(c["PositionIndex"])  # shoulders: left, right
+            base = f"Item\\ObjectComponents\\{folder}\\{name}"
+            if base + ".m2" not in files:
+                def texture_name(f):
+                    p = build.mpq_path(fetch.name(f))
+                    files[p] = fetch.get(f)
+                    return p
+                m2, skins, anims, warnings = convert.convert_model_fitting(fetch.get(fid), name, texture_name, fetch.get)
+                convert.check(m2, skins)
+                files[base + ".m2"] = m2
+                for i, s in enumerate(skins):
+                    files[f"{base}{i:02d}.skin"] = s
+                for (aid, sub), data in anims.items():
+                    files[f"{base}{aid:04d}-{sub:02d}.anim"] = data
+            row[IDI_MODEL + k] = idi.add_string(stem + ".mdx")
+            shown = True
+            tex = tfd.get(r[f"ModelMaterialResourcesID_{k}"], [])
+            if tex:
+                tpath = fetch.name(tex[0])
+                files[build.mpq_path(tpath)] = fetch.get(tex[0])
+                row[IDI_MODEL_TEX + k] = idi.add_string(tpath.rsplit("/", 1)[1][:-4])
+    for m in table("ItemDisplayInfoMaterialRes"):
+        if m["ItemDisplayInfoID"] != str(rid) or int(m["ComponentSection"]) > 7:
+            continue
+        for fid in tfd.get(m["MaterialResourcesID"], []):
+            path = fetch.name(fid)  # <section folder>/<name>_<u|m|f>.blp
+            files[build.mpq_path(path)] = (lambda f: lambda: blp.reencode(fetch.get(f)))(fid)
+            row[IDI_TEX + int(m["ComponentSection"])] = idi.add_string(path.rsplit("/", 1)[1][:-6])
+            shown = True
+    for g in range(3):
+        row[IDI_GEOSETS + g] = int(r[f"GeosetGroup_{g}"])
+        shown |= row[IDI_GEOSETS + g] != 0
+    if not shown:
+        return None
+    idi.rows.append(row)
+    return new_id
 
 
 def race_archive(race_dir):
@@ -727,7 +882,10 @@ def main(selected):
     files["DBFilesClient\\CharacterFacialHairStyles.dbc"] = facial_styles(report).bytes()
     files.update(creation_backdrops(report))
     files.update(glue_lighting())
-    files["DBFilesClient\\CreatureDisplayInfoExtra.dbc"] = unbaked_npcs(report)
+    cdx = build.Dbc(Client().read("DBFilesClient\\CreatureDisplayInfoExtra.dbc"))
+    unbaked_npcs(cdx, report)
+    npc_looks(cdx, files, report)
+    files["DBFilesClient\\CreatureDisplayInfoExtra.dbc"] = cdx.bytes()
     print("\n".join(report))
     print(build.write_patch(6, files))
     for race_dir, own in race_files.items():
