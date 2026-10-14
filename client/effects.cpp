@@ -5,9 +5,19 @@
  * device is the gx device's (0xc5df88) IDirect3DDevice9 at +0x397c, used only once its vtable is
  * found in d3d9.dll (not under -opengl). Our render targets live in D3DPOOL_DEFAULT, which D3D9
  * wants released before IDirect3DDevice9::Reset: we hook Reset in the device's vtable for that.
- * WOTLKHD_EFFECTS picks the effects: "smaa,cas" (the default), "smaa", "cas" or "off". */
+ * WOTLKHD_EFFECTS picks the effects: "smaa,cas" (the default), "smaa", "cas" or "off"; "ao" adds
+ * ambient occlusion (before SMAA and CAS), "aoview" and "depth" debug views of it and the depth;
+ * WOTLKHD_AO=radius,intensity tunes the AO (default 1.5 yards, 2). 
+ *
+ * Depth: D3D9 cannot sample the device's own depth buffer (D24S8), so for depth effects the world is
+ * drawn into an INTZ depth texture instead: we create one the size of the back buffer and, through
+ * SetDepthStencilSurface and GetDepthStencilSurface in the vtable, it stands in for the device's
+ * depth buffer wherever the client binds that one (render to texture with depth targets of its own,
+ * the portraits, is left alone), while the client keeps seeing its own surface. */
 #include <windows.h>
 #include <d3d9.h>
+#include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -21,14 +31,24 @@ extern "C" void wlog(const char *fmt, ...);
 #define GX_DEVICE (*(BYTE **)0x00C5DF88)
 #define GX_D3D_DEVICE 0x397C
 #define CAS_SHARPNESS 1.0f /* 0..1; AMD's full strength, still mild at 1440p */
+#define NEAR_CLIP (*(float *)0x00ADEED4) /* CWorld near and far clip (AdjustFarClip's result), yards */
+#define FAR_CLIP (*(float *)0x00CD7748)
+#define FOV (*(float *)0x009E8D88)     /* the world camera's (patch_exe.py widens it) */
+static float ao_radius = 1.5f, ao_intensity = 2.0f; /* yards; WOTLKHD_AO=radius,intensity */
+#define WORLD_MAX_Z 0.94f /* the client's viewport MaxZ for the world (sky and horizon: 0.998..1) */
+#define D3DFMT_INTZ ((D3DFORMAT)MAKEFOURCC('I', 'N', 'T', 'Z'))
 
-static bool use_smaa = true, use_cas = true, broken;
+static bool use_smaa = true, use_cas = true, use_ao, use_ao_view, use_depth_view, broken;
+#define USE_DEPTH (use_ao || use_ao_view || use_depth_view)
 static IDirect3DDevice9 *dev;
 static IDirect3DVertexShader9 *vs_quad, *vs_edges, *vs_weights, *vs_blend;
-static IDirect3DPixelShader9 *ps_edges, *ps_weights, *ps_blend, *ps_cas;
+static IDirect3DPixelShader9 *ps_edges, *ps_weights, *ps_blend, *ps_cas, *ps_depth, *ps_ao, *ps_ao_blur, *ps_ao_apply, *ps_ao_view;
 static IDirect3DTexture9 *area, *search;               /* D3DPOOL_MANAGED: survive Reset */
 static IDirect3DTexture9 *color, *edges, *weights, *temp; /* D3DPOOL_DEFAULT, back buffer size */
+static IDirect3DTexture9 *ao, *ao_temp;   /* D3DPOOL_DEFAULT, half the back buffer */
 static IDirect3DStateBlock9 *state;
+static IDirect3DTexture9 *depth;                  /* INTZ, D3DPOOL_DEFAULT */
+static IDirect3DSurface9 *depth_surface, *device_depth; /* ours, and the device's that it replaces */
 static UINT width, height;
 
 template <class T> static void release(T *&p) {
@@ -37,11 +57,43 @@ template <class T> static void release(T *&p) {
     p = nullptr;
 }
 
+typedef HRESULT(STDMETHODCALLTYPE *set_depth_t)(IDirect3DDevice9 *, IDirect3DSurface9 *);
+typedef HRESULT(STDMETHODCALLTYPE *get_depth_t)(IDirect3DDevice9 *, IDirect3DSurface9 **);
+static set_depth_t real_set_depth;
+static get_depth_t real_get_depth;
+
+static HRESULT STDMETHODCALLTYPE set_depth_hook(IDirect3DDevice9 *self, IDirect3DSurface9 *s) {
+    if (self == dev && s && s == device_depth && depth_surface)
+        s = depth_surface;
+    return real_set_depth(self, s);
+}
+
+static HRESULT STDMETHODCALLTYPE get_depth_hook(IDirect3DDevice9 *self, IDirect3DSurface9 **out) {
+    HRESULT hr = real_get_depth(self, out);
+    if (SUCCEEDED(hr) && self == dev && *out && *out == depth_surface && device_depth) {
+        (*out)->Release();
+        device_depth->AddRef();
+        *out = device_depth;
+    }
+    return hr;
+}
+
+static void release_depth(void) {
+    if (depth_surface && device_depth)
+        real_set_depth(dev, device_depth); /* never leave ours bound */
+    release(depth_surface);
+    release(depth);
+    release(device_depth);
+}
+
 static void release_targets(void) {
+    release_depth();
     release(color);
     release(edges);
     release(weights);
     release(temp);
+    release(ao);
+    release(ao_temp);
     release(state);
     width = height = 0;
 }
@@ -98,6 +150,13 @@ static bool setup(void) {
     real_reset = (reset_t)vtbl[16];
     vtbl[16] = (void *)reset_hook;
     VirtualProtect(&vtbl[16], sizeof(void *), old, &old);
+    if (USE_DEPTH && VirtualProtect(&vtbl[39], 2 * sizeof(void *), PAGE_READWRITE, &old)) {
+        real_set_depth = (set_depth_t)vtbl[39];
+        real_get_depth = (get_depth_t)vtbl[40];
+        vtbl[39] = (void *)set_depth_hook;
+        vtbl[40] = (void *)get_depth_hook;
+        VirtualProtect(&vtbl[39], 2 * sizeof(void *), old, &old);
+    }
 
     bool ok = SUCCEEDED(dev->CreateVertexShader(quad_vs, &vs_quad)) &&
               SUCCEEDED(dev->CreateVertexShader(smaa_edges_vs, &vs_edges)) &&
@@ -106,21 +165,27 @@ static bool setup(void) {
               SUCCEEDED(dev->CreatePixelShader(smaa_edges_ps, &ps_edges)) &&
               SUCCEEDED(dev->CreatePixelShader(smaa_weights_ps, &ps_weights)) &&
               SUCCEEDED(dev->CreatePixelShader(smaa_blend_ps, &ps_blend)) &&
-              SUCCEEDED(dev->CreatePixelShader(cas_ps, &ps_cas));
+              SUCCEEDED(dev->CreatePixelShader(cas_ps, &ps_cas)) &&
+              SUCCEEDED(dev->CreatePixelShader(depth_ps, &ps_depth)) &&
+              SUCCEEDED(dev->CreatePixelShader(ao_ps, &ps_ao)) &&
+              SUCCEEDED(dev->CreatePixelShader(ao_blur_ps, &ps_ao_blur)) &&
+              SUCCEEDED(dev->CreatePixelShader(ao_apply_ps, &ps_ao_apply)) &&
+              SUCCEEDED(dev->CreatePixelShader(ao_view_ps, &ps_ao_view));
     area = lookup_texture(AREATEX_WIDTH, AREATEX_HEIGHT, D3DFMT_A8L8, areaTexBytes, AREATEX_PITCH);
     search = lookup_texture(SEARCHTEX_WIDTH, SEARCHTEX_HEIGHT, D3DFMT_L8, searchTexBytes, SEARCHTEX_PITCH);
     if (!ok || !area || !search) {
         wlog("effects: shaders or SMAA textures failed, effects off");
         return false;
     }
-    wlog("effects: D3D9 device %p, %s%s%s before the UI", (void *)dev, use_smaa ? "SMAA" : "",
-         use_smaa && use_cas ? " and " : "", use_cas ? "CAS" : "");
+    wlog("effects: D3D9 device %p, %s%s%s%s%s%s before the UI", (void *)dev, use_ao ? "AO, " : "",
+         use_smaa ? "SMAA" : "", use_smaa && use_cas ? " and " : "", use_cas ? "CAS" : "",
+         use_ao_view ? ", AO view" : "", use_depth_view ? ", depth view" : "");
     return true;
 }
 
-static IDirect3DTexture9 *target_texture(void) {
+static IDirect3DTexture9 *target_texture(UINT w = width, UINT h = height) {
     IDirect3DTexture9 *t = nullptr;
-    dev->CreateTexture(width, height, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &t, nullptr);
+    dev->CreateTexture(w, h, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &t, nullptr);
     return t;
 }
 
@@ -131,13 +196,40 @@ static bool make_targets(UINT w, UINT h) {
     edges = use_smaa ? target_texture() : nullptr;
     weights = use_smaa ? target_texture() : nullptr;
     temp = use_smaa && use_cas ? target_texture() : nullptr;
+    ao = USE_DEPTH ? target_texture(w / 2, h / 2) : nullptr;
+    ao_temp = USE_DEPTH ? target_texture(w / 2, h / 2) : nullptr;
     if (FAILED(dev->CreateStateBlock(D3DSBT_ALL, &state)))
         state = nullptr;
-    if (!color || !state || (use_smaa && (!edges || !weights)) || (use_smaa && use_cas && !temp)) {
+    if (!color || !state || (use_smaa && (!edges || !weights)) || (use_smaa && use_cas && !temp) ||
+        (USE_DEPTH && (!ao || !ao_temp))) {
         wlog("effects: no %ux%u render targets, effects off", w, h);
         release_targets();
         return false;
     }
+    return true;
+}
+
+/* The INTZ texture in place of the device's depth buffer, which is bound now (the world frame has
+ * just used it). It takes over from the next frame; false when the device's cannot be replaced. */
+static bool make_depth(void) {
+    D3DSURFACE_DESC d;
+    if (FAILED(real_get_depth(dev, &device_depth)) || !device_depth)
+        return false;
+    device_depth->GetDesc(&d);
+    if (d.MultiSampleType != D3DMULTISAMPLE_NONE || d.Width != width || d.Height != height) {
+        wlog("effects: depth buffer %ux%u, multisample %u: no depth effects (turn multisampling off)",
+             d.Width, d.Height, (unsigned)d.MultiSampleType);
+        release(device_depth);
+        return false;
+    }
+    if (FAILED(dev->CreateTexture(width, height, 1, D3DUSAGE_DEPTHSTENCIL, D3DFMT_INTZ, D3DPOOL_DEFAULT, &depth,
+                                  nullptr)) ||
+        FAILED(depth->GetSurfaceLevel(0, &depth_surface))) {
+        wlog("effects: no INTZ depth texture, no depth effects");
+        release_depth();
+        return false;
+    }
+    wlog("effects: %ux%u INTZ depth texture in place of the device's depth buffer", width, height);
     return true;
 }
 
@@ -161,9 +253,10 @@ static void target(IDirect3DTexture9 *t, IDirect3DSurface9 *back) {
         s->Release();
 }
 
-/* Full-screen quad, shifted half a pixel for D3D9's pixel centres (as in SMAA's D3D9 demo). */
-static void draw(IDirect3DVertexShader9 *vs, IDirect3DPixelShader9 *ps) {
-    float px = 1.0f / width, py = 1.0f / height;
+/* Full-screen quad, shifted half a pixel (of a w x h target) for D3D9's pixel centres (as in SMAA's
+ * D3D9 demo). */
+static void draw(IDirect3DVertexShader9 *vs, IDirect3DPixelShader9 *ps, UINT w = width, UINT h = height) {
+    float px = 1.0f / w, py = 1.0f / h;
     float quad[4][5] = {{-1.0f - px, 1.0f + py, 0.5f, 0.0f, 0.0f},
                         {1.0f - px, 1.0f + py, 0.5f, 1.0f, 0.0f},
                         {-1.0f - px, -1.0f + py, 0.5f, 0.0f, 1.0f},
@@ -184,6 +277,10 @@ static void render(void) {
         broken = true;
         return;
     }
+
+    bool depth_ready = depth != nullptr; /* drawn into this frame */
+    if (USE_DEPTH && !depth && !make_depth())
+        use_ao = use_ao_view = use_depth_view = false;
 
     /* A D3DSBT_ALL state block keeps everything but the render target and depth surface. */
     state->Capture();
@@ -210,6 +307,39 @@ static void render(void) {
 
     color->GetSurfaceLevel(0, &color_surface);
     dev->StretchRect(back, nullptr, color_surface, nullptr, D3DTEXF_NONE);
+
+    if ((use_ao || use_ao_view) && depth_ready) {
+        /* the world camera's projection (GxuXformCreateProjection_SG): vertical fov = fov / sqrt(a^2 + 1) */
+        float aspect = (float)width / height, tan_y = tanf(0.5f * FOV / sqrtf(aspect * aspect + 1.0f));
+        float planes[4] = {NEAR_CLIP, FAR_CLIP, WORLD_MAX_Z, 0.0f};
+        float params[4] = {tan_y * aspect, tan_y, ao_radius, ao_intensity};
+        UINT w2 = width / 2, h2 = height / 2;
+        float half_metrics[4] = {1.0f / w2, 1.0f / h2, (float)w2, (float)h2};
+        float across[4] = {1.0f / w2, 0.0f, 0.0f, 0.0f}, down[4] = {0.0f, 1.0f / h2, 0.0f, 0.0f};
+        dev->SetPixelShaderConstantF(2, planes, 1);
+        dev->SetPixelShaderConstantF(3, params, 1);
+        dev->SetPixelShaderConstantF(4, half_metrics, 1);
+        dev->SetRenderState(D3DRS_SRGBWRITEENABLE, FALSE);
+        sampler(6, depth, false, false);
+        target(ao, back);
+        draw(vs_quad, ps_ao, w2, h2);
+        target(ao_temp, back);
+        sampler(7, ao, false, false);
+        dev->SetPixelShaderConstantF(5, across, 1);
+        draw(vs_quad, ps_ao_blur, w2, h2);
+        target(ao, back);
+        sampler(7, ao_temp, false, false);
+        dev->SetPixelShaderConstantF(5, down, 1);
+        draw(vs_quad, ps_ao_blur, w2, h2);
+        if (use_ao) {  /* the darkened scene becomes the colour SMAA and CAS start from */
+            dev->SetRenderState(D3DRS_SRGBWRITEENABLE, TRUE);
+            target(nullptr, back);
+            sampler(1, color, false, true);
+            sampler(7, ao, true, false);
+            draw(vs_quad, ps_ao_apply);
+            dev->StretchRect(back, nullptr, color_surface, nullptr, D3DTEXF_NONE);
+        }
+    }
     color_surface->Release();
 
     IDirect3DTexture9 *source = color;
@@ -240,6 +370,20 @@ static void render(void) {
         sampler(1, source, false, true);
         draw(vs_quad, ps_cas);
     }
+    if (use_ao_view && depth_ready) {
+        dev->SetRenderState(D3DRS_SRGBWRITEENABLE, FALSE);
+        target(nullptr, back);
+        sampler(7, ao, true, false);
+        draw(vs_quad, ps_ao_view);
+    }
+    if (use_depth_view && depth_ready) {
+        float planes[4] = {NEAR_CLIP, FAR_CLIP, WORLD_MAX_Z, 0.0f};
+        dev->SetRenderState(D3DRS_SRGBWRITEENABLE, FALSE);
+        dev->SetPixelShaderConstantF(2, planes, 1);
+        target(nullptr, back);
+        sampler(6, depth, false, false);
+        draw(vs_quad, ps_depth);
+    }
 
     state->Apply();
     dev->SetRenderTarget(0, saved_target);
@@ -267,8 +411,17 @@ extern "C" void effects_hooks(void) {
     if (mode) {
         use_smaa = strstr(mode, "smaa") != nullptr;
         use_cas = strstr(mode, "cas") != nullptr;
+        use_depth_view = strstr(mode, "depth") != nullptr;
+        use_ao_view = strstr(mode, "aoview") != nullptr;
+        use_ao = strstr(mode, "ao") != nullptr && !use_ao_view;
     }
-    if (!use_smaa && !use_cas) {
+    if (const char *tune = getenv("WOTLKHD_AO")) {
+        float r, i;
+        if (sscanf(tune, "%f,%f", &r, &i) == 2 && r > 0.0f && i >= 0.0f)
+            ao_radius = r, ao_intensity = i;
+        wlog("effects: AO radius %.2f yd, intensity %.2f", ao_radius, ao_intensity);
+    }
+    if (!use_smaa && !use_cas && !USE_DEPTH) {
         wlog("effects: off (WOTLKHD_EFFECTS=%s)", mode);
         return;
     }

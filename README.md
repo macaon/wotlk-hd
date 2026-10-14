@@ -189,6 +189,18 @@ afterwards. `WOTLKHD_EFFECTS=smaa`, `cas` or `off` picks the effects (default bo
 committed `client/shaders.h` by `client/shaders.sh`, which runs Microsoft's d3dcompiler_47.dll
 (fetched from the Windows SDK, build time only) under Proton's Wine.
 
+Depth and ambient occlusion (opt-in: `WOTLKHD_EFFECTS=smaa,cas,ao`; `aoview` and `depth` are debug
+views; `WOTLKHD_AO=radius,intensity`, default 1.5 yards, 2). D3D9 cannot sample the device's D24S8
+depth buffer, so for depth effects the world draws into an INTZ depth texture instead: the DLL hooks
+SetDepthStencilSurface and GetDepthStencilSurface in the device's vtable so it stands in for the
+device's depth buffer only (render to texture with depth targets of its own keeps those). The client
+draws the world into the viewport depth range 0..0.94 and sky and horizon layers into 0.998..1; near
+and far clip are 0xadeed4 and 0xcd7748, the field of view the camera constant 0x9e8d88 (vertical =
+fov / sqrt(aspect^2 + 1), GxuXformCreateProjection_SG). AO runs at half resolution, so depth reads
+snap to depth pixel centres (a half-resolution pixel lies exactly between two; rounding picked
+either, in stripes). It is off by default: on small detailed models, characters at a distance, its
+blurred darkening costs some sharpness.
+
 Portraits (`client/portraits.c`): unit frame portraits render at 256x256 instead of 64x64.
 SetPortraitTexture (0x619580) draws the model into a "Portrait1" texture when the device can render
 to textures and masks it with a quad, so only the texture (0x619b72) and the portrait depth target

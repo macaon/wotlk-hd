@@ -26,6 +26,7 @@ cp ../cache/smaa/SMAA.hlsl "$FXC/"
     quad_vs quad_vs vs_3_0 \
     smaa_edges_vs smaa_edges_vs vs_3_0 smaa_weights_vs smaa_weights_vs vs_3_0 smaa_blend_vs smaa_blend_vs vs_3_0 \
     smaa_edges_ps smaa_edges_ps ps_3_0 smaa_weights_ps smaa_weights_ps ps_3_0 smaa_blend_ps smaa_blend_ps ps_3_0 \
-    cas_ps cas_ps ps_3_0)
+    cas_ps cas_ps ps_3_0 depth_ps depth_ps ps_3_0 \
+    ao_ps ao_ps ps_3_0 ao_blur_ps ao_blur_ps ps_3_0 ao_apply_ps ao_apply_ps ps_3_0 ao_view_ps ao_view_ps ps_3_0)
 mv "$FXC/shaders.h" shaders.h
 echo "built $(pwd)/shaders.h"
