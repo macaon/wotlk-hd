@@ -5,11 +5,14 @@
  * device is the gx device's (0xc5df88) IDirect3DDevice9 at +0x397c, used only once its vtable is
  * found in d3d9.dll (not under -opengl). Our render targets live in D3DPOOL_DEFAULT, which D3D9
  * wants released before IDirect3DDevice9::Reset: we hook Reset in the device's vtable for that.
- * WOTLKHD_EFFECTS picks the effects: "smaa,cas,shafts" (the default), any of those, or "off"; "ao" adds
+ * Settings: cvars (saved in Config.wtf; the WotlkHD addon's Video Options page sets them), registered
+ * after the client's world graphics cvars (0x78e400, called at 0x4041c2) and read every frame:
+ * hdSMAA, hdSharpen, hdSharpness (0-100), hdSunshafts, hdSunshaftsStrength (0-100), hdAO, hdHaze.
+ * For debugging WOTLKHD_EFFECTS overrides them: "smaa,cas,shafts", any of those, or "off"; "ao" adds
  * ambient occlusion (before SMAA and CAS), "aoview" and "depth" debug views of it and the depth;
  * WOTLKHD_AO=radius,intensity tunes the AO (default 1.5 yards, 2). "haze" adds distance haze in the
  * fog colour (WOTLKHD_HAZE=strength,density, default 0.5, 1.5); "shafts" sunshafts (WOTLKHD_SHAFTS=
- * intensity,threshold, default 0.6, 0.4), "shaftsview" their debug view. 
+ * intensity,threshold, default 0.6, 0.4), "shaftsview" their debug view.
  *
  * Depth: D3D9 cannot sample the device's own depth buffer (D24S8), so for depth effects the world is
  * drawn into an INTZ depth texture instead: we create one the size of the back buffer and, through
@@ -55,7 +58,45 @@ static float shaft_intensity = 0.6f, shaft_threshold = 0.4f; /* WOTLKHD_SHAFTS *
 #define D3DFMT_INTZ ((D3DFORMAT)MAKEFOURCC('I', 'N', 'T', 'Z'))
 
 static bool use_smaa = true, use_cas = true, use_ao, use_ao_view, use_depth_view, use_haze, use_shafts = true,
-    use_shafts_view, broken;
+    use_shafts_view, broken, from_env;
+static float cas_sharpness = CAS_SHARPNESS;
+
+/* CVar::Register (0x767fc0, cdecl: name, help, flags, default, callback, category, ...) and Lookup;
+ * a cvar's integer value is at +0x30 */
+typedef BYTE *(__cdecl *cvar_register_t)(const char *, const char *, unsigned, const char *, void *, unsigned,
+                                         int, void *, int);
+#define CVAR_REGISTER ((cvar_register_t)0x00767FC0)
+#define CVAR_INT(cv) (*(int *)((cv) + 0x30))
+static BYTE *cv_smaa, *cv_sharpen, *cv_sharpness, *cv_shafts, *cv_shafts_strength, *cv_ao, *cv_haze;
+
+static void __cdecl register_cvars(void) {
+    ((void(__cdecl *)(void))0x0078E400)(); /* the client's own world graphics cvars */
+    cv_smaa = CVAR_REGISTER("hdSMAA", "wotlk-hd: SMAA anti-aliasing", 1, "1", nullptr, 1, 0, nullptr, 0);
+    cv_sharpen = CVAR_REGISTER("hdSharpen", "wotlk-hd: CAS sharpening", 1, "1", nullptr, 1, 0, nullptr, 0);
+    cv_sharpness = CVAR_REGISTER("hdSharpness", "wotlk-hd: sharpening strength (0-100)", 1, "100", nullptr, 1, 0,
+                                 nullptr, 0);
+    cv_shafts = CVAR_REGISTER("hdSunshafts", "wotlk-hd: sunshafts", 1, "1", nullptr, 1, 0, nullptr, 0);
+    cv_shafts_strength = CVAR_REGISTER("hdSunshaftsStrength", "wotlk-hd: sunshaft strength (0-100)", 1, "60",
+                                       nullptr, 1, 0, nullptr, 0);
+    cv_ao = CVAR_REGISTER("hdAO", "wotlk-hd: ambient occlusion", 1, "0", nullptr, 1, 0, nullptr, 0);
+    cv_haze = CVAR_REGISTER("hdHaze", "wotlk-hd: distance haze", 1, "0", nullptr, 1, 0, nullptr, 0);
+    wlog("effects: settings registered (hdSMAA %d, hdSharpen %d, hdSharpness %d, hdSunshafts %d, hdAO %d, hdHaze %d)",
+         cv_smaa ? CVAR_INT(cv_smaa) : -1, cv_sharpen ? CVAR_INT(cv_sharpen) : -1,
+         cv_sharpness ? CVAR_INT(cv_sharpness) : -1, cv_shafts ? CVAR_INT(cv_shafts) : -1, cv_ao ? CVAR_INT(cv_ao) : -1,
+         cv_haze ? CVAR_INT(cv_haze) : -1);
+}
+
+static void read_settings(void) {
+    if (from_env || !cv_smaa || !cv_sharpen || !cv_sharpness || !cv_shafts || !cv_shafts_strength || !cv_ao || !cv_haze)
+        return;
+    use_smaa = CVAR_INT(cv_smaa) != 0;
+    use_cas = CVAR_INT(cv_sharpen) != 0;
+    cas_sharpness = fminf(fmaxf(CVAR_INT(cv_sharpness) / 100.0f, 0.0f), 1.0f);
+    use_shafts = CVAR_INT(cv_shafts) != 0;
+    shaft_intensity = fmaxf(CVAR_INT(cv_shafts_strength) / 100.0f, 0.0f);
+    use_ao = CVAR_INT(cv_ao) != 0;
+    use_haze = CVAR_INT(cv_haze) != 0;
+}
 static unsigned frames;
 static float haze_color[3] = {-1.0f, 0.0f, 0.0f}; /* linear, eased; < 0: none seen yet */
 #define USE_DEPTH (use_ao || use_ao_view || use_depth_view || use_haze || use_shafts || use_shafts_view)
@@ -173,7 +214,7 @@ static bool setup(void) {
     real_reset = (reset_t)vtbl[16];
     vtbl[16] = (void *)reset_hook;
     VirtualProtect(&vtbl[16], sizeof(void *), old, &old);
-    if (USE_DEPTH && VirtualProtect(&vtbl[39], 2 * sizeof(void *), PAGE_READWRITE, &old)) {
+    if (VirtualProtect(&vtbl[39], 2 * sizeof(void *), PAGE_READWRITE, &old)) {
         real_set_depth = (set_depth_t)vtbl[39];
         real_get_depth = (get_depth_t)vtbl[40];
         vtbl[39] = (void *)set_depth_hook;
@@ -222,17 +263,17 @@ static bool make_targets(UINT w, UINT h) {
     release_targets();
     width = w, height = h;
     color = target_texture();
-    edges = use_smaa ? target_texture() : nullptr;
-    weights = use_smaa ? target_texture() : nullptr;
-    temp = use_smaa && use_cas ? target_texture() : nullptr;
-    ao = USE_DEPTH ? target_texture(w / 2, h / 2) : nullptr;
-    ao_temp = USE_DEPTH ? target_texture(w / 2, h / 2) : nullptr;
-    shafts = USE_DEPTH ? target_texture(w / 2, h / 2, D3DFMT_A16B16G16R16F) : nullptr;
-    shafts_temp = USE_DEPTH ? target_texture(w / 2, h / 2, D3DFMT_A16B16G16R16F) : nullptr;
+    edges = target_texture();
+    weights = target_texture();
+    temp = target_texture();
+    /* always: the depth effects can be turned on at any time */
+    ao = target_texture(w / 2, h / 2);
+    ao_temp = target_texture(w / 2, h / 2);
+    shafts = target_texture(w / 2, h / 2, D3DFMT_A16B16G16R16F);
+    shafts_temp = target_texture(w / 2, h / 2, D3DFMT_A16B16G16R16F);
     if (FAILED(dev->CreateStateBlock(D3DSBT_ALL, &state)))
         state = nullptr;
-    if (!color || !state || (use_smaa && (!edges || !weights)) || (use_smaa && use_cas && !temp) ||
-        (USE_DEPTH && (!ao || !ao_temp || !shafts || !shafts_temp))) {
+    if (!color || !state || !edges || !weights || !temp || !ao || !ao_temp || !shafts || !shafts_temp) {
         wlog("effects: no %ux%u render targets, effects off", w, h);
         release_targets();
         return false;
@@ -343,8 +384,10 @@ static void render(void) {
     }
 
     bool depth_ready = depth != nullptr; /* drawn into this frame */
-    if (USE_DEPTH && !depth && !make_depth())
+    if (USE_DEPTH && !depth && !make_depth()) {
         use_ao = use_ao_view = use_depth_view = use_haze = use_shafts = use_shafts_view = false;
+        from_env = true; /* no depth: the settings cannot turn the depth effects on */
+    }
 
     /* A D3DSBT_ALL state block keeps everything but the render target and depth surface. */
     state->Capture();
@@ -364,7 +407,7 @@ static void render(void) {
     dev->SetRenderState(D3DRS_CLIPPLANEENABLE, 0);
     dev->SetFVF(D3DFVF_XYZ | D3DFVF_TEX1);
     float metrics[4] = {1.0f / width, 1.0f / height, (float)width, (float)height};
-    float cas[4] = {-1.0f / (8.0f + (5.0f - 8.0f) * CAS_SHARPNESS), 0.0f, 0.0f, 0.0f};
+    float cas[4] = {-1.0f / (8.0f + (5.0f - 8.0f) * cas_sharpness), 0.0f, 0.0f, 0.0f};
     dev->SetVertexShaderConstantF(0, metrics, 1);
     dev->SetPixelShaderConstantF(0, metrics, 1);
     dev->SetPixelShaderConstantF(1, cas, 1);
@@ -533,6 +576,7 @@ static void __cdecl world_end(void) {
     FFX_APPLY();
     if (broken)
         return;
+    read_settings();
     if (!dev && !setup()) {
         broken = true;
         return;
@@ -542,6 +586,15 @@ static void __cdecl world_end(void) {
 
 extern "C" void effects_hooks(void) {
     const char *mode = getenv("WOTLKHD_EFFECTS");
+    BYTE *reg = reinterpret_cast<BYTE *>(0x004041C2);
+    if (reg[0] == 0xE8 && 0x004041C2u + 5 + *reinterpret_cast<int *>(reg + 1) == 0x0078E400u) {
+        DWORD o;
+        VirtualProtect(reg, 5, PAGE_EXECUTE_READWRITE, &o);
+        *reinterpret_cast<int *>(reg + 1) = static_cast<int>(reinterpret_cast<BYTE *>(&register_cvars) - (reg + 5));
+        VirtualProtect(reg, 5, o, &o);
+    } else
+        wlog("effects: call at 004041c2 not as expected, no settings (cvars)");
+    from_env = mode != nullptr;
     if (mode) {
         use_smaa = strstr(mode, "smaa") != nullptr;
         use_cas = strstr(mode, "cas") != nullptr;
@@ -570,7 +623,7 @@ extern "C" void effects_hooks(void) {
             ao_radius = r, ao_intensity = i;
         wlog("effects: AO radius %.2f yd, intensity %.2f", ao_radius, ao_intensity);
     }
-    if (!use_smaa && !use_cas && !USE_DEPTH) {
+    if (from_env && !use_smaa && !use_cas && !USE_DEPTH) {
         wlog("effects: off (WOTLKHD_EFFECTS=%s)", mode);
         return;
     }

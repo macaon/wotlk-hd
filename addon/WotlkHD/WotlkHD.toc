@@ -1,0 +1,4 @@
+## Interface: 30300
+## Title: wotlk-hd
+## Notes: Video Options page for wotlk-hd's effects (dinput8.dll); a wider view distance.
+WotlkHD.lua

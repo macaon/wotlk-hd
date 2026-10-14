@@ -184,7 +184,13 @@ Post-processing (`client/effects.cpp`, D3D9 only): SMAA, then AMD's CAS sharpeni
 not the UI. The world frame ends with the client's own full-frame effects (0x8c1010, called at
 0x4f9281) before the UI draws; the DLL hooks that call and runs its passes on the back buffer there,
 on the client's device (gx device 0xc5df88, IDirect3DDevice9 at +0x397c), restoring the device state
-afterwards. `WOTLKHD_EFFECTS` picks the effects (default `smaa,cas,shafts`; `off` for none). The shaders are
+afterwards. The effects are cvars, saved in Config.wtf: `hdSMAA`, `hdSharpen`, `hdSharpness` (0-100),
+`hdSunshafts`, `hdSunshaftsStrength` (0-100), `hdAO`, `hdHaze`, registered right after the client's
+world graphics cvars (0x78e400, called at 0x4041c2) and read every frame, so changes apply at once.
+The WotlkHD addon (`addon/WotlkHD`, installed by `install.py`) puts them on an HD Effects page in
+Video Options and raises the View Distance slider to the engine's 1583 (setting `farClipOverride`, as
+the old continents otherwise cap at 791). For debugging `WOTLKHD_EFFECTS` overrides the cvars
+(`smaa,cas,shafts`, any of those, or `off`). The shaders are
 `client/post.hlsl` (SMAA from iryoku/smaa, MIT, fetched into cache/ by `build.sh`), compiled into the
 committed `client/shaders.h` by `client/shaders.sh`, which runs Microsoft's d3dcompiler_47.dll
 (fetched from the Windows SDK, build time only) under Proton's Wine.
