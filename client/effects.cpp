@@ -7,7 +7,8 @@
  * wants released before IDirect3DDevice9::Reset: we hook Reset in the device's vtable for that.
  * WOTLKHD_EFFECTS picks the effects: "smaa,cas" (the default), "smaa", "cas" or "off"; "ao" adds
  * ambient occlusion (before SMAA and CAS), "aoview" and "depth" debug views of it and the depth;
- * WOTLKHD_AO=radius,intensity tunes the AO (default 1.5 yards, 2). 
+ * WOTLKHD_AO=radius,intensity tunes the AO (default 1.5 yards, 2). "haze" adds distance haze in the
+ * fog colour (WOTLKHD_HAZE=strength,density, default 0.5, 1.5). 
  *
  * Depth: D3D9 cannot sample the device's own depth buffer (D24S8), so for depth effects the world is
  * drawn into an INTZ depth texture instead: we create one the size of the back buffer and, through
@@ -35,14 +36,22 @@ extern "C" void wlog(const char *fmt, ...);
 #define FAR_CLIP (*(float *)0x00CD7748)
 #define FOV (*(float *)0x009E8D88)     /* the world camera's (patch_exe.py widens it) */
 static float ao_radius = 1.5f, ao_intensity = 2.0f; /* yards; WOTLKHD_AO=radius,intensity */
+static float haze_strength = 0.5f, haze_density = 1.5f; /* per fog end distance; WOTLKHD_HAZE */
+/* CShaderEffect's fog, as SetFogParams (0x873210) last set it for the shaders: the colour (0..1, gamma)
+ * and s_fogParams.xy = -fogMul / (end - start), end / (end - start) */
+#define FOG_COLOR ((const float *)0x00D43058)
+#define FOG_PARAMS ((const float *)0x00D43068)
+#define FOG_MUL (*(const float *)0x00D4300C)
 #define WORLD_MAX_Z 0.94f /* the client's viewport MaxZ for the world (sky and horizon: 0.998..1) */
 #define D3DFMT_INTZ ((D3DFORMAT)MAKEFOURCC('I', 'N', 'T', 'Z'))
 
-static bool use_smaa = true, use_cas = true, use_ao, use_ao_view, use_depth_view, broken;
-#define USE_DEPTH (use_ao || use_ao_view || use_depth_view)
+static bool use_smaa = true, use_cas = true, use_ao, use_ao_view, use_depth_view, use_haze, broken;
+static unsigned frames;
+static float haze_color[3] = {-1.0f, 0.0f, 0.0f}; /* linear, eased; < 0: none seen yet */
+#define USE_DEPTH (use_ao || use_ao_view || use_depth_view || use_haze)
 static IDirect3DDevice9 *dev;
 static IDirect3DVertexShader9 *vs_quad, *vs_edges, *vs_weights, *vs_blend;
-static IDirect3DPixelShader9 *ps_edges, *ps_weights, *ps_blend, *ps_cas, *ps_depth, *ps_ao, *ps_ao_blur, *ps_ao_apply, *ps_ao_view;
+static IDirect3DPixelShader9 *ps_edges, *ps_weights, *ps_blend, *ps_cas, *ps_depth, *ps_ao, *ps_ao_blur, *ps_ao_apply, *ps_ao_view, *ps_haze;
 static IDirect3DTexture9 *area, *search;               /* D3DPOOL_MANAGED: survive Reset */
 static IDirect3DTexture9 *color, *edges, *weights, *temp; /* D3DPOOL_DEFAULT, back buffer size */
 static IDirect3DTexture9 *ao, *ao_temp;   /* D3DPOOL_DEFAULT, half the back buffer */
@@ -170,14 +179,16 @@ static bool setup(void) {
               SUCCEEDED(dev->CreatePixelShader(ao_ps, &ps_ao)) &&
               SUCCEEDED(dev->CreatePixelShader(ao_blur_ps, &ps_ao_blur)) &&
               SUCCEEDED(dev->CreatePixelShader(ao_apply_ps, &ps_ao_apply)) &&
-              SUCCEEDED(dev->CreatePixelShader(ao_view_ps, &ps_ao_view));
+              SUCCEEDED(dev->CreatePixelShader(ao_view_ps, &ps_ao_view)) &&
+              SUCCEEDED(dev->CreatePixelShader(haze_ps, &ps_haze));
     area = lookup_texture(AREATEX_WIDTH, AREATEX_HEIGHT, D3DFMT_A8L8, areaTexBytes, AREATEX_PITCH);
     search = lookup_texture(SEARCHTEX_WIDTH, SEARCHTEX_HEIGHT, D3DFMT_L8, searchTexBytes, SEARCHTEX_PITCH);
     if (!ok || !area || !search) {
         wlog("effects: shaders or SMAA textures failed, effects off");
         return false;
     }
-    wlog("effects: D3D9 device %p, %s%s%s%s%s%s before the UI", (void *)dev, use_ao ? "AO, " : "",
+    wlog("effects: D3D9 device %p, %s%s%s%s%s%s%s before the UI", (void *)dev, use_ao ? "AO, " : "",
+         use_haze ? "haze, " : "",
          use_smaa ? "SMAA" : "", use_smaa && use_cas ? " and " : "", use_cas ? "CAS" : "",
          use_ao_view ? ", AO view" : "", use_depth_view ? ", depth view" : "");
     return true;
@@ -280,7 +291,7 @@ static void render(void) {
 
     bool depth_ready = depth != nullptr; /* drawn into this frame */
     if (USE_DEPTH && !depth && !make_depth())
-        use_ao = use_ao_view = use_depth_view = false;
+        use_ao = use_ao_view = use_depth_view = use_haze = false;
 
     /* A D3DSBT_ALL state block keeps everything but the render target and depth surface. */
     state->Capture();
@@ -340,6 +351,36 @@ static void render(void) {
             dev->StretchRect(back, nullptr, color_surface, nullptr, D3DTEXF_NONE);
         }
     }
+    if (use_haze && depth_ready) {
+        float span = FOG_PARAMS[0] < 0.0f ? -FOG_MUL / FOG_PARAMS[0] : 0.0f, fog_end = FOG_PARAMS[1] * span;
+        if (!(fog_end > 1.0f && fog_end < 100000.0f))
+            fog_end = FAR_CLIP;
+        float planes[4] = {NEAR_CLIP, FAR_CLIP, WORLD_MAX_Z, 0.0f};
+        /* additive draws (glows, particles) set black fog: keep the last real colour, and ease changes
+         * (zones, time of day) over about a second rather than jump */
+        if (FOG_COLOR[0] + FOG_COLOR[1] + FOG_COLOR[2] > 0.02f)
+            for (int i = 0; i < 3; i++) {
+                float c = powf(FOG_COLOR[i], 2.2f);
+                haze_color[i] = haze_color[0] < 0.0f ? c : haze_color[i] + (c - haze_color[i]) * 0.05f;
+            }
+        if (haze_color[0] < 0.0f)
+            goto no_haze;
+        float fog[4] = {haze_color[0], haze_color[1], haze_color[2], haze_strength};
+        float params[4] = {haze_density / fog_end, 0.0f, 0.0f, 0.0f};
+        if (++frames % 600 == 1)
+            wlog("effects: fog start %.1f, end %.1f, colour %.2f %.2f %.2f (far clip %.1f)", fog_end - span, fog_end,
+                 FOG_COLOR[0], FOG_COLOR[1], FOG_COLOR[2], FAR_CLIP);
+        dev->SetPixelShaderConstantF(2, planes, 1);
+        dev->SetPixelShaderConstantF(6, fog, 1);
+        dev->SetPixelShaderConstantF(7, params, 1);
+        dev->SetRenderState(D3DRS_SRGBWRITEENABLE, TRUE);
+        target(nullptr, back);
+        sampler(1, color, false, true);
+        sampler(6, depth, false, false);
+        draw(vs_quad, ps_haze);
+        dev->StretchRect(back, nullptr, color_surface, nullptr, D3DTEXF_NONE);
+    }
+no_haze:
     color_surface->Release();
 
     IDirect3DTexture9 *source = color;
@@ -414,6 +455,13 @@ extern "C" void effects_hooks(void) {
         use_depth_view = strstr(mode, "depth") != nullptr;
         use_ao_view = strstr(mode, "aoview") != nullptr;
         use_ao = strstr(mode, "ao") != nullptr && !use_ao_view;
+        use_haze = strstr(mode, "haze") != nullptr;
+    }
+    if (const char *tune = getenv("WOTLKHD_HAZE")) {
+        float a, b;
+        if (sscanf(tune, "%f,%f", &a, &b) == 2 && a >= 0.0f && b > 0.0f)
+            haze_strength = a, haze_density = b;
+        wlog("effects: haze strength %.2f, density %.2f", haze_strength, haze_density);
     }
     if (const char *tune = getenv("WOTLKHD_AO")) {
         float r, i;

@@ -201,6 +201,13 @@ snap to depth pixel centres (a half-resolution pixel lies exactly between two; r
 either, in stripes). It is off by default: on small detailed models, characters at a distance, its
 blurred darkening costs some sharpness.
 
+Distance haze (opt-in: `WOTLKHD_EFFECTS=smaa,cas,haze`; `WOTLKHD_HAZE=strength,density`, default 0.5,
+1.5 per fog end): the world fades towards the fog colour with distance, from close by rather than in
+the client's wall at the fog end; the sky is left alone. Colour and distances are CShaderEffect's, as
+SetFogParams (0x873210) last set them: colour 0xd43058, s_fogParams 0xd43068 (-fogMul / (end - start),
+end / (end - start)), fogMul 0xd4300c. Additive draws set black fog, so black is ignored and changes
+ease in over about a second. Off by default: zone fog is often blue-grey, which cools warm zones.
+
 Portraits (`client/portraits.c`): unit frame portraits render at 256x256 instead of 64x64.
 SetPortraitTexture (0x619580) draws the model into a "Portrait1" texture when the device can render
 to textures and masks it with a quad, so only the texture (0x619b72) and the portrait depth target

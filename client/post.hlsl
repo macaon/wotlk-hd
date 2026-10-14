@@ -8,7 +8,8 @@
 // c0: render target metrics (1/w, 1/h, w, h); c1.x: CAS peak, -1 / lerp(8, 5, sharpness);
 // c2: near and far clip (yards), and the depth the world is drawn up to.
 // c3: tan of half the field of view (x, y), AO radius (yards), AO intensity; c4: AO target metrics
-// (half the screen); c5.xy: AO blur step (texcoords).
+// (half the screen); c5.xy: AO blur step (texcoords); c6: fog colour (linear) and haze strength;
+// c7.x: haze density per fog end distance (1 / yards).
 
 float4 rt_metrics : register(c0);
 float4 cas_params : register(c1);
@@ -16,6 +17,8 @@ float4 clip_planes : register(c2);
 float4 ao_params : register(c3);
 float4 ao_metrics : register(c4);
 float4 blur_step : register(c5);
+float4 fog_color : register(c6);
+float4 haze_params : register(c7);
 
 #define SMAA_HLSL_3
 #define SMAA_PRESET_HIGH
@@ -175,4 +178,14 @@ float4 ao_apply_ps(float2 texcoord : TEXCOORD0) : COLOR {
 // Debug view (WOTLKHD_EFFECTS=aoview): the AO term alone.
 float4 ao_view_ps(float2 texcoord : TEXCOORD0) : COLOR {
     return float4(tex2D(ao_tex, texcoord).rrr, 1.0);
+}
+
+// Distance haze (aerial perspective): the world fades towards the fog colour with distance, smoothly
+// and from close by, where the client's own fog only starts at the fog start and ends in a wall at
+// the fog end. The sky is the fog's colour already and is left alone. s1 and the target are sRGB.
+float4 haze_ps(float2 texcoord : TEXCOORD0) : COLOR {
+    float3 c = tex2D(color_linear, texcoord).rgb;
+    float z = linear_depth(texcoord);
+    float h = z >= clip_planes.y * 0.999 ? 0.0 : (1.0 - exp(-haze_params.x * z)) * fog_color.w;
+    return float4(lerp(c, fog_color.rgb, h), 1.0);
 }
