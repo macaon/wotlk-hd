@@ -184,7 +184,7 @@ Post-processing (`client/effects.cpp`, D3D9 only): SMAA, then AMD's CAS sharpeni
 not the UI. The world frame ends with the client's own full-frame effects (0x8c1010, called at
 0x4f9281) before the UI draws; the DLL hooks that call and runs its passes on the back buffer there,
 on the client's device (gx device 0xc5df88, IDirect3DDevice9 at +0x397c), restoring the device state
-afterwards. `WOTLKHD_EFFECTS=smaa`, `cas` or `off` picks the effects (default both). The shaders are
+afterwards. `WOTLKHD_EFFECTS` picks the effects (default `smaa,cas,shafts`; `off` for none). The shaders are
 `client/post.hlsl` (SMAA from iryoku/smaa, MIT, fetched into cache/ by `build.sh`), compiled into the
 committed `client/shaders.h` by `client/shaders.sh`, which runs Microsoft's d3dcompiler_47.dll
 (fetched from the Windows SDK, build time only) under Proton's Wine.
@@ -207,6 +207,14 @@ the client's wall at the fog end; the sky is left alone. Colour and distances ar
 SetFogParams (0x873210) last set them: colour 0xd43058, s_fogParams 0xd43068 (-fogMul / (end - start),
 end / (end - start)), fogMul 0xd4300c. Additive draws set black fog, so black is ignored and changes
 ease in over about a second. Off by default: zone fog is often blue-grey, which cools warm zones.
+
+Sunshafts (on by default; `WOTLKHD_SHAFTS=intensity,threshold`, default 0.6, 0.4; `shaftsview` shows
+them with a ring where the sun is): a broad glow of the sky's own colour around the sun plus its
+brightest sky, sky only (by depth), blurred radially towards the sun at half resolution in two passes,
+so whatever stands in front of the sky cuts it into rays; added in linear light. The sun is the sky's
+(0xd38e28, set in 0x7eecc0 as the camera position 0xd38b18 plus the sun's direction at a fixed radius),
+projected through the world camera ([0xb7436c] +0x7e20: position +0x08, forward row at +0x14, up row
+at +0x2c); it fades out behind the camera, below the horizon and off screen.
 
 Portraits (`client/portraits.c`): unit frame portraits render at 256x256 instead of 64x64.
 SetPortraitTexture (0x619580) draws the model into a "Portrait1" texture when the device can render

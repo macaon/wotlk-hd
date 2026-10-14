@@ -4,12 +4,14 @@
 //
 // Samplers (effects.cpp sets their states): s0 colour, gamma space; s1 colour, sRGB read (linear);
 // s2 SMAA edges; s3 SMAA blend weights; s4 SMAA area texture; s5 SMAA search texture;
-// s6 scene depth (INTZ: the device's depth buffer as a texture, 0 near .. 1 far); s7 ambient occlusion.
+// s6 scene depth (INTZ: the device's depth buffer as a texture, 0 near .. 1 far); s7 ambient occlusion;
+// s8 sunshafts.
 // c0: render target metrics (1/w, 1/h, w, h); c1.x: CAS peak, -1 / lerp(8, 5, sharpness);
 // c2: near and far clip (yards), and the depth the world is drawn up to.
 // c3: tan of half the field of view (x, y), AO radius (yards), AO intensity; c4: AO target metrics
 // (half the screen); c5.xy: AO blur step (texcoords); c6: fog colour (linear) and haze strength;
-// c7.x: haze density per fog end distance (1 / yards).
+// c7.x: haze density per fog end distance (1 / yards); c8: sun position (texcoords), visibility,
+// shaft intensity; c9.x: shaft length of this blur pass, c9.y: sky brightness threshold.
 
 float4 rt_metrics : register(c0);
 float4 cas_params : register(c1);
@@ -19,6 +21,8 @@ float4 ao_metrics : register(c4);
 float4 blur_step : register(c5);
 float4 fog_color : register(c6);
 float4 haze_params : register(c7);
+float4 sun_params : register(c8);
+float4 shaft_params : register(c9);
 
 #define SMAA_HLSL_3
 #define SMAA_PRESET_HIGH
@@ -33,6 +37,7 @@ sampler2D area_tex : register(s4);
 sampler2D search_tex : register(s5);
 sampler2D depth_tex : register(s6);
 sampler2D ao_tex : register(s7);
+sampler2D shaft_tex : register(s8);
 
 // Distance from the camera plane in yards: D3D's depth d = f/(f-n) - f*n/((f-n)*z), inverted. The
 // client draws the world into the viewport depth range 0..0.94 (c2.z) and sky and horizon layers into
@@ -188,4 +193,47 @@ float4 haze_ps(float2 texcoord : TEXCOORD0) : COLOR {
     float z = linear_depth(texcoord);
     float h = z >= clip_planes.y * 0.999 ? 0.0 : (1.0 - exp(-haze_params.x * z)) * fog_color.w;
     return float4(lerp(c, fog_color.rgb, h), 1.0);
+}
+
+// Sunshafts (screen-space light scattering): bright sky near the sun, blurred radially towards it, so
+// it streams past whatever stands in front of the sky. 1: the source, sky only (by depth): a broad
+// glow of the sky's own colour around the sun, so whatever cuts into it makes many rays, not one beam
+// from the sun's disc, plus the brightest sky (over the threshold) closer in.
+float4 shafts_mask_ps(float2 texcoord : TEXCOORD0) : COLOR {
+    if (linear_depth(texcoord) < clip_planes.y * 0.999)
+        return 0.0;
+    float3 c = tex2Dlod(color_linear, float4(texcoord, 0.0, 0.0)).rgb;
+    float l = dot(c, float3(0.2126, 0.7152, 0.0722));
+    float2 d = (texcoord - sun_params.xy) * float2(rt_metrics.z / rt_metrics.w, 1.0);
+    float glow = saturate(1.0 - length(d) / 0.6), near_sun = saturate(1.0 - length(d) / 0.25);
+    float bright = saturate((l - shaft_params.y) / (1.0 - shaft_params.y));
+    return float4(c * (0.5 * glow * glow + bright * near_sun * near_sun), 1.0);
+}
+
+// 2: radial blur towards the sun, 32 samples with decay; run twice, the second pass longer.
+float4 shafts_blur_ps(float2 texcoord : TEXCOORD0) : COLOR {
+    float2 step = (texcoord - sun_params.xy) * (shaft_params.x / 32.0);
+    float3 sum = 0.0;
+    float decay = 1.0, weights = 0.0;
+    float2 q = texcoord;
+    [unroll] for (int i = 0; i < 32; i++) {
+        sum += tex2Dlod(shaft_tex, float4(q, 0.0, 0.0)).rgb * decay;
+        weights += decay;
+        decay *= 0.94;
+        q -= step;
+    }
+    return float4(sum / weights, 1.0);
+}
+
+// 3: added to the scene (linear light; s1 and the target are sRGB).
+float4 shafts_apply_ps(float2 texcoord : TEXCOORD0) : COLOR {
+    float3 c = tex2D(color_linear, texcoord).rgb;
+    return float4(c + tex2D(shaft_tex, texcoord).rgb * sun_params.z * sun_params.w, 1.0);
+}
+
+// Debug view (WOTLKHD_EFFECTS=shaftsview): the shafts, and a ring where the sun is thought to be.
+float4 shafts_view_ps(float2 texcoord : TEXCOORD0) : COLOR {
+    float2 d = (texcoord - sun_params.xy) * float2(rt_metrics.z / rt_metrics.w, 1.0);
+    float ring = abs(length(d) - 0.02) < 0.003 ? 1.0 : 0.0;
+    return float4(tex2D(shaft_tex, texcoord).rgb * 4.0 + float3(ring, 0.0, 0.0), 1.0);
 }

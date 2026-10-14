@@ -5,10 +5,11 @@
  * device is the gx device's (0xc5df88) IDirect3DDevice9 at +0x397c, used only once its vtable is
  * found in d3d9.dll (not under -opengl). Our render targets live in D3DPOOL_DEFAULT, which D3D9
  * wants released before IDirect3DDevice9::Reset: we hook Reset in the device's vtable for that.
- * WOTLKHD_EFFECTS picks the effects: "smaa,cas" (the default), "smaa", "cas" or "off"; "ao" adds
+ * WOTLKHD_EFFECTS picks the effects: "smaa,cas,shafts" (the default), any of those, or "off"; "ao" adds
  * ambient occlusion (before SMAA and CAS), "aoview" and "depth" debug views of it and the depth;
  * WOTLKHD_AO=radius,intensity tunes the AO (default 1.5 yards, 2). "haze" adds distance haze in the
- * fog colour (WOTLKHD_HAZE=strength,density, default 0.5, 1.5). 
+ * fog colour (WOTLKHD_HAZE=strength,density, default 0.5, 1.5); "shafts" sunshafts (WOTLKHD_SHAFTS=
+ * intensity,threshold, default 0.6, 0.4), "shaftsview" their debug view. 
  *
  * Depth: D3D9 cannot sample the device's own depth buffer (D24S8), so for depth effects the world is
  * drawn into an INTZ depth texture instead: we create one the size of the back buffer and, through
@@ -42,19 +43,30 @@ static float haze_strength = 0.5f, haze_density = 1.5f; /* per fog end distance;
 #define FOG_COLOR ((const float *)0x00D43058)
 #define FOG_PARAMS ((const float *)0x00D43068)
 #define FOG_MUL (*(const float *)0x00D4300C)
+/* the sky's sun (0x7eecc0: the camera position at 0xd38b18 plus the sun's direction at a fixed radius)
+ * and the world camera (the world frame's 0xb7436c +0x7e20: position +0x08, orientation +0x14,
+ * forward, left, up rows) */
+#define SUN_POS ((const float *)0x00D38E28)
+#define SKY_CAMERA ((const float *)0x00D38B18)
+#define WORLD_FRAME (*(BYTE **)0x00B7436C)
+#define WORLD_CAMERA 0x7E20
+static float shaft_intensity = 0.6f, shaft_threshold = 0.4f; /* WOTLKHD_SHAFTS */
 #define WORLD_MAX_Z 0.94f /* the client's viewport MaxZ for the world (sky and horizon: 0.998..1) */
 #define D3DFMT_INTZ ((D3DFORMAT)MAKEFOURCC('I', 'N', 'T', 'Z'))
 
-static bool use_smaa = true, use_cas = true, use_ao, use_ao_view, use_depth_view, use_haze, broken;
+static bool use_smaa = true, use_cas = true, use_ao, use_ao_view, use_depth_view, use_haze, use_shafts = true,
+    use_shafts_view, broken;
 static unsigned frames;
 static float haze_color[3] = {-1.0f, 0.0f, 0.0f}; /* linear, eased; < 0: none seen yet */
-#define USE_DEPTH (use_ao || use_ao_view || use_depth_view || use_haze)
+#define USE_DEPTH (use_ao || use_ao_view || use_depth_view || use_haze || use_shafts || use_shafts_view)
 static IDirect3DDevice9 *dev;
 static IDirect3DVertexShader9 *vs_quad, *vs_edges, *vs_weights, *vs_blend;
-static IDirect3DPixelShader9 *ps_edges, *ps_weights, *ps_blend, *ps_cas, *ps_depth, *ps_ao, *ps_ao_blur, *ps_ao_apply, *ps_ao_view, *ps_haze;
+static IDirect3DPixelShader9 *ps_edges, *ps_weights, *ps_blend, *ps_cas, *ps_depth, *ps_ao, *ps_ao_blur, *ps_ao_apply, *ps_ao_view, *ps_haze, *ps_shafts_mask, *ps_shafts_blur,
+    *ps_shafts_apply, *ps_shafts_view;
 static IDirect3DTexture9 *area, *search;               /* D3DPOOL_MANAGED: survive Reset */
 static IDirect3DTexture9 *color, *edges, *weights, *temp; /* D3DPOOL_DEFAULT, back buffer size */
 static IDirect3DTexture9 *ao, *ao_temp;   /* D3DPOOL_DEFAULT, half the back buffer */
+static IDirect3DTexture9 *shafts, *shafts_temp; /* D3DPOOL_DEFAULT, half the back buffer, 16-bit float */
 static IDirect3DStateBlock9 *state;
 static IDirect3DTexture9 *depth;                  /* INTZ, D3DPOOL_DEFAULT */
 static IDirect3DSurface9 *depth_surface, *device_depth; /* ours, and the device's that it replaces */
@@ -103,6 +115,8 @@ static void release_targets(void) {
     release(temp);
     release(ao);
     release(ao_temp);
+    release(shafts);
+    release(shafts_temp);
     release(state);
     width = height = 0;
 }
@@ -180,23 +194,27 @@ static bool setup(void) {
               SUCCEEDED(dev->CreatePixelShader(ao_blur_ps, &ps_ao_blur)) &&
               SUCCEEDED(dev->CreatePixelShader(ao_apply_ps, &ps_ao_apply)) &&
               SUCCEEDED(dev->CreatePixelShader(ao_view_ps, &ps_ao_view)) &&
-              SUCCEEDED(dev->CreatePixelShader(haze_ps, &ps_haze));
+              SUCCEEDED(dev->CreatePixelShader(haze_ps, &ps_haze)) &&
+              SUCCEEDED(dev->CreatePixelShader(shafts_mask_ps, &ps_shafts_mask)) &&
+              SUCCEEDED(dev->CreatePixelShader(shafts_blur_ps, &ps_shafts_blur)) &&
+              SUCCEEDED(dev->CreatePixelShader(shafts_apply_ps, &ps_shafts_apply)) &&
+              SUCCEEDED(dev->CreatePixelShader(shafts_view_ps, &ps_shafts_view));
     area = lookup_texture(AREATEX_WIDTH, AREATEX_HEIGHT, D3DFMT_A8L8, areaTexBytes, AREATEX_PITCH);
     search = lookup_texture(SEARCHTEX_WIDTH, SEARCHTEX_HEIGHT, D3DFMT_L8, searchTexBytes, SEARCHTEX_PITCH);
     if (!ok || !area || !search) {
         wlog("effects: shaders or SMAA textures failed, effects off");
         return false;
     }
-    wlog("effects: D3D9 device %p, %s%s%s%s%s%s%s before the UI", (void *)dev, use_ao ? "AO, " : "",
-         use_haze ? "haze, " : "",
+    wlog("effects: D3D9 device %p, %s%s%s%s%s%s%s%s before the UI", (void *)dev, use_ao ? "AO, " : "",
+         use_haze ? "haze, " : "", use_shafts ? "shafts, " : "",
          use_smaa ? "SMAA" : "", use_smaa && use_cas ? " and " : "", use_cas ? "CAS" : "",
          use_ao_view ? ", AO view" : "", use_depth_view ? ", depth view" : "");
     return true;
 }
 
-static IDirect3DTexture9 *target_texture(UINT w = width, UINT h = height) {
+static IDirect3DTexture9 *target_texture(UINT w = width, UINT h = height, D3DFORMAT f = D3DFMT_A8R8G8B8) {
     IDirect3DTexture9 *t = nullptr;
-    dev->CreateTexture(w, h, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &t, nullptr);
+    dev->CreateTexture(w, h, 1, D3DUSAGE_RENDERTARGET, f, D3DPOOL_DEFAULT, &t, nullptr);
     return t;
 }
 
@@ -209,10 +227,12 @@ static bool make_targets(UINT w, UINT h) {
     temp = use_smaa && use_cas ? target_texture() : nullptr;
     ao = USE_DEPTH ? target_texture(w / 2, h / 2) : nullptr;
     ao_temp = USE_DEPTH ? target_texture(w / 2, h / 2) : nullptr;
+    shafts = USE_DEPTH ? target_texture(w / 2, h / 2, D3DFMT_A16B16G16R16F) : nullptr;
+    shafts_temp = USE_DEPTH ? target_texture(w / 2, h / 2, D3DFMT_A16B16G16R16F) : nullptr;
     if (FAILED(dev->CreateStateBlock(D3DSBT_ALL, &state)))
         state = nullptr;
     if (!color || !state || (use_smaa && (!edges || !weights)) || (use_smaa && use_cas && !temp) ||
-        (USE_DEPTH && (!ao || !ao_temp))) {
+        (USE_DEPTH && (!ao || !ao_temp || !shafts || !shafts_temp))) {
         wlog("effects: no %ux%u render targets, effects off", w, h);
         release_targets();
         return false;
@@ -277,6 +297,39 @@ static void draw(IDirect3DVertexShader9 *vs, IDirect3DPixelShader9 *ps, UINT w =
     dev->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, quad, sizeof(quad[0]));
 }
 
+/* The sun on screen: texcoords, and how visible (0 behind the camera, below the horizon or far off
+ * screen). False without a world camera. */
+static bool sun_on_screen(float *u, float *v, float *visibility) {
+    BYTE *frame = WORLD_FRAME, *cam = frame ? *(BYTE **)(frame + WORLD_CAMERA) : nullptr;
+    if (!cam)
+        return false;
+    const float *pos = (const float *)(cam + 0x08), *m = (const float *)(cam + 0x14);
+    const float *fwd = m, *up = m + 6;
+    float right[3] = {fwd[1] * up[2] - fwd[2] * up[1], fwd[2] * up[0] - fwd[0] * up[2], fwd[0] * up[1] - fwd[1] * up[0]};
+    float rel[3] = {SUN_POS[0] - pos[0], SUN_POS[1] - pos[1], SUN_POS[2] - pos[2]};
+    float dist = sqrtf(rel[0] * rel[0] + rel[1] * rel[1] + rel[2] * rel[2]);
+    float z = rel[0] * fwd[0] + rel[1] * fwd[1] + rel[2] * fwd[2];
+    if (frames % 600 == 2)
+        wlog("effects: camera %.1f %.1f %.1f (sky's %.1f %.1f %.1f), sun %.1f %.1f %.1f, forward %.2f %.2f %.2f",
+             pos[0], pos[1], pos[2], SKY_CAMERA[0], SKY_CAMERA[1], SKY_CAMERA[2], SUN_POS[0], SUN_POS[1],
+             SUN_POS[2], fwd[0], fwd[1], fwd[2]);
+    if (dist <= 0.0f || z <= 0.0f) {
+        *visibility = 0.0f;
+        return true;
+    }
+    float aspect = (float)width / height, tan_y = tanf(0.5f * FOV / sqrtf(aspect * aspect + 1.0f));
+    float x = (rel[0] * right[0] + rel[1] * right[1] + rel[2] * right[2]) / (z * tan_y * aspect);
+    float y = (rel[0] * up[0] + rel[1] * up[1] + rel[2] * up[2]) / (z * tan_y);
+    *u = 0.5f + 0.5f * x;
+    *v = 0.5f - 0.5f * y;
+    float off = fmaxf(fabsf(x), fabsf(y)); /* 1 at the screen's edge */
+    float elevation = rel[2] / dist;
+    *visibility = fminf(fmaxf(2.0f - off, 0.0f), 1.0f) * fminf(fmaxf(elevation * 5.0f, 0.0f), 1.0f);
+    if (frames % 600 == 2)
+        wlog("effects: sun at %.3f %.3f, visibility %.2f", *u, *v, *visibility);
+    return true;
+}
+
 static void render(void) {
     IDirect3DSurface9 *back = nullptr, *saved_target = nullptr, *saved_depth = nullptr, *color_surface = nullptr;
     D3DSURFACE_DESC desc;
@@ -291,7 +344,7 @@ static void render(void) {
 
     bool depth_ready = depth != nullptr; /* drawn into this frame */
     if (USE_DEPTH && !depth && !make_depth())
-        use_ao = use_ao_view = use_depth_view = use_haze = false;
+        use_ao = use_ao_view = use_depth_view = use_haze = use_shafts = use_shafts_view = false;
 
     /* A D3DSBT_ALL state block keeps everything but the render target and depth surface. */
     state->Capture();
@@ -381,6 +434,38 @@ static void render(void) {
         dev->StretchRect(back, nullptr, color_surface, nullptr, D3DTEXF_NONE);
     }
 no_haze:
+    float sun_u = 0.5f, sun_v = 0.5f, sun_visibility = 0.0f;
+    frames += !use_haze; /* the haze counts frames otherwise */
+    if ((use_shafts || use_shafts_view) && depth_ready && sun_on_screen(&sun_u, &sun_v, &sun_visibility) &&
+        (sun_visibility > 0.0f || use_shafts_view)) {
+        UINT w2 = width / 2, h2 = height / 2;
+        float planes[4] = {NEAR_CLIP, FAR_CLIP, WORLD_MAX_Z, 0.0f};
+        float sun[4] = {sun_u, sun_v, sun_visibility, shaft_intensity};
+        float pass1[4] = {0.5f, shaft_threshold, 0.0f, 0.0f}, pass2[4] = {1.0f, shaft_threshold, 0.0f, 0.0f};
+        dev->SetPixelShaderConstantF(2, planes, 1);
+        dev->SetPixelShaderConstantF(8, sun, 1);
+        dev->SetPixelShaderConstantF(9, pass1, 1);
+        dev->SetRenderState(D3DRS_SRGBWRITEENABLE, FALSE);
+        target(shafts, back);
+        sampler(1, color, true, true);
+        sampler(6, depth, false, false);
+        draw(vs_quad, ps_shafts_mask, w2, h2);
+        target(shafts_temp, back);
+        sampler(8, shafts, true, false);
+        draw(vs_quad, ps_shafts_blur, w2, h2);
+        target(shafts, back);
+        sampler(8, shafts_temp, true, false);
+        dev->SetPixelShaderConstantF(9, pass2, 1);
+        draw(vs_quad, ps_shafts_blur, w2, h2);
+        if (use_shafts) {
+            dev->SetRenderState(D3DRS_SRGBWRITEENABLE, TRUE);
+            target(nullptr, back);
+            sampler(1, color, false, true);
+            sampler(8, shafts, true, false);
+            draw(vs_quad, ps_shafts_apply);
+            dev->StretchRect(back, nullptr, color_surface, nullptr, D3DTEXF_NONE);
+        }
+    }
     color_surface->Release();
 
     IDirect3DTexture9 *source = color;
@@ -410,6 +495,14 @@ no_haze:
         target(nullptr, back);
         sampler(1, source, false, true);
         draw(vs_quad, ps_cas);
+    }
+    if (use_shafts_view && depth_ready) {
+        float sun[4] = {sun_u, sun_v, sun_visibility, shaft_intensity};
+        dev->SetPixelShaderConstantF(8, sun, 1);
+        dev->SetRenderState(D3DRS_SRGBWRITEENABLE, FALSE);
+        target(nullptr, back);
+        sampler(8, shafts, true, false);
+        draw(vs_quad, ps_shafts_view);
     }
     if (use_ao_view && depth_ready) {
         dev->SetRenderState(D3DRS_SRGBWRITEENABLE, FALSE);
@@ -456,6 +549,14 @@ extern "C" void effects_hooks(void) {
         use_ao_view = strstr(mode, "aoview") != nullptr;
         use_ao = strstr(mode, "ao") != nullptr && !use_ao_view;
         use_haze = strstr(mode, "haze") != nullptr;
+        use_shafts_view = strstr(mode, "shaftsview") != nullptr;
+        use_shafts = strstr(mode, "shafts") != nullptr && !use_shafts_view;
+    }
+    if (const char *tune = getenv("WOTLKHD_SHAFTS")) {
+        float a, b;
+        if (sscanf(tune, "%f,%f", &a, &b) == 2 && a >= 0.0f && b >= 0.0f && b < 1.0f)
+            shaft_intensity = a, shaft_threshold = b;
+        wlog("effects: shafts intensity %.2f, threshold %.2f", shaft_intensity, shaft_threshold);
     }
     if (const char *tune = getenv("WOTLKHD_HAZE")) {
         float a, b;
