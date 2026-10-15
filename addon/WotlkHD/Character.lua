@@ -164,16 +164,19 @@ end
 local function rowFrame(i)
     local r = rows[i]
     if not r then
-        r = CreateFrame("Frame", nil, pane)
+        local name = "WotlkHDCharacterStat" .. i
+        r = CreateFrame("Frame", name, pane)
         r:SetWidth(187)
         r:SetHeight(15)
+        r:EnableMouse(true)
+        r:SetScript("OnLeave", GameTooltip_Hide)
         r.stripe = r:CreateTexture(nil, "BACKGROUND")
         r.stripe:SetAtlas("UI-Character-Info-Line-Bounce", true)
         r.stripe:SetAlpha(.3)
         r.stripe:SetPoint("CENTER")
-        r.label = r:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+        r.label = r:CreateFontString(name .. "Label", "ARTWORK", "GameFontNormalSmall")
         r.label:SetPoint("LEFT", 11, 0)
-        r.value = r:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+        r.value = r:CreateFontString(name .. "StatText", "ARTWORK", "GameFontHighlightSmall")
         r.value:SetPoint("RIGHT", -8, 0)
         rows[i] = r
     end
@@ -189,6 +192,16 @@ ilvlBounce:SetAlpha(.3)
 ilvlBounce:SetPoint("CENTER")
 local ilvlText = ilvlBox:CreateFontString(nil, "ARTWORK", "GameFontHighlightLarge")
 ilvlText:SetPoint("CENTER", 0, -1)
+ilvlBox:EnableMouse(true)
+ilvlBox:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText(HIGHLIGHT_FONT_COLOR_CODE .. (STAT_AVERAGE_ITEM_LEVEL or "Item Level") .. " "
+        .. ilvlText:GetText() .. FONT_COLOR_CODE_CLOSE)
+    GameTooltip:AddLine("The average item level of your equipped gear.", NORMAL_FONT_COLOR.r,
+        NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b, 1)
+    GameTooltip:Show()
+end)
+ilvlBox:SetScript("OnLeave", GameTooltip_Hide)
 
 -- Average item level over the 17 slots that hold gear (shirt, tabard and ammo left out), a two-hander
 -- counting for both hands; an item the client hasn't cached yet counts 0 until the next update.
@@ -235,14 +248,16 @@ local function tank()
     return GetCombatRating(CR_DEFENSE_SKILL) > 0 or (shield and select(2, UnitClass("player")) ~= "SHAMAN")
 end
 
+-- Each stat: {label, value, 3.3.5's PaperDollFrame setter for its tooltip, the setter's argument,
+-- an OnEnter other than PaperDollStatTooltip}.
 local function stats()
     local attributes = {}
     for i = 1, 5 do
         local _, stat = UnitStat("player", i)
-        attributes[#attributes + 1] = {_G["SPELL_STAT" .. i .. "_NAME"], stat}
+        attributes[#attributes + 1] = {_G["SPELL_STAT" .. i .. "_NAME"], stat, PaperDollFrame_SetStat, i}
     end
     local _, armor = UnitArmor("player")
-    attributes[#attributes + 1] = {ARMOR, armor}
+    attributes[#attributes + 1] = {ARMOR, armor, PaperDollFrame_SetArmor}
 
     local e, r = {}, role()
     if r == "spell" then
@@ -251,43 +266,45 @@ local function stats()
             power = math.max(power, GetSpellBonusDamage(school))
             crit = math.max(crit, GetSpellCritChance(school))
         end
-        e[#e + 1] = {ITEM_MOD_SPELL_POWER_SHORT or "Spell Power", math.max(power, GetSpellBonusHealing())}
-        e[#e + 1] = {CRIT_ABBR or "Crit", pct(crit)}
-        e[#e + 1] = {SPELL_HASTE_ABBR or "Haste", pct(GetCombatRatingBonus(CR_HASTE_SPELL))}
-        e[#e + 1] = {COMBAT_RATING_NAME8 or "Hit", pct(GetCombatRatingBonus(CR_HIT_SPELL))}
+        e[#e + 1] = {ITEM_MOD_SPELL_POWER_SHORT or "Spell Power", math.max(power, GetSpellBonusHealing()),
+            PaperDollFrame_SetSpellBonusDamage, nil, CharacterSpellBonusDamage_OnEnter}
+        e[#e + 1] = {CRIT_ABBR or "Crit", pct(crit), PaperDollFrame_SetSpellCritChance, nil, CharacterSpellCritChance_OnEnter}
+        e[#e + 1] = {SPELL_HASTE_ABBR or "Haste", pct(GetCombatRatingBonus(CR_HASTE_SPELL)), PaperDollFrame_SetSpellHaste}
+        e[#e + 1] = {COMBAT_RATING_NAME8 or "Hit", pct(GetCombatRatingBonus(CR_HIT_SPELL)), PaperDollFrame_SetRating, CR_HIT_SPELL}
         local base, casting = GetManaRegen() -- per second; retail shows the combat rate in combat
         local regen = UnitAffectingCombat("player") and casting or base
-        e[#e + 1] = {ITEM_MOD_MANA_REGENERATION_SHORT or "Mana Regen", math.floor(regen * 5 + .5)}
+        e[#e + 1] = {ITEM_MOD_MANA_REGENERATION_SHORT or "Mana Regen", math.floor(regen * 5 + .5), PaperDollFrame_SetManaRegen}
     elseif r == "ranged" then
         local base, pos, neg = UnitRangedAttackPower("player")
-        e[#e + 1] = {ITEM_MOD_RANGED_ATTACK_POWER_SHORT or "Attack Power", base + pos + neg}
-        e[#e + 1] = {CRIT_ABBR or "Crit", pct(GetRangedCritChance())}
-        e[#e + 1] = {SPELL_HASTE_ABBR or "Haste", pct(GetCombatRatingBonus(CR_HASTE_RANGED))}
-        e[#e + 1] = {COMBAT_RATING_NAME8 or "Hit", pct(GetCombatRatingBonus(CR_HIT_RANGED))}
+        e[#e + 1] = {ITEM_MOD_RANGED_ATTACK_POWER_SHORT or "Attack Power", base + pos + neg, PaperDollFrame_SetRangedAttackPower}
+        e[#e + 1] = {CRIT_ABBR or "Crit", pct(GetRangedCritChance()), PaperDollFrame_SetRangedCritChance}
+        e[#e + 1] = {SPELL_HASTE_ABBR or "Haste", pct(GetCombatRatingBonus(CR_HASTE_RANGED)), PaperDollFrame_SetRating, CR_HASTE_RANGED}
+        e[#e + 1] = {COMBAT_RATING_NAME8 or "Hit", pct(GetCombatRatingBonus(CR_HIT_RANGED)), PaperDollFrame_SetRating, CR_HIT_RANGED}
     else
         local base, pos, neg = UnitAttackPower("player")
-        e[#e + 1] = {ITEM_MOD_ATTACK_POWER_SHORT or "Attack Power", base + pos + neg}
-        e[#e + 1] = {CRIT_ABBR or "Crit", pct(GetCritChance())}
-        e[#e + 1] = {SPELL_HASTE_ABBR or "Haste", pct(GetCombatRatingBonus(CR_HASTE_MELEE))}
-        e[#e + 1] = {COMBAT_RATING_NAME8 or "Hit", pct(GetCombatRatingBonus(CR_HIT_MELEE))}
-        e[#e + 1] = {STAT_EXPERTISE or "Expertise", (GetExpertise())}
+        e[#e + 1] = {ITEM_MOD_ATTACK_POWER_SHORT or "Attack Power", base + pos + neg, PaperDollFrame_SetAttackPower}
+        e[#e + 1] = {CRIT_ABBR or "Crit", pct(GetCritChance()), PaperDollFrame_SetMeleeCritChance}
+        e[#e + 1] = {SPELL_HASTE_ABBR or "Haste", pct(GetCombatRatingBonus(CR_HASTE_MELEE)), PaperDollFrame_SetRating, CR_HASTE_MELEE}
+        e[#e + 1] = {COMBAT_RATING_NAME8 or "Hit", pct(GetCombatRatingBonus(CR_HIT_MELEE)), PaperDollFrame_SetRating, CR_HIT_MELEE}
+        e[#e + 1] = {STAT_EXPERTISE or "Expertise", (GetExpertise()), PaperDollFrame_SetExpertise}
     end
     local arp = GetCombatRatingBonus(CR_ARMOR_PENETRATION)
     if r ~= "spell" and arp > 0 then
-        e[#e + 1] = {ITEM_MOD_ARMOR_PENETRATION_RATING_SHORT or "Armor Penetration", pct(arp)}
+        e[#e + 1] = {ITEM_MOD_ARMOR_PENETRATION_RATING_SHORT or "Armor Penetration", pct(arp), PaperDollFrame_SetRating,
+            CR_ARMOR_PENETRATION}
     end
     if tank() then
         local base, mod = UnitDefense("player")
-        e[#e + 1] = {DEFENSE, base + mod}
-        e[#e + 1] = {STAT_DODGE or DODGE, pct(GetDodgeChance())}
-        e[#e + 1] = {STAT_PARRY or PARRY, pct(GetParryChance())}
+        e[#e + 1] = {DEFENSE, base + mod, PaperDollFrame_SetDefense}
+        e[#e + 1] = {STAT_DODGE or DODGE, pct(GetDodgeChance()), PaperDollFrame_SetDodge}
+        e[#e + 1] = {STAT_PARRY or PARRY, pct(GetParryChance()), PaperDollFrame_SetParry}
         if GetBlockChance() > 0 then
-            e[#e + 1] = {STAT_BLOCK or BLOCK, pct(GetBlockChance())}
+            e[#e + 1] = {STAT_BLOCK or BLOCK, pct(GetBlockChance()), PaperDollFrame_SetBlock}
         end
     end
     local resilience = GetCombatRating(CR_CRIT_TAKEN_MELEE)
     if resilience > 0 then
-        e[#e + 1] = {STAT_RESILIENCE or "Resilience", resilience}
+        e[#e + 1] = {STAT_RESILIENCE or "Resilience", resilience, PaperDollFrame_SetResilience}
     end
     return {{STAT_CATEGORY_ATTRIBUTES or "Attributes", attributes},
         {STAT_CATEGORY_ENHANCEMENTS or "Enhancements", e}}
@@ -315,6 +332,13 @@ local function update()
             n = n + 1
             local r = rowFrame(n)
             r:SetPoint("TOP", below, "BOTTOM", 0, i == 1 and -2 or 0)
+            -- 3.3.5's own setter for the stat writes its tooltip (and its label and value, which we
+            -- write over with retail's)
+            r.tooltip, r.tooltip2 = nil, nil
+            r:SetScript("OnEnter", stat[5] or PaperDollStatTooltip)
+            if stat[3] then
+                stat[3](r, stat[4])
+            end
             r.label:SetFormattedText(STAT_FORMAT or "%s:", stat[1])
             r.value:SetText(stat[2])
             if i % 2 == 0 then
