@@ -2,15 +2,8 @@
 
 ## Fix
 
-- gargoyle2 (Stonewing Slayer) still crashes the client on live data; it is left out of
-  `picks.json`. Mixed builds were not the cause. Fallback: a recoloured felbat2.
-- Lady Sylvanas (her model uses a `.skel`), Anduin and Lady Vashj (missing `.anim` files) don't
-  convert.
-- Blood elf eye glow: retail's plain glow (1701) shows cyan rather than fel green.
+- Lady Vashj doesn't convert: sequence 62 has no `.anim` file.
 - NPC looks (`chars.py` `NPC_LOOKS`): belt buckles (retail waist models) have no slot in 3.3.5.
-- Face shapes: whether retail applies the `.bone` offset before or after the bone's animation is a
-  guess (before: the shape rotates with jaw and lips); check faces while talking. NPCs on player
-  models (CreatureDisplayInfoExtra) may not pass the geoset update that records the face.
 - Helmets are sized for 3.3.5's heads; check fit and hair/ear hiding per race.
 
 ## Models and textures
