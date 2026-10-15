@@ -22,7 +22,7 @@ Done: Lua functions from the DLL (`client/lua.c`), retail Options window (`addon
 cast, cursor lock and color filter (`client/controls.c`, `client/effects.cpp`, `Options.lua`),
 nameplates as units and retail nameplates (`client/nameplates.c`, `Nameplates.lua`), retail raid
 frames (`RaidFrames.lua`), Edit Mode (`EditMode.lua`), retail unit frames and cast bars
-(`UnitFrames.lua`), combined bags (`Bags.lua`), action bars (`ActionBars.lua`). Retail settings mapped to 3.3.5:
+(`UnitFrames.lua`), combined bags (`Bags.lua`), action bars (`ActionBars.lua`), minimap (`Minimap.lua`). Retail settings mapped to 3.3.5:
 [docs/retail-options.md](docs/retail-options.md).
 
 - Mouseover cast covers action bar spells only, not macros or items.

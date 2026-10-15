@@ -97,9 +97,18 @@ UI-HUD-ExperienceBar-Fill-Rested UI-HUD-ExperienceBar-Fill-Prediction UI-HUD-Exp
 UI-HUD-ExperienceBar-Frame-Pip-Mouseover UI-HUD-ExperienceBar-Fill-Reputation-Faction-Red
 UI-HUD-ExperienceBar-Fill-Reputation-Faction-Orange UI-HUD-ExperienceBar-Fill-Reputation-Faction-Yellow
 UI-HUD-ExperienceBar-Fill-Reputation-Faction-Green
+UI-HUD-Minimap-Frame UI-HUD-Minimap-Button UI-HUD-Minimap-Button-Down
+UI-HUD-Minimap-Button-NineSlice-CornerTopLeft
+UI-HUD-Minimap-Button-NineSlice-CornerTopRight UI-HUD-Minimap-Button-NineSlice-CornerBottomLeft
+UI-HUD-Minimap-Button-NineSlice-CornerBottomRight _UI-HUD-Minimap-Button-NineSlice-EdgeTop
+_UI-HUD-Minimap-Button-NineSlice-EdgeBottom !UI-HUD-Minimap-Button-NineSlice-EdgeLeft
+!UI-HUD-Minimap-Button-NineSlice-EdgeRight UI-HUD-Minimap-Button-NineSlice-Center
+UI-HUD-Minimap-Tracking-Up UI-HUD-Minimap-Tracking-Down UI-HUD-Minimap-Tracking-Mouseover UI-HUD-Minimap-Mail-Up
+UI-HUD-Minimap-Zoom-In UI-HUD-Minimap-Zoom-In-Down UI-HUD-Minimap-Zoom-In-Mouseover
+UI-HUD-Minimap-Zoom-Out UI-HUD-Minimap-Zoom-Out-Down UI-HUD-Minimap-Zoom-Out-Mouseover
 
 
-""".split()
+""".split() + [f"UI-HUD-Calendar-{day}-{state}" for day in range(1, 32) for state in ("Up", "Down", "Mouseover")]
 
 
 # Whole retail textures (not atlas parts), by path: copied as they are, under their file name.

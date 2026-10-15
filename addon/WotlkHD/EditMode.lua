@@ -44,6 +44,8 @@ local PRESETS = {
         player = {point = "BOTTOMRIGHT", rel = "BOTTOM", x = -300, y = 250},
         target = {point = "BOTTOMLEFT", rel = "BOTTOM", x = 300, y = 250},
         focus = {point = "BOTTOMLEFT", rel = "BOTTOM", x = 520, y = 265},
+        buffs = {point = "TOPRIGHT", x = -255, y = -10},
+        quests = {point = "TOPRIGHT", x = -110, y = -275},
     }},
     Classic = {frames = {}},
 }
@@ -859,8 +861,10 @@ events:SetScript("OnEvent", function(_, event)
             storeLayout("Layout 1")
         else
             saved.layout = "Modern"
-            saved.frames = deep(PRESETS.Modern.frames)
         end
+    end
+    if PRESETS[saved.layout] then -- a preset as this version has it (changes to one save as a new layout)
+        saved.frames = deep(PRESETS[saved.layout].frames)
     end
     applySaved()
     if WotlkHD_Saved.raidFrameWidth then

@@ -42,6 +42,8 @@ It's a personal build: it aims to look and play well, not to stay faithful to 3.
 - Retail's combined bags: one window with search, retail item slots and quality borders, Clean Up
   Bags (stacking and sorting), bag assignments and ignore, junk, quest and new item markers; the bank
   opens your bags, as on retail.
+- Retail's minimap: the larger map in retail's frame, the zone bar with clock and calendar, tracking
+  and mail beside it, zoom buttons on hover and mouse wheel zoom, player coordinates under it.
 - Retail raid frames for raids (and parties, with Use Raid-Style Party Frames): green or class
   coloured health, roles, target and aggro highlights, buffs, debuffs, dispellable types and range
   fade.
