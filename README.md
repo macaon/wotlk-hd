@@ -42,6 +42,9 @@ It's a personal build: it aims to look and play well, not to stay faithful to 3.
 - Retail's combined bags: one window with search, retail item slots and quality borders, Clean Up
   Bags (stacking and sorting), bag assignments and ignore, junk, quest and new item markers; the bank
   opens your bags, as on retail.
+- Retail's character window: the larger frame with retail's slot columns, model on the race's
+  backdrop, the stats pane (item level, attributes, enhancements by role) and sidebar tabs; retail's
+  tabs under it.
 - Retail's minimap: the larger map in retail's frame, the zone bar with clock and calendar, tracking
   and mail beside it, zoom buttons on hover and mouse wheel zoom, player coordinates under it.
 - Retail raid frames for raids (and parties, with Use Raid-Style Party Frames): green or class

@@ -12,6 +12,7 @@ UnitFrames.lua
 Bags.lua
 ActionBars.lua
 Minimap.lua
+Character.lua
 WotlkHD.lua
 Options.lua
 Settings.lua

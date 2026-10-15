@@ -106,14 +106,21 @@ _UI-HUD-Minimap-Button-NineSlice-EdgeBottom !UI-HUD-Minimap-Button-NineSlice-Edg
 UI-HUD-Minimap-Tracking-Up UI-HUD-Minimap-Tracking-Down UI-HUD-Minimap-Tracking-Mouseover UI-HUD-Minimap-Mail-Up
 UI-HUD-Minimap-Zoom-In UI-HUD-Minimap-Zoom-In-Down UI-HUD-Minimap-Zoom-In-Mouseover
 UI-HUD-Minimap-Zoom-Out UI-HUD-Minimap-Zoom-Out-Down UI-HUD-Minimap-Zoom-Out-Mouseover
+character-panel-background UI-Character-Info-Title UI-Character-Info-ItemLevel-Bounce
+UI-Character-Info-Line-Bounce uiframe-tab-left uiframe-tab-right _uiframe-tab-center uiframe-activetab-left
+uiframe-activetab-right _uiframe-activetab-center
 
 
-""".split() + [f"UI-HUD-Calendar-{day}-{state}" for day in range(1, 32) for state in ("Up", "Down", "Mouseover")]
+""".split() + [f"UI-HUD-Calendar-{day}-{state}" for day in range(1, 32) for state in ("Up", "Down", "Mouseover")] + [
+    f"UI-Character-Info-{c}-BG" for c in ("Warrior", "Paladin", "Hunter", "Rogue", "Priest", "DeathKnight", "Shaman",
+                                          "Mage", "Warlock", "Druid")]
 
 
 # Whole retail textures (not atlas parts), by path: copied as they are, under their file name.
 FILES = """
 Interface/Common/WhiteIconFrame.blp
+Interface/CharacterFrame/Char-Paperdoll-Parts.blp
+Interface/PaperDollInfoFrame/PaperDollSidebarTabs.blp
 """.split()
 
 
