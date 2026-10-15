@@ -107,7 +107,8 @@ UI-HUD-Minimap-Tracking-Up UI-HUD-Minimap-Tracking-Down UI-HUD-Minimap-Tracking-
 UI-HUD-Minimap-Zoom-In UI-HUD-Minimap-Zoom-In-Down UI-HUD-Minimap-Zoom-In-Mouseover
 UI-HUD-Minimap-Zoom-Out UI-HUD-Minimap-Zoom-Out-Down UI-HUD-Minimap-Zoom-Out-Mouseover
 character-panel-background UI-Character-Info-Title UI-Character-Info-ItemLevel-Bounce
-UI-Character-Info-Line-Bounce uiframe-tab-left uiframe-tab-right _uiframe-tab-center uiframe-activetab-left
+UI-Character-Info-Line-Bounce minimal-scrollbar-track-top minimal-scrollbar-track-bottom
+!minimal-scrollbar-track-middle minimal-scrollbar-thumb-middle uiframe-tab-left uiframe-tab-right _uiframe-tab-center uiframe-activetab-left
 uiframe-activetab-right _uiframe-activetab-center
 
 
@@ -121,6 +122,8 @@ FILES = """
 Interface/Common/WhiteIconFrame.blp
 Interface/CharacterFrame/Char-Paperdoll-Parts.blp
 Interface/PaperDollInfoFrame/PaperDollSidebarTabs.blp
+Interface/CharacterFrame/Char-Stat-Middle.blp
+Interface/FriendsFrame/UI-FriendsFrame-HighlightBar-Blue.blp
 """.split()
 
 

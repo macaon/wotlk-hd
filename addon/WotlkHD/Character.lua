@@ -355,8 +355,184 @@ local function update()
     end
 end
 
+-- [[ Titles ]] --
+-- Retail's titles pane (PaperDollTitlesPane) in the stats pane's place: No Title, then the known titles
+-- by name, the current one checked and lit, every other row striped, in retail's row frame, with a
+-- minimal scroll bar. 3.3.5's own title popup (PlayerTitlePickerFrame) is not used.
+local STAT_MIDDLE = "Interface\\AddOns\\WotlkHD\\Art\\char-stat-middle"
+local TITLE_ROWS, TITLE_HEIGHT = 16, 22
+local titlesPane = CreateFrame("Frame", nil, f)
+titlesPane:SetPoint("TOPLEFT", f, "TOPLEFT", 337, -64)
+titlesPane:SetWidth(172)
+titlesPane:SetHeight(354)
+titlesPane:EnableMouseWheel(true)
+titlesPane:Hide()
+
+local titleList, titleOffset, titleButtons = {}, 0, {}
+local scroll -- the scroll bar, below
+local function titleButton(i)
+    local b = CreateFrame("Button", nil, titlesPane)
+    b:SetWidth(169)
+    b:SetHeight(TITLE_HEIGHT)
+    b:SetPoint("TOPLEFT", 2, -4 - (i - 1) * TITLE_HEIGHT)
+    b.top = b:CreateTexture(nil, "BACKGROUND")
+    b.top:SetTexture(PARTS)
+    b.top:SetTexCoord(.00390625, .6640625, .5078125, .578125)
+    b.top:SetWidth(169)
+    b.top:SetHeight(9)
+    b.top:SetPoint("TOPLEFT", 0, 1)
+    b.bottom = b:CreateTexture(nil, "BACKGROUND")
+    b.bottom:SetTexture(PARTS)
+    b.bottom:SetTexCoord(.6640625, .00390625, .578125, .5078125) -- the top piece turned over, as retail's
+    b.bottom:SetWidth(169)
+    b.bottom:SetHeight(9)
+    b.bottom:SetPoint("BOTTOMLEFT", 0, -4)
+    b.middle = b:CreateTexture(nil, "BACKGROUND")
+    b.middle:SetTexture(STAT_MIDDLE)
+    b.middle:SetTexCoord(.00390625, .6640625, 0, 1)
+    b.middle:SetWidth(169)
+    b.stripe = b:CreateTexture(nil, "BORDER")
+    b.stripe:SetPoint("TOPLEFT", 1, 0)
+    b.stripe:SetPoint("BOTTOMRIGHT")
+    b.stripe:SetTexture(.9, .9, 1, .1) -- retail's STRIPE_COLOR at 0.1
+    b.check = b:CreateTexture(nil, "ARTWORK")
+    b.check:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
+    b.check:SetWidth(16)
+    b.check:SetHeight(16)
+    b.check:SetPoint("LEFT", 8, 0)
+    b.bar = b:CreateTexture(nil, "OVERLAY")
+    b.bar:SetTexture("Interface\\FriendsFrame\\UI-FriendsFrame-HighlightBar")
+    b.bar:SetAllPoints()
+    b.bar:SetBlendMode("ADD")
+    b.bar:SetAlpha(.4)
+    b.text = b:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+    b.text:SetJustifyH("LEFT")
+    b.text:SetPoint("LEFT", b.check, "RIGHT", 3, 0)
+    b.text:SetPoint("RIGHT", -3, 0)
+    local lit = b:CreateTexture(nil, "HIGHLIGHT") -- retail's blue bar (not in 3.3.5; ui.py copies it)
+    lit:SetTexture("Interface\\AddOns\\WotlkHD\\Art\\ui-friendsframe-highlightbar-blue")
+    lit:SetAllPoints()
+    lit:SetBlendMode("ADD")
+    b:SetScript("OnClick", function(self)
+        PlaySound("igMainMenuOptionCheckBoxOff")
+        SetCurrentTitle(self.id)
+    end)
+    titleButtons[i] = b
+    return b
+end
+
+local function titlesUpdate()
+    if not titlesPane:IsVisible() then
+        return
+    end
+    wipe(titleList)
+    for i = 1, GetNumTitles() do
+        if IsTitleKnown(i) ~= 0 and IsTitleKnown(i) then
+            titleList[#titleList + 1] = {name = strtrim(GetTitleName(i)), id = i}
+        end
+    end
+    table.sort(titleList, function(a, b) return a.name < b.name end)
+    table.insert(titleList, 1, {name = PLAYER_TITLE_NONE or NONE, id = -1})
+    local current = GetCurrentTitle()
+    if not (current > 0 and IsTitleKnown(current) ~= 0) then
+        current = -1
+    end
+    local max = math.max(#titleList - TITLE_ROWS, 0)
+    titleOffset = math.min(math.max(titleOffset, 0), max)
+    for i = 1, TITLE_ROWS do
+        local b = titleButtons[i] or titleButton(i)
+        local n = titleOffset + i
+        local t = titleList[n]
+        if t then
+            b.id = t.id
+            b.text:SetText(t.name)
+            if t.id == current then
+                b.check:Show()
+                b.bar:Show()
+            else
+                b.check:Hide()
+                b.bar:Hide()
+            end
+            -- retail's frame closes over the first and last titles only
+            b.middle:ClearAllPoints()
+            if n == 1 then
+                b.top:Show()
+                b.middle:SetPoint("TOPLEFT", b.top, "BOTTOMLEFT", 1, 0)
+            else
+                b.top:Hide()
+                b.middle:SetPoint("TOPLEFT", 1, 0)
+            end
+            if n == #titleList then
+                b.bottom:Show()
+                b.middle:SetPoint("BOTTOMLEFT", b.bottom, "TOPLEFT", 1, 0)
+            else
+                b.bottom:Hide()
+                b.middle:SetPoint("BOTTOMLEFT", 1, 0)
+            end
+            if n % 2 == 0 then
+                b.stripe:Show()
+            else
+                b.stripe:Hide()
+            end
+            b:Show()
+        else
+            b:Hide()
+        end
+    end
+    scroll:SetMinMaxValues(0, max)
+    scroll:SetValue(titleOffset)
+    if max > 0 then
+        scroll:Show()
+    else
+        scroll:Hide()
+    end
+end
+
+-- Retail's MinimalScrollBar: a thin track with caps and a thumb, right of the list.
+scroll = CreateFrame("Slider", nil, titlesPane)
+scroll:SetWidth(8)
+scroll:SetPoint("TOPLEFT", titlesPane, "TOPRIGHT", 8, -5)
+scroll:SetPoint("BOTTOMLEFT", titlesPane, "BOTTOMRIGHT", 8, 4)
+scroll:SetOrientation("VERTICAL")
+scroll:SetValueStep(1)
+local trackTop = scroll:CreateTexture(nil, "BACKGROUND")
+trackTop:SetAtlas("minimal-scrollbar-track-top", true)
+trackTop:SetPoint("TOPLEFT")
+local trackBottom = scroll:CreateTexture(nil, "BACKGROUND")
+trackBottom:SetAtlas("minimal-scrollbar-track-bottom", true)
+trackBottom:SetPoint("BOTTOMLEFT")
+local trackMiddle = scroll:CreateTexture(nil, "BACKGROUND")
+trackMiddle:SetAtlas("!minimal-scrollbar-track-middle")
+trackMiddle:SetPoint("TOPLEFT", trackTop, "BOTTOMLEFT")
+trackMiddle:SetPoint("BOTTOMRIGHT", trackBottom, "TOPRIGHT")
+scroll:SetThumbTexture(WotlkHD_Atlas["minimal-scrollbar-thumb-middle"][1])
+local thumb = scroll:GetThumbTexture()
+thumb:SetAtlas("minimal-scrollbar-thumb-middle")
+thumb:SetWidth(8)
+thumb:SetHeight(40)
+scroll:SetScript("OnValueChanged", function(_, v)
+    v = math.floor(v + .5)
+    if v ~= titleOffset then
+        titleOffset = v
+        titlesUpdate()
+    end
+end)
+titlesPane:SetScript("OnMouseWheel", function(_, d)
+    titleOffset = titleOffset - d * 3
+    titlesUpdate()
+end)
+titlesPane:SetScript("OnShow", titlesUpdate)
+local titleEvents = CreateFrame("Frame", nil, titlesPane)
+titleEvents:RegisterEvent("KNOWN_TITLES_UPDATE")
+titleEvents:RegisterEvent("UNIT_NAME_UPDATE")
+titleEvents:SetScript("OnEvent", function(_, event, unit)
+    if event == "KNOWN_TITLES_UPDATE" or unit == "player" then
+        titlesUpdate()
+    end
+end)
+
 -- [[ Sidebar tabs ]] --
--- Retail's three tabs over the pane: stats, titles (3.3.5's title picker in the pane's place) and the
+-- Retail's three tabs over the pane: stats, titles (the titles pane in its place) and the
 -- equipment manager (its dialog beside the frame), the last only with the Equipment Manager option on.
 local sidebar = CreateFrame("Frame", nil, f)
 sidebar:SetWidth(168)
@@ -429,12 +605,9 @@ local function selectTab(i)
         pane:Hide()
     end
     if i == 2 then
-        PlayerTitleFrame_UpdateTitles()
-        PlayerTitlePickerFrame:ClearAllPoints()
-        PlayerTitlePickerFrame:SetPoint("TOPLEFT", pane, "TOPLEFT", -3, 3)
-        PlayerTitlePickerFrame:Show()
+        titlesPane:Show()
     else
-        PlayerTitlePickerFrame:Hide()
+        titlesPane:Hide()
     end
     if i == 3 then
         GearManagerDialog:ClearAllPoints()
@@ -448,12 +621,6 @@ end
 statsTab:SetScript("OnClick", function() selectTab(1) end)
 titlesTab:SetScript("OnClick", function() selectTab(2) end)
 gearTab:SetScript("OnClick", function() selectTab(selected == 3 and 1 or 3) end)
--- Picking a title closes the picker; back to stats then, as retail stays on its list (ours is a popup).
-PlayerTitlePickerFrame:HookScript("OnHide", function()
-    if selected == 2 and f:IsVisible() then
-        selectTab(1)
-    end
-end)
 GearManagerDialog:HookScript("OnHide", function()
     if selected == 3 and f:IsVisible() then
         selectTab(1)
