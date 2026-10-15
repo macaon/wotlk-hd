@@ -5,7 +5,7 @@
 -- default), and applied at login. Out of combat only, as the client's frames are protected in combat.
 
 local Retail = WotlkHD_Retail
-local GRID_DEFAULT = 40
+local GRID_DEFAULT = 100 -- retail's
 
 -- [[ Systems ]] --
 -- frame: what moves. last: the frame whose bottom right ends the box (party frames). size: a fixed box
@@ -212,6 +212,7 @@ end
 
 local overlays, selected = {}, nil
 local settings -- the selected system's settings dialog, below
+local markDirty -- below: there are changes to save or revert
 
 local function nineSlice(parent, kind)
     local t = {}
@@ -353,6 +354,7 @@ local function overlay(sys)
             a.width, a.height = self.start.width, self.start.height
         end
         saved.frames[sys.key] = a
+        markDirty()
         fit(self)
         settings:Open(self)
     end)
@@ -362,21 +364,35 @@ end
 
 -- [[ Panels ]] --
 
+-- Retail's dark dialog with the gold rim, and its red close button.
 local function dialog(name, w, h)
     local d = CreateFrame("Frame", name, UIParent)
     d:SetWidth(w)
     d:SetHeight(h)
     d:SetFrameStrata("DIALOG")
     d:EnableMouse(true)
-    local bg = d:CreateTexture(nil, "BACKGROUND")
-    bg:SetTexture(0x1f / 255, 0x1e / 255, 0x21 / 255, 0.9)
-    bg:SetPoint("TOPLEFT", 7, -18)
-    bg:SetPoint("BOTTOMRIGHT", -3, 3)
-    d.border = Retail.MetalFrame(d)
-    d.title = d.border:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    d.title:SetPoint("TOP", 0, -5)
+    d:SetBackdrop({bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
+        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 32, edgeSize = 32,
+        insets = {left = 11, right = 12, top = 12, bottom = 11}})
+    d.title = d:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    d.title:SetPoint("TOP", 0, -16)
     d:Hide()
     return d
+end
+
+local function closeButton(parent, onClick)
+    local c = CreateFrame("Button", nil, parent)
+    c:SetWidth(24)
+    c:SetHeight(24)
+    c:SetPoint("TOPRIGHT", -6, -6)
+    for _, t in ipairs({{"SetNormalTexture", "GetNormalTexture", "RedButton-Exit"},
+        {"SetPushedTexture", "GetPushedTexture", "RedButton-exit-pressed"},
+        {"SetHighlightTexture", "GetHighlightTexture", "RedButton-Highlight"}}) do
+        c[t[1]](c, WotlkHD_Atlas[strlower(t[3])][1])
+        c[t[2]](c):SetAtlas(t[3])
+    end
+    c:SetScript("OnClick", onClick)
+    return c
 end
 
 local checkboxes = 0
@@ -391,20 +407,28 @@ local function checkbox(parent, text, x, y, get, set)
     return c
 end
 
+-- A slider; with no text, retail's inline kind: no label, the value on its right.
 local sliders = 0
-local function slider(parent, text, x, y, low, high, step, get, set, format)
+local function slider(parent, text, x, y, low, high, step, get, set, format, width)
     sliders = sliders + 1
     local name = "WotlkHDEditModeSlider" .. sliders
     local s = CreateFrame("Slider", name, parent, "OptionsSliderTemplate")
     s:SetPoint("TOPLEFT", x, y)
-    s:SetWidth(180)
+    s:SetWidth(width or 180)
     s:SetMinMaxValues(low, high)
     s:SetValueStep(step)
     _G[name .. "Low"]:SetText("")
     _G[name .. "High"]:SetText("")
     Retail.SkinSlider(s)
+    local value = _G[name .. "Text"]
+    if not text then
+        value:ClearAllPoints()
+        value:SetPoint("LEFT", s, "RIGHT", 8, 0)
+        value:SetFontObject("GameFontNormalSmall")
+    end
     local function label(v)
-        _G[name .. "Text"]:SetText(text .. ": " .. (format and format(v) or v))
+        v = format and format(v) or v
+        value:SetText(text and text .. ": " .. v or v)
     end
     s:SetScript("OnShow", function(self)
         self.loading = true
@@ -431,24 +455,26 @@ local function button(parent, text, w)
 end
 
 -- The selected system's settings.
-settings = dialog("WotlkHDEditModeSettings", 240, 150)
+settings = dialog("WotlkHDEditModeSettings", 250, 150)
+closeButton(settings, function() settings:Hide() end)
 local percent = function(v) return v .. "%" end
-local scaleSlider = slider(settings, "Frame Size", 30, -46, 50, 200, 5,
+local scaleSlider = slider(settings, "Frame Size", 34, -54, 50, 200, 5,
     function() return math.floor(frameOf(selected.sys):GetScale() * 100 + 0.5) end,
-    function(v) setScale(selected.sys, v / 100); fit(selected) end, percent)
-local raidWidth = slider(settings, "Frame Width", 30, -46, 50, 150, 2,
+    function(v) setScale(selected.sys, v / 100); fit(selected); markDirty() end, percent)
+local raidWidth = slider(settings, "Frame Width", 34, -54, 50, 150, 2,
     function() return WotlkHD_Saved.raidFrameWidth or 72 end,
-    function(v) WotlkHD_RaidFrames.SetSize(v, WotlkHD_Saved.raidFrameHeight or 36) end)
-local raidHeight = slider(settings, "Frame Height", 30, -84, 20, 80, 2,
+    function(v) WotlkHD_RaidFrames.SetSize(v, WotlkHD_Saved.raidFrameHeight or 36); markDirty() end)
+local raidHeight = slider(settings, "Frame Height", 34, -92, 20, 80, 2,
     function() return WotlkHD_Saved.raidFrameHeight or 36 end,
-    function(v) WotlkHD_RaidFrames.SetSize(WotlkHD_Saved.raidFrameWidth or 72, v) end)
-local raidParty = checkbox(settings, "Use Raid-Style Party Frames", 24, -100,
+    function(v) WotlkHD_RaidFrames.SetSize(WotlkHD_Saved.raidFrameWidth or 72, v); markDirty() end)
+local raidParty = checkbox(settings, "Use Raid-Style Party Frames", 24, -116,
     function() return GetCVar("hdRaidStyleParty") == "1" end,
     function(on) SetCVar("hdRaidStyleParty", on and "1" or "0") end)
 local resetButton = button(settings, "Reset To Default Position", 190)
-resetButton:SetPoint("BOTTOM", 0, 16)
+resetButton:SetPoint("BOTTOM", 0, 18)
 resetButton:SetScript("OnClick", function()
     reset(selected.sys)
+    markDirty()
     fit(selected)
     settings:Open(selected)
 end)
@@ -456,8 +482,7 @@ end)
 function settings:Open(o)
     local raid = o.sys.raid
     self.title:SetText(o.sys.label)
-    self:SetHeight(raid and 190 or 130)
-    raidParty:SetPoint("TOPLEFT", 24, -116)
+    self:SetHeight(raid and 200 or 140)
     for _, c in ipairs({raidWidth, raidHeight, raidParty}) do
         c:Hide()
         if raid then
@@ -469,7 +494,7 @@ function settings:Open(o)
         scaleSlider:Show()
     end
     self:ClearAllPoints()
-    if o:GetRight() + 250 < UIParent:GetWidth() then
+    if o:GetRight() + 260 < UIParent:GetWidth() then
         self:SetPoint("TOPLEFT", o, "TOPRIGHT", 8, 0)
     else
         self:SetPoint("TOPRIGHT", o, "TOPLEFT", -8, 0)
@@ -477,12 +502,13 @@ function settings:Open(o)
     self:Show()
 end
 
--- The Edit Mode panel.
-local manager = dialog("WotlkHDEditMode", 300, 170)
+-- The Edit Mode panel, as retail's HUD Edit Mode: grid and snap, which boxes show, Revert and Save.
+local manager = dialog("WotlkHDEditMode", 340, 0)
 manager:SetPoint("TOP", 0, -80)
-manager.title:SetText("Edit Mode")
+manager.title:SetText("HUD Edit Mode")
 tinsert(UISpecialFrames, "WotlkHDEditMode")
-checkbox(manager, "Show Grid", 24, -32, function() return saved.grid end, function(on)
+closeButton(manager, function() manager:Hide() end)
+checkbox(manager, "Show Grid", 20, -38, function() return saved.grid end, function(on)
     saved.grid = on
     if on then
         grid:Show()
@@ -490,35 +516,47 @@ checkbox(manager, "Show Grid", 24, -32, function() return saved.grid end, functi
         grid:Hide()
     end
 end)
-slider(manager, "Grid Spacing", 60, -72, 20, 200, 10, function() return saved.spacing end, function(v)
+slider(manager, nil, 130, -44, 20, 200, 10, function() return saved.spacing end, function(v)
     saved.spacing = v
     drawGrid()
-end)
-checkbox(manager, "Enable Snap", 24, -96, function() return saved.snap end, function(on) saved.snap = on end)
+end, nil, 150)
+checkbox(manager, "Snap to Elements", 20, -64, function() return saved.snap end, function(on) saved.snap = on end)
 
-local snapshot -- saved.frames and the raid frame size when Edit Mode opened, for Revert
+-- Which boxes show: two columns of the systems.
+local list = CreateFrame("Frame", nil, manager)
+list:SetPoint("TOPLEFT", 18, -94)
+list:SetPoint("RIGHT", -18, 0)
+list:SetHeight(math.ceil(#SYSTEMS / 2) * 24 + 10)
+list:SetBackdrop({edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 12})
+list:SetBackdropBorderColor(0.6, 0.6, 0.6)
+for i, sys in ipairs(SYSTEMS) do
+    checkbox(list, sys.label, i % 2 == 1 and 6 or 154, -5 - math.floor((i - 1) / 2) * 24,
+        function() return not saved.hidden[sys.key] end,
+        function(on)
+            saved.hidden[sys.key] = not on or nil
+            local o = overlays[sys.key]
+            if o and on then
+                o:Show()
+            elseif o then
+                o:Hide()
+            end
+        end)
+end
+manager:SetHeight(94 + list:GetHeight() + 50)
 
-local revert = button(manager, "Revert Changes")
-revert:SetPoint("BOTTOMLEFT", 16, 16)
-revert:SetScript("OnClick", function()
-    for _, sys in ipairs(SYSTEMS) do
-        if frameOf(sys) and saved.frames[sys.key] ~= snapshot.frames[sys.key] then
-            reset(sys)
-        end
-    end
-    saved.frames = snapshot.frames
-    WotlkHD_RaidFrames.SetSize(snapshot.raidWidth, snapshot.raidHeight)
-    applySaved()
-    for _, o in pairs(overlays) do
-        fit(o)
-    end
-    settings:Hide()
-end)
-local save = button(manager, SAVE or "Save")
-save:SetPoint("BOTTOMRIGHT", -16, 16)
-save:SetScript("OnClick", function() manager:Hide() end)
+local snapshot -- saved.frames and the raid frame size at the last save, for Revert
+local dirty, leavingForCombat
 
--- [[ Entering and leaving ]] --
+local revert = button(manager, "Revert All Changes", 140)
+revert:SetPoint("BOTTOMLEFT", 18, 18)
+local save = button(manager, SAVE or "Save", 140)
+save:SetPoint("BOTTOMRIGHT", -18, 18)
+
+function markDirty()
+    dirty = true
+    revert:Enable()
+    save:Enable()
+end
 
 local function copy(t)
     local c = {}
@@ -528,13 +566,57 @@ local function copy(t)
     return c
 end
 
+local function commit()
+    snapshot = {frames = copy(saved.frames), raidWidth = WotlkHD_Saved.raidFrameWidth or 72,
+        raidHeight = WotlkHD_Saved.raidFrameHeight or 36}
+    dirty = nil
+    revert:Disable()
+    save:Disable()
+end
+
+local function revertAll()
+    for _, sys in ipairs(SYSTEMS) do
+        if frameOf(sys) and saved.frames[sys.key] ~= snapshot.frames[sys.key] then
+            reset(sys)
+        end
+    end
+    saved.frames = copy(snapshot.frames)
+    WotlkHD_RaidFrames.SetSize(snapshot.raidWidth, snapshot.raidHeight)
+    applySaved()
+    for _, o in pairs(overlays) do
+        fit(o)
+    end
+    settings:Hide()
+    commit()
+end
+revert:SetScript("OnClick", revertAll)
+save:SetScript("OnClick", commit)
+
+StaticPopupDialogs["WOTLKHD_EDITMODE_UNSAVED"] = {
+    text = "You have unsaved changes.",
+    button1 = "Save and Exit",
+    button2 = "Exit",
+    OnAccept = commit,
+    OnCancel = function(_, _, reason)
+        if reason == "clicked" then
+            revertAll()
+        else
+            commit() -- closed some other way (combat): keep what's on screen
+        end
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = false,
+}
+
+-- [[ Entering and leaving ]] --
+
 function WotlkHD_EnterEditMode()
     if InCombatLockdown() then
         UIErrorsFrame:AddMessage(ERR_NOT_IN_COMBAT, 1, 0.1, 0.1)
         return
     end
-    snapshot = {frames = copy(saved.frames), raidWidth = WotlkHD_Saved.raidFrameWidth or 72,
-        raidHeight = WotlkHD_Saved.raidFrameHeight or 36}
+    commit()
     drawGrid()
     if saved.grid then
         grid:Show()
@@ -542,10 +624,15 @@ function WotlkHD_EnterEditMode()
     for _, sys in ipairs(SYSTEMS) do
         if frameOf(sys) then
             overlays[sys.key] = overlays[sys.key] or overlay(sys)
-            fit(overlays[sys.key])
-            overlays[sys.key].selection.Hide()
-            overlays[sys.key].highlight.Show()
-            overlays[sys.key]:Show()
+            local o = overlays[sys.key]
+            fit(o)
+            o.selection.Hide()
+            o.highlight.Show()
+            if saved.hidden[sys.key] then
+                o:Hide()
+            else
+                o:Show()
+            end
         end
     end
     manager:Show()
@@ -558,6 +645,13 @@ manager:SetScript("OnHide", function()
         o:Hide()
     end
     selected = nil
+    if dirty then
+        if InCombatLockdown() or leavingForCombat then
+            commit() -- the frames are locked: keep what's on screen
+        else
+            StaticPopup_Show("WOTLKHD_EDITMODE_UNSAVED")
+        end
+    end
 end)
 
 -- The game menu's Edit Mode button, under Options as on retail.
@@ -578,13 +672,16 @@ events:RegisterEvent("PLAYER_LOGIN")
 events:RegisterEvent("PLAYER_REGEN_DISABLED")
 events:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_REGEN_DISABLED" then
+        leavingForCombat = true
         manager:Hide() -- the frames lock in combat
+        leavingForCombat = nil
         return
     end
     WotlkHD_Saved = WotlkHD_Saved or {}
     WotlkHD_Saved.editMode = WotlkHD_Saved.editMode or {frames = {}, grid = true, snap = true, spacing = GRID_DEFAULT}
     saved = WotlkHD_Saved.editMode
     saved.defaults = saved.defaults or {}
+    saved.hidden = saved.hidden or {}
     for _, sys in ipairs(SYSTEMS) do
         managed[sys.key] = sys.managed and UIPARENT_MANAGED_FRAME_POSITIONS[sys.frame]
     end

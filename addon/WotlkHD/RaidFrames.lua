@@ -1,7 +1,8 @@
 -- wotlk-hd: retail's raid frames (CompactUnitFrame) for raids, and for the party in place of the party
 -- frames with Use Raid-Style Party Frames (cvar hdRaidStyleParty, from dinput8.dll; off as on retail).
+-- Health is green, or class coloured with Display Class Colors (hdRaidClassColors, off as on retail).
 -- A SecureGroupHeader lays out SecureUnitButtons (click to target, right-click for the unit menu, both
--- in combat); we draw retail's look on them: class-coloured health, name and role, dead/offline,
+-- in combat); we draw retail's look on them: health, name and role, dead/offline,
 -- target and aggro highlights, your buffs, debuffs, dispellable debuff types, and out-of-range fade.
 
 local FONT = "Fonts\\FRIZQT__.TTF"
@@ -12,6 +13,7 @@ local DISPEL = {Magic = "raidframe-icon-debuffmagic", Curse = "raidframe-icon-de
     Disease = "raidframe-icon-debuffdisease", Poison = "raidframe-icon-debuffpoison"}
 
 local buttons = {}
+local GREEN = {r = 0, g = 1, b = 0} -- retail's health colour without Display Class Colors
 
 -- Frame size, set in Edit Mode (WotlkHD_Saved.raidFrameWidth/Height; retail's 72x36 by default).
 local function frameSize()
@@ -170,7 +172,7 @@ local function update(f)
         return
     end
     local _, class = UnitClass(unit)
-    local c = RAID_CLASS_COLORS[class] or NORMAL_FONT_COLOR
+    local c = GetCVar("hdRaidClassColors") == "1" and RAID_CLASS_COLORS[class] or GREEN
     local online, dead = UnitIsConnected(unit), UnitIsDeadOrGhost(unit)
     f.health:SetMinMaxValues(0, math.max(UnitHealthMax(unit), 1))
     f.health:SetValue(dead and 0 or UnitHealth(unit))
@@ -348,6 +350,8 @@ end
 hooksecurefunc("SetCVar", function(name)
     if name == "hdRaidStyleParty" then
         applyParty()
+    elseif name == "hdRaidClassColors" then
+        updateAll()
     end
 end)
 applyParty()

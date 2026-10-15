@@ -10,7 +10,8 @@
  * Lock cursor to window (hdLockCursor): while the game window has focus, the cursor stays inside it
  * (ClipCursor, checked by a thread every 100 ms, since focus changes and window moves reset it).
  *
- * Raid-style party frames (hdRaidStyleParty): only saved here; the addon's RaidFrames.lua reads it. */
+ * Raid frame options (hdRaidStyleParty, hdRaidClassColors): only saved here; the addon's RaidFrames.lua
+ * reads them. */
 #include <windows.h>
 
 #include "cvar.h"
@@ -37,6 +38,7 @@ void controls_cvars(void) {
     cv_mouseover_key = CVAR_SAVED("hdMouseoverCastKey", "wotlk-hd: mouseover cast modifier (0 none, 1 alt, 2 ctrl, 3 shift)", "0");
     cv_lock_cursor = CVAR_SAVED("hdLockCursor", "wotlk-hd: keep the cursor inside the game window", "0");
     CVAR_SAVED("hdRaidStyleParty", "wotlk-hd: the WotlkHD addon's raid frames for the party too", "0");
+    CVAR_SAVED("hdRaidClassColors", "wotlk-hd: raid frame health in class colours (else green)", "0");
 }
 
 static int modifier_held(void) {

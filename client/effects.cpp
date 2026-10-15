@@ -79,7 +79,7 @@ static void __cdecl register_cvars(void) {
     cv_ao = CVAR_REGISTER("hdAO", "wotlk-hd: ambient occlusion", 1, "0", nullptr, 1, 0, nullptr, 0);
     cv_haze = CVAR_REGISTER("hdHaze", "wotlk-hd: distance haze", 1, "0", nullptr, 1, 0, nullptr, 0);
     cv_colorblind = CVAR_SAVED("hdColorblind", "wotlk-hd: colorblind filter (0 off, 1 protanopia, 2 deuteranopia, 3 tritanopia)", "0");
-    cv_colorblind_strength = CVAR_SAVED("hdColorblindStrength", "wotlk-hd: colorblind filter strength (0-100)", "100");
+    cv_colorblind_strength = CVAR_SAVED("hdColorblindStrength", "wotlk-hd: colorblind filter strength (0-100)", "50");
     wlog("effects: settings registered (hdSMAA %d, hdSharpen %d, hdSharpness %d, hdSunshafts %d, hdAO %d, hdHaze %d)",
          cv_smaa ? CVAR_INT(cv_smaa) : -1, cv_sharpen ? CVAR_INT(cv_sharpen) : -1,
          cv_sharpness ? CVAR_INT(cv_sharpness) : -1, cv_shafts ? CVAR_INT(cv_shafts) : -1, cv_ao ? CVAR_INT(cv_ao) : -1,

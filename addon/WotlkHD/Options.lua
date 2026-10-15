@@ -61,14 +61,16 @@ local function dropdown(page, cvar, label, choices, anchor, x, y)
     return dd
 end
 
--- [[ Controls: Mouseover Cast ]] --
+-- [[ Combat: Mouseover Cast, with its key on the same row as on retail ]] --
 
-local controls = InterfaceOptionsControlsPanel
-local mouseover = check(controls, "hdMouseoverCast", "Mouseover Cast",
+local combat = InterfaceOptionsCombatPanel
+local mouseover = check(combat, "hdMouseoverCast", "Mouseover Cast",
     "Action bar spells go to the unit under your mouse when they can, instead of your target.",
-    InterfaceOptionsControlsPanelAutoLootKeyDropDown, 13, -16)
-local mouseoverKey = dropdown(controls, "hdMouseoverCastKey", "Mouseover Cast Key",
-    {{"0", NONE_KEY}, {"1", ALT_KEY}, {"2", CTRL_KEY}, {"3", SHIFT_KEY}}, mouseover, -13, -24)
+    InterfaceOptionsCombatPanelFocusCastKeyDropDown, 13, -16)
+local mouseoverKey = dropdown(combat, "hdMouseoverCastKey", "",
+    {{"0", NONE_KEY}, {"1", ALT_KEY}, {"2", CTRL_KEY}, {"3", SHIFT_KEY}}, mouseover, 0, 0)
+mouseoverKey:ClearAllPoints()
+mouseoverKey:SetPoint("LEFT", mouseover, "RIGHT", 140, -2)
 BlizzardOptionsPanel_SetupDependentControl(mouseover, mouseoverKey)
 
 -- [[ Mouse: Lock Cursor to Window ]] --
@@ -78,9 +80,11 @@ check(InterfaceOptionsMousePanel, "hdLockCursor", "Lock Cursor to Window",
 
 -- [[ Unit Frames: Raid-Style Party Frames ]] --
 
-check(InterfaceOptionsUnitFramePanel, "hdRaidStyleParty", "Use Raid-Style Party Frames",
+local raidStyle = check(InterfaceOptionsUnitFramePanel, "hdRaidStyleParty", "Use Raid-Style Party Frames",
     "Shows your party in raid frames instead of the party frames.", InterfaceOptionsUnitFramePanelFullSizeFocusFrame,
     0, -8)
+check(InterfaceOptionsUnitFramePanel, "hdRaidClassColors", "Display Class Colors",
+    "Raid frame health bars in class colours instead of green.", raidStyle, 0, -8)
 
 -- [[ Accessibility: Colors ]] --
 
@@ -92,11 +96,17 @@ BlizzardOptionsPanel_OnLoad(colors)
 colors:SetScript("OnShow", BlizzardOptionsPanel_Refresh) -- not one of the client's categories: nothing else refreshes it
 WotlkHD_AccessibilityPages = {colors}
 
-local sub = colors:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-sub:SetPoint("TOPLEFT", 16, -16)
-sub:SetText("A colour filter over the whole screen, for colour vision deficiency.")
-local filter = dropdown(colors, "hdColorblind", "Color Filter",
-    {{"0", NONE}, {"1", "Protanopia"}, {"2", "Deuteranopia"}, {"3", "Tritanopia"}}, sub, -16, -32)
+-- The client's colorblind mode (item quality as text and the like) moves here from Display, as on
+-- retail; Display still owns it for Okay and Defaults.
+local uiMode = InterfaceOptionsDisplayPanelColorblindMode
+InterfaceOptionsDisplayPanelShowItemLevel:SetPoint("TOPLEFT", InterfaceOptionsDisplayPanelPlayAggroSounds,
+    "BOTTOMLEFT", 0, -8)
+uiMode:SetParent(colors)
+uiMode:ClearAllPoints()
+uiMode:SetPoint("TOPLEFT", 16, -16)
+_G[uiMode:GetName() .. "Text"]:SetText("Enable UI Colorblind Mode")
+local filter = dropdown(colors, "hdColorblind", "Colorblind Filter",
+    {{"0", NONE}, {"1", "Protanopia"}, {"2", "Deuteranopia"}, {"3", "Tritanopia"}}, uiMode, -13, -32)
 
 local strength = CreateFrame("Slider", "WotlkHDColorsPanelStrength", colors, "OptionsSliderTemplate")
 strength:SetPoint("TOPLEFT", filter, "BOTTOMLEFT", 20, -24)
