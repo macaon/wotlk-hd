@@ -21,18 +21,23 @@
 Done: Lua functions from the DLL (`client/lua.c`), retail Options window (`addon/WotlkHD`), mouseover
 cast, cursor lock and color filter (`client/controls.c`, `client/effects.cpp`, `Options.lua`),
 nameplates as units and retail nameplates (`client/nameplates.c`, `Nameplates.lua`), retail raid
-frames (`RaidFrames.lua`), Edit Mode (`EditMode.lua`).
+frames (`RaidFrames.lua`), Edit Mode (`EditMode.lua`), retail player/target/focus frames
+(`UnitFrames.lua`, not yet checked in game). Retail settings mapped to 3.3.5:
+[docs/retail-options.md](docs/retail-options.md).
 
 - Mouseover cast covers action bar spells only, not macros or items.
 - The color filter starts with the first world frame (not on the login and character screens).
 
-- Options window: search box, retail dropdown menu lists, retail's single-column page layout,
-  scrollbar art, a retail Key Bindings page.
-- Nameplates: `NAME_PLATE_UNIT_ADDED`/`REMOVED` and unit events for `nameplateN`, a look checked
-  against retail.
-- Unit and player frames, bags, action bars in retail's look.
-- Edit Mode: action bars, named layouts (retail's presets, reset all), chat; raid frames: pets, heal prediction (no 3.3.5
-  API), retail's raid manager panel.
+- Options window: our own retail pages (single-column layout, steppers) in place of the client's
+  panels, then search box, dropdown menu lists, scrollbar art, a Key Bindings page; see
+  docs/retail-options.md.
+- Nameplates: which auras retail shows beside the bar, `NAME_PLATE_UNIT_ADDED`/`REMOVED` and unit
+  events for `nameplateN`.
+- Unit frames: target of target, the target's cast bar, the small focus frame, pet and party
+  frames; then bags and action bars in retail's look.
+- Edit Mode: action bars, named layouts (retail's presets, reset all), chat, more boxes (pet,
+  boss, arena, durability, vehicle seats). Raid frames: pets, power bars, health text, heal
+  prediction (no 3.3.5 API), retail's raid manager panel.
 - Retail textures under 3.3.5's own UI paths in an MPQ (buttons, panels), restyling the whole UI.
 
 ## Client

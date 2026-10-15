@@ -140,6 +140,37 @@ function Retail.ThreeSlice(parent, layer, name, left, right)
     return parts
 end
 
+-- A StatusBar filled with an atlas, as retail's are: the fill is cut from the atlas part (a StatusBar
+-- would stretch its whole texture), and the bar's own texture is cleared.
+local function FillBar(bar)
+    local a, fill = bar.wotlkhdAtlas, bar.wotlkhdFill
+    local lo, hi = bar:GetMinMaxValues()
+    local frac = hi > lo and math.min(math.max((bar:GetValue() - lo) / (hi - lo), 0), 1) or 0
+    if frac == 0 then
+        fill:Hide()
+        return
+    end
+    fill:SetWidth(bar:GetWidth() * frac)
+    fill:SetTexCoord(a[4], a[4] + (a[5] - a[4]) * frac, a[6], a[7])
+    fill:Show()
+end
+
+function Retail.AtlasBar(bar, atlas)
+    if not bar.wotlkhdFill then
+        bar:SetStatusBarTexture("Interface\\AddOns\\WotlkHD\\Art\\clear")
+        local fill = bar:CreateTexture(nil, "ARTWORK")
+        fill:SetPoint("TOPLEFT")
+        fill:SetPoint("BOTTOMLEFT")
+        bar.wotlkhdFill = fill
+        bar:HookScript("OnValueChanged", FillBar)
+        bar:HookScript("OnMinMaxChanged", FillBar)
+        bar:HookScript("OnSizeChanged", FillBar)
+    end
+    bar.wotlkhdAtlas = ATLAS[strlower(atlas)]
+    bar.wotlkhdFill:SetTexture(bar.wotlkhdAtlas[1])
+    FillBar(bar)
+end
+
 -- [[ Skins for the Blizzard option controls ]] --
 
 local function atlasTexture(button, setter, getter, atlas)

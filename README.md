@@ -29,15 +29,19 @@ It's a personal build: it aims to look and play well, not to stay faithful to 3.
 - Retail's Options window, with Game and AddOns tabs, replaces Interface, Video and Sound Options.
   The client's own option pages are hosted in it with retail art for checkboxes, sliders and
   dropdowns. Addon option pages appear there too.
-- Retail nameplates: retail's bar and cast bar art, cast bars with spell name and icon on every
-  casting enemy (stock 3.3.5 shows the target's only), your debuffs with timers, elite and rare
-  icons, and enemy nameplates on by default.
-- Retail raid frames for raids (and parties, with Use Raid-Style Party Frames): class-coloured health,
-  roles, target and aggro highlights, buffs, debuffs, dispellable types and range fade.
+- Retail nameplates: the name inside the bar, retail's cast bar art, cast bars with spell name and
+  icon on every casting enemy (stock 3.3.5 shows the target's only), your debuffs with timers, elite
+  and rare icons, retail's scaling by distance, a 60 yard range (41 in 3.3.5), and enemy nameplates
+  on by default.
+- Retail player, target and focus frames (Dragonflight art and layout, elite and rare dragons).
+- Retail raid frames for raids (and parties, with Use Raid-Style Party Frames): green or class
+  coloured health, roles, target and aggro highlights, buffs, debuffs, dispellable types and range
+  fade.
 - Retail's Edit Mode (game menu): move and resize the unit frames, party and raid frames, cast bar,
   minimap, buffs and quest tracker, with a grid and snapping; positions are kept account-wide.
 - Nameplates as units: `nameplateN` tokens work in every `Unit*` function, as on retail.
-- A Lua API from the DLL for addons (`WotlkHD_Version()`, `WotlkHD_NamePlateUnit(frame)`).
+- A Lua API from the DLL for addons (`WotlkHD_Version()`, `WotlkHD_NamePlateUnit(frame)`,
+  `WotlkHD_UnitDistance(unit)`).
 - Retail's Mouseover Cast (with an optional modifier key), Lock Cursor to Window, and the
   Accessibility color filter (protanopia, deuteranopia, tritanopia) over the whole screen.
 
