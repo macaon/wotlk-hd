@@ -28,7 +28,7 @@ if [ ! -f "$OBJ/done" ]; then
     done | xargs -P"$(nproc)" -I{} sh -c '{}'
     touch "$OBJ/done"
 fi
-"$ZIG" c++ -target x86-windows-gnu -O2 -shared -w -I "$STORMLIB/src" -o dinput8.dll dinput8.c mpq.c faces.c effects.cpp portraits.c npcitems.c dinput8.def \
+"$ZIG" c++ -target x86-windows-gnu -O2 -shared -w -I "$STORMLIB/src" -o dinput8.dll dinput8.c mpq.c faces.c effects.cpp portraits.c npcitems.c lua.c dinput8.def \
     "$OBJ"/*.o -lwininet
 rm -f dinput8.lib dinput8.pdb
 echo "built $(pwd)/dinput8.dll"
