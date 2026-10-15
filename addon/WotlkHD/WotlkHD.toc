@@ -9,3 +9,4 @@ RaidFrames.lua
 WotlkHD.lua
 Options.lua
 Settings.lua
+EditMode.lua

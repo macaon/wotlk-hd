@@ -34,6 +34,8 @@ It's a personal build: it aims to look and play well, not to stay faithful to 3.
   icons, and enemy nameplates on by default.
 - Retail raid frames for raids (and parties, with Use Raid-Style Party Frames): class-coloured health,
   roles, target and aggro highlights, buffs, debuffs, dispellable types and range fade.
+- Retail's Edit Mode (game menu): move and resize the unit frames, party and raid frames, cast bar,
+  minimap, buffs and quest tracker, with a grid and snapping; positions are kept account-wide.
 - Nameplates as units: `nameplateN` tokens work in every `Unit*` function, as on retail.
 - A Lua API from the DLL for addons (`WotlkHD_Version()`, `WotlkHD_NamePlateUnit(frame)`).
 - Retail's Mouseover Cast (with an optional modifier key), Lock Cursor to Window, and the

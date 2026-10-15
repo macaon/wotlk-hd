@@ -59,4 +59,12 @@ WotlkHD_Atlas = {
     ["roleicon-tiny-tank"] = {"Interface\\AddOns\\WotlkHD\\Art\\roleicons", 16, 16, 0.578125, 0.828125, 0.03125, 0.53125, false, false},
     ["roleicon-tiny-healer"] = {"Interface\\AddOns\\WotlkHD\\Art\\roleicons", 16, 16, 0.296875, 0.546875, 0.03125, 0.53125, false, false},
     ["roleicon-tiny-dps"] = {"Interface\\AddOns\\WotlkHD\\Art\\roleicons", 16, 16, 0.015625, 0.265625, 0.03125, 0.53125, false, false},
+    ["editmode-actionbar-highlight-nineslice-corner"] = {"Interface\\AddOns\\WotlkHD\\Art\\editmodeui", 16, 16, 0.03125, 0.53125, 0.285156, 0.347656, false, false},
+    ["_editmode-actionbar-highlight-nineslice-edgetop"] = {"Interface\\AddOns\\WotlkHD\\Art\\editmodeui", 16, 16, 0, 0.5, 0.0742188, 0.136719, true, false},
+    ["!editmode-actionbar-highlight-nineslice-edgeleft"] = {"Interface\\AddOns\\WotlkHD\\Art\\editmodeuivertical", 16, 16, 0.0078125, 0.132812, 0, 1, false, true},
+    ["editmode-actionbar-highlight-nineslice-center"] = {"Interface\\AddOns\\WotlkHD\\Art\\editmodeuihighlightbackground", 16, 16, 0, 1, 0, 1, true, true},
+    ["editmode-actionbar-selected-nineslice-corner"] = {"Interface\\AddOns\\WotlkHD\\Art\\editmodeui", 16, 16, 0.03125, 0.53125, 0.355469, 0.417969, false, false},
+    ["_editmode-actionbar-selected-nineslice-edgetop"] = {"Interface\\AddOns\\WotlkHD\\Art\\editmodeui", 16, 16, 0, 0.5, 0.214844, 0.277344, true, false},
+    ["!editmode-actionbar-selected-nineslice-edgeleft"] = {"Interface\\AddOns\\WotlkHD\\Art\\editmodeuivertical", 16, 16, 0.289062, 0.414062, 0, 1, false, true},
+    ["editmode-actionbar-selected-nineslice-center"] = {"Interface\\AddOns\\WotlkHD\\Art\\editmodeuiselectedbackground", 16, 16, 0, 1, 0, 1, true, true},
 }

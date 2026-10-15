@@ -37,6 +37,10 @@ UI-CastingBar-Background UI-CastingBar-Filling-Standard UI-CastingBar-Filling-Ch
 RaidFrame-Hp-Fill RaidFrame-Hp-Bg RaidFrame-TargetFrame RaidFrame-AgroFrame RaidFrame-DispelHighlight
 RaidFrame-Icon-DebuffMagic RaidFrame-Icon-DebuffCurse RaidFrame-Icon-DebuffDisease RaidFrame-Icon-DebuffPoison
 roleicon-tiny-tank roleicon-tiny-healer roleicon-tiny-dps
+editmode-actionbar-highlight-nineslice-corner _editmode-actionbar-highlight-nineslice-edgetop
+!editmode-actionbar-highlight-nineslice-edgeleft editmode-actionbar-highlight-nineslice-center
+editmode-actionbar-selected-nineslice-corner _editmode-actionbar-selected-nineslice-edgetop
+!editmode-actionbar-selected-nineslice-edgeleft editmode-actionbar-selected-nineslice-center
 """.split()
 
 

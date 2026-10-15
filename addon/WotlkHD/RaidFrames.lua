@@ -5,13 +5,19 @@
 -- target and aggro highlights, your buffs, debuffs, dispellable debuff types, and out-of-range fade.
 
 local FONT = "Fonts\\FRIZQT__.TTF"
-local WIDTH, HEIGHT, AURA = 72, 36, 12
+local AURA = 12
 local MAX_BUFFS, MAX_DEBUFFS, MAX_DISPELS = 3, 3, 3
 local ROLE = {"roleicon-tiny-tank", "roleicon-tiny-healer", "roleicon-tiny-dps"}
 local DISPEL = {Magic = "raidframe-icon-debuffmagic", Curse = "raidframe-icon-debuffcurse",
     Disease = "raidframe-icon-debuffdisease", Poison = "raidframe-icon-debuffpoison"}
 
 local buttons = {}
+
+-- Frame size, set in Edit Mode (WotlkHD_Saved.raidFrameWidth/Height; retail's 72x36 by default).
+local function frameSize()
+    local saved = WotlkHD_Saved or {}
+    return saved.raidFrameWidth or 72, saved.raidFrameHeight or 36
+end
 
 -- [[ Look ]] --
 
@@ -234,8 +240,9 @@ header:SetAttribute("unitsPerColumn", 5)
 header:SetAttribute("maxColumns", 8)
 header:SetAttribute("columnAnchorPoint", "LEFT")
 header.initialConfigFunction = function(f)
-    f:SetAttribute("initial-width", WIDTH)
-    f:SetAttribute("initial-height", HEIGHT)
+    local w, h = frameSize()
+    f:SetAttribute("initial-width", w)
+    f:SetAttribute("initial-height", h)
     f:SetAttribute("*type1", "target")
     f:SetAttribute("*type2", "menu")
     f.menu = showMenu
@@ -250,6 +257,17 @@ header.initialConfigFunction = function(f)
     tinsert(buttons, f)
 end
 header:Show()
+
+-- For Edit Mode: resize the frames (out of combat) and lay them out again.
+WotlkHD_RaidFrames = {header = header}
+function WotlkHD_RaidFrames.SetSize(w, h)
+    WotlkHD_Saved.raidFrameWidth, WotlkHD_Saved.raidFrameHeight = w, h
+    for _, f in ipairs(buttons) do
+        f:SetWidth(w)
+        f:SetHeight(h)
+    end
+    header:SetAttribute("unitsPerColumn", 5) -- any attribute change makes the header lay out again
+end
 
 -- [[ Events ]] --
 
