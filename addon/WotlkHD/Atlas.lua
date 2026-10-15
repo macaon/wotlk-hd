@@ -117,4 +117,11 @@ WotlkHD_Atlas = {
     ["ui-castingbar-textbox"] = {"Interface\\AddOns\\WotlkHD\\Art\\uicastingbar2x", 209, 28, 0.000976562, 0.410156, 0.00195312, 0.113281, false, false},
     ["ui-castingbar-shield"] = {"Interface\\AddOns\\WotlkHD\\Art\\uicastingbar2x", 37, 44, 0.000976562, 0.0742188, 0.796875, 0.970703, false, false},
     ["ui-castingbar-interrupted"] = {"Interface\\AddOns\\WotlkHD\\Art\\uicastingbar2x", 209, 11, 0.000976562, 0.40918, 0.65625, 0.699219, false, false},
+    ["ui-frame-portraitmetal-cornertopleft"] = {"Interface\\AddOns\\WotlkHD\\Art\\uiframemetal2x", 75, 75, 0.00195312, 0.294922, 0.298828, 0.591797, false, false},
+    ["bags-item-slot64"] = {"Interface\\AddOns\\WotlkHD\\Art\\bagsitemslot2x", 32, 32, 0, 1, 0, 1, true, true},
+    ["common-search-border-left"] = {"Interface\\AddOns\\WotlkHD\\Art\\commonsearch", 16, 40, 0.886719, 0.949219, 0.335938, 0.648438, false, false},
+    ["common-search-border-middle"] = {"Interface\\AddOns\\WotlkHD\\Art\\commonsearch", 224, 40, 0.00390625, 0.878906, 0.335938, 0.648438, false, false},
+    ["common-search-border-right"] = {"Interface\\AddOns\\WotlkHD\\Art\\commonsearch", 16, 40, 0.00390625, 0.0664062, 0.664062, 0.976562, false, false},
+    ["common-search-magnifyingglass"] = {"Interface\\AddOns\\WotlkHD\\Art\\commonsearch", 24, 24, 0.0742188, 0.167969, 0.664062, 0.851562, false, false},
+    ["common-search-clearbutton"] = {"Interface\\AddOns\\WotlkHD\\Art\\commonsearch", 20, 20, 0.175781, 0.253906, 0.664062, 0.820312, false, false},
 }

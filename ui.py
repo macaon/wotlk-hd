@@ -65,6 +65,14 @@ UI-HUD-UnitFrame-Party-PortraitOn-Bar-Rage UI-HUD-UnitFrame-Party-PortraitOn-Bar
 UI-HUD-UnitFrame-Party-PortraitOn-Bar-Focus UI-HUD-UnitFrame-Party-PortraitOn-Bar-RunicPower
 UI-HUD-UnitFrame-Party-PortraitOn-InCombat UI-HUD-UnitFrame-Party-PortraitOn-Vehicle
 UI-CastingBar-Frame UI-CastingBar-TextBox UI-CastingBar-Shield UI-CastingBar-Interrupted
+UI-Frame-PortraitMetal-CornerTopLeft bags-item-slot64 common-search-border-left common-search-border-middle
+common-search-border-right common-search-magnifyingglass common-search-clearbutton
+""".split()
+
+
+# Whole retail textures (not atlas parts), by path: copied as they are, under their file name.
+FILES = """
+Interface/Common/WhiteIconFrame.blp
 """.split()
 
 
@@ -98,6 +106,9 @@ def main():
         lines.append(f'    ["{name.lower()}"] = {{"{ART}{file}", {w}, {h}, '
                      + ", ".join(f"{c:.6g}" for c in coords) + f", {str(bool(flags & 4)).lower()}, "
                      f"{str(bool(flags & 2)).lower()}}},")
+    for path in FILES:
+        im = blp.decode(fetch.get(fetch.fdid(path)))
+        open(os.path.join(ADDON, "Art", os.path.basename(path).lower()), "wb").write(blp.encode_dxt5(im))
     # A clear texture, for hiding a StatusBar's own fill (retail's bar fills are atlas parts, which the
     # addon draws itself).
     from PIL import Image

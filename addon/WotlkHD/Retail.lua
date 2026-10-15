@@ -80,8 +80,9 @@ function Retail.Tiles(parent, name)
     return holder
 end
 
--- Retail's ButtonFrameTemplateNoPortrait NineSlice: the metal frame around a panel.
-function Retail.MetalFrame(frame)
+-- Retail's ButtonFrameTemplateNoPortrait NineSlice: the metal frame around a panel; with portrait,
+-- PortraitFrameTemplate's, whose top left corner rings a 60x60 portrait (returned second).
+function Retail.MetalFrame(frame, portrait)
     local border = CreateFrame("Frame", nil, frame)
     border:SetAllPoints()
     border:SetFrameLevel(frame:GetFrameLevel() + 10)
@@ -91,9 +92,10 @@ function Retail.MetalFrame(frame)
         t:SetPoint(point, x, y)
         return t
     end
-    local tl = corner("UI-Frame-Metal-CornerTopLeft", "TOPLEFT", -8, 16)
+    local tl = portrait and corner("UI-Frame-PortraitMetal-CornerTopLeft", "TOPLEFT", -13, 16)
+        or corner("UI-Frame-Metal-CornerTopLeft", "TOPLEFT", -8, 16)
     local tr = corner("UI-Frame-Metal-CornerTopRight", "TOPRIGHT", 4, 16)
-    local bl = corner("UI-Frame-Metal-CornerBottomLeft", "BOTTOMLEFT", -8, -3)
+    local bl = corner("UI-Frame-Metal-CornerBottomLeft", "BOTTOMLEFT", portrait and -13 or -8, -3)
     local br = corner("UI-Frame-Metal-CornerBottomRight", "BOTTOMRIGHT", 4, -3)
     local function edge(atlas, a1, r1, p1, a2, r2, p2)
         local e = Retail.Tiles(border, atlas)
@@ -110,6 +112,13 @@ function Retail.MetalFrame(frame)
     edge("_UI-Frame-Metal-EdgeBottom", "BOTTOMLEFT", bl, "BOTTOMRIGHT", "BOTTOMRIGHT", br, "BOTTOMLEFT")
     edge("!UI-Frame-Metal-EdgeLeft", "TOPLEFT", tl, "BOTTOMLEFT", "BOTTOMLEFT", bl, "TOPLEFT")
     edge("!UI-Frame-Metal-EdgeRight", "TOPRIGHT", tr, "BOTTOMRIGHT", "BOTTOMRIGHT", br, "TOPRIGHT")
+    if portrait then
+        local p = border:CreateTexture(nil, "ARTWORK")
+        p:SetWidth(60)
+        p:SetHeight(60)
+        p:SetPoint("TOPLEFT", -5, 7)
+        return border, p
+    end
     return border
 end
 
