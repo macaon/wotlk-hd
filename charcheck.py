@@ -34,7 +34,10 @@ table = chars.table
 
 
 def hd_path(race_dir, sex):
-    return f"character/{race_dir}/{sex}/{race_dir}{sex}_hd"
+    """retail's model path without .m2 (from chars.RACES, else the usual _hd name)."""
+    paths = next((p for _, r, _, p in chars.RACES if r == race_dir), {})
+    s = next((k for k, (lower, _) in chars.SEXES.items() if lower == sex), None)
+    return paths[s][:-3] if s in paths else f"character/{race_dir}/{sex}/{race_dir}{sex}_hd"
 
 
 def old_path(race_dir, sex):

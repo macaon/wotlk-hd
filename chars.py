@@ -25,6 +25,7 @@ through convert.py (their skeletons are .skel files); then:
 """
 import collections
 import csv
+import functools
 import io
 import os
 import struct
@@ -55,6 +56,8 @@ RACES = [
     (7, "gnome", "Gnome", {0: "character/gnome/male/gnomemale_hd.m2", 1: "character/gnome/female/gnomefemale_hd.m2"}),
     (11, "draenei", "Draenei", {0: "character/draenei/male/draeneimale_hd.m2",
                                 1: "character/draenei/female/draeneifemale_hd.m2"}),
+    # NPC-only in 3.3.5; retail's playable goblin (Cataclysm's model) keeps the old file names
+    (9, "goblin", "Goblin", {0: "character/goblin/male/goblinmale.m2", 1: "character/goblin/female/goblinfemale.m2"}),
 ]
 SEXES = {0: ("male", "Male"), 1: ("female", "Female")}
 SEXES_BY_PATH = {upper: sex for sex, (_, upper) in SEXES.items()}
@@ -247,9 +250,26 @@ def draenei_geosets(sid, allowed):
 # styles 3 and 4 close calls against 305 and 303). Never 301: the client shows x01 where a helmet
 # hides facial hair (0x4ef1ec), so style 2 takes its runner-up 305 (0.087 against 301's 0.084).
 GNOME_MUSTACHES = {2: 305, 3: 303, 4: 310, 5: 305, 6: 305, 7: 305}
+def goblin_geosets(sid, allowed):
+    """3.3.5's goblins (NPCs only) have two hair geosets and no facial styles; retail's hair styles
+    (1-22) are kept for CharHairGeosets (goblin_tables), and its per-NPC ears, chin, nose, earrings
+    and nose ring move into the groups CharacterFacialHairStyles switches (GOBLIN_GROUPS), so a
+    facial style is one NPC's combination of them. A helmet that hides facial hair shows x01:
+    the ear stubs (701), the first chin and nose."""
+    if 0 < sid < 100:
+        return sid
+    if sid // 100 in GOBLIN_GROUPS:
+        return GOBLIN_GROUPS[sid // 100] * 100 + sid % 100 if sid % 100 else None
+    return NotImplemented
+
+
+# retail group -> 3.3.5 facial group: ears, chin, nose, nose ring, earrings
+GOBLIN_GROUPS = {7: 1, 40: 2, 41: 3, 16: 16, 35: 17}
+# options and their retail group, in CharacterFacialHairStyles column order (1xx, 3xx, 2xx, 16xx, 17xx)
+GOBLIN_OPTIONS = (("Ears", 7), ("Nose", 41), ("Chin", 40), ("Nose Ring", 16), ("Earrings", 35))
 RACE_GEOSETS = {6: tauren_geosets, 2: orc_geosets, 5: undead_geosets, 8: troll_geosets, 1: human_geosets,
                 3: dwarf_geosets, 4: nightelf_geosets, 7: gnome_geosets,
-                11: draenei_geosets}
+                11: draenei_geosets, 9: goblin_geosets}
 # Horn Color choices (ChrCustomizationElement -> Material -> TextureFileData), by 3.3.5 hair colour
 HORN_TEXTURES = {0: ["01", "02", "03", "01", "07", "07", "07"], 1: ["01", "02", "03", "04", "10", "10", "10", "10"]}
 
@@ -403,8 +423,10 @@ def face_textures(hd_path):
                      if opts.get(c["ChrCustomizationOptionID"]) == name), key=lambda c: int(c["OrderIndex"]))
         order[name] = {c["ID"]: i for i, c in enumerate(cs)}
     targets = {r["ID"]: r["ChrModelTextureTargetID"] for r in table("ChrCustomizationMaterial")}
+    # per Skin Color only: female goblins also have brows per face and Hair Color (target 4)
     elements = [e for e in table("ChrCustomizationElement") if e["ChrCustomizationChoiceID"] in order["Face"]
-                and e["ChrCustomizationMaterialID"] in targets]
+                and e["ChrCustomizationMaterialID"] in targets
+                and e["RelatedChrCustomizationChoiceID"] in order["Skin Color"]]
     if not elements:
         return {}
     face_target = collections.Counter(targets[e["ChrCustomizationMaterialID"]] for e in elements).most_common(1)[0][0]
@@ -421,7 +443,62 @@ def face_textures(hd_path):
     return out
 
 
-def char_sections(cs, race, race_dir, sex, files, report):
+def paired_textures(hd_path, option, related, target):
+    """{(choice, related choice): file id} of the texture an option's choice sets on a texture target
+    per choice of another option (female goblin hair styles: a hairline per Hair Color, target 11),
+    as positions in each option's choice order."""
+    cm = chr_model(hd_path)
+    opts = {o["ID"]: o["Name_lang"] for o in table("ChrCustomizationOption") if o["ChrModelID"] == cm}
+    order = {}
+    for name in (option, related):
+        cs = sorted((c for c in table("ChrCustomizationChoice") if opts.get(c["ChrCustomizationOptionID"]) == name),
+                    key=lambda c: int(c["OrderIndex"]))
+        order[name] = {c["ID"]: i for i, c in enumerate(cs)}
+    mat = {r["ID"]: r["MaterialResourcesID"] for r in table("ChrCustomizationMaterial")
+           if r["ChrModelTextureTargetID"] == str(target)}
+    files = {}
+    for r in table("TextureFileData"):
+        files.setdefault(r["MaterialResourcesID"], int(r["FileDataID"]))
+    return {(order[option][e["ChrCustomizationChoiceID"]], order[related][e["RelatedChrCustomizationChoiceID"]]):
+            files[mat[e["ChrCustomizationMaterialID"]]] for e in table("ChrCustomizationElement")
+            if e["ChrCustomizationChoiceID"] in order[option] and e["RelatedChrCustomizationChoiceID"] in order[related]
+            and e["ChrCustomizationMaterialID"] in mat and mat[e["ChrCustomizationMaterialID"]] in files}
+
+
+def choice_geosets(hd_path, option):
+    """Geoset ids (type x 100 + id) each choice of a retail option shows, in choice order."""
+    cm = chr_model(hd_path)
+    opt = next(o["ID"] for o in table("ChrCustomizationOption") if o["ChrModelID"] == cm and o["Name_lang"] == option)
+    geo = {r["ID"]: int(r["GeosetType"]) * 100 + int(r["GeosetID"]) for r in table("ChrCustomizationGeoset")}
+    ids = collections.defaultdict(list)
+    for e in table("ChrCustomizationElement"):
+        if e["ChrCustomizationGeosetID"] != "0":
+            ids[e["ChrCustomizationChoiceID"]].append(geo[e["ChrCustomizationGeosetID"]])
+    choices = sorted((c for c in table("ChrCustomizationChoice") if c["ChrCustomizationOptionID"] == opt),
+                     key=lambda c: int(c["OrderIndex"]))
+    return [sorted(ids[c["ID"]]) for c in choices]
+
+
+@functools.cache
+def retail_looks():
+    """{retail CreatureDisplayInfoExtra id: {(option name, ChrModel id): choice index}}: the NPC
+    looks (CreatureDisplayInfoOption) as positions in each option's choice order."""
+    names = {o["ID"]: (o["Name_lang"], o["ChrModelID"]) for o in table("ChrCustomizationOption")}
+    order = collections.defaultdict(list)
+    for c in table("ChrCustomizationChoice"):
+        order[c["ChrCustomizationOptionID"]].append(c)
+    index = {}
+    for opt, cs in order.items():
+        for i, c in enumerate(sorted(cs, key=lambda c: int(c["OrderIndex"]))):
+            index[c["ID"]] = i
+    out = collections.defaultdict(dict)
+    for r in table("CreatureDisplayInfoOption"):
+        if r["ChrCustomizationChoiceID"] in index and r["ChrCustomizationOptionID"] in names:
+            out[r["CreatureDisplayInfoExtraID"]][names[r["ChrCustomizationOptionID"]]] = index[r["ChrCustomizationChoiceID"]]
+    return out
+
+
+def char_sections(cs, race, race_dir, sex, hd_path, files, report):
     """Point a race and sex's CharSections rows at retail's HD textures (by color and variation)."""
     lower, _ = SEXES[sex]
     prefix = f"character/{race_dir}/{lower}/{race_dir}{lower}"
@@ -474,12 +551,29 @@ def char_sections(cs, race, race_dir, sex, files, report):
                 return blp.encode(im.convert("RGBA").resize(COMPOSITE).crop(THROAT_BOX))
             files[path] = encode
         return path
-    hair = choice_textures(f"{prefix}_hd.m2", "Hair Color", 10)
-    skin_fids = choice_textures(f"{prefix}_hd.m2", "Skin Color", 1)
-    extra_fids = choice_textures(f"{prefix}_hd.m2", "Skin Color", 2)  # tauren fur, draenei male horns
-    faces = face_textures(f"{prefix}_hd.m2")
+    hair = choice_textures(hd_path, "Hair Color", 10)
+    skin_fids = choice_textures(hd_path, "Skin Color", 1)
+    extra_fids = choice_textures(hd_path, "Skin Color", 2)  # tauren fur, draenei male horns
+    faces = face_textures(hd_path)
     # Skin Color's underwear: target 13 pelvis, 14 torso
-    underwear = [choice_textures(f"{prefix}_hd.m2", "Skin Color", t) for t in (13, 14)]
+    underwear = [choice_textures(hd_path, "Skin Color", t) for t in (13, 14)]
+    if race in NPC_RACES:  # 3.3.5 has a few NPC skins only: a row for every retail choice instead
+        cs.rows[:] = [r for r in cs.rows if (r[CS_RACE], r[CS_SEX]) != (race, sex)]
+        rows = [(SKIN, 0, c, [f and hd(fetch.name(f)), e and hd(fetch.name(e), composited=False), ""])
+                for c, (f, e) in enumerate(zip(skin_fids, extra_fids + [None] * len(skin_fids)))]
+        rows += [(FACE, v, c, ["", hd(fetch.name(f)), ""]) for (v, c), f in sorted(faces.items())]
+        hairline = paired_textures(hd_path, "Hair Style", "Hair Color", HAIRLINE_TARGET)  # the scalp upper slot
+        rows += [(HAIR, v, c, [hd(fetch.name(f), composited=False), "",
+                               hd(fetch.name(hairline[v, c])) if (v, c) in hairline else ""])
+                 for v in range(len(choice_geosets(hd_path, "Hair Style"))) for c, f in enumerate(hair) if f]
+        rows += [(UNDERWEAR, 0, c, [f and hd(fetch.name(f)), g and hd(fetch.name(g)), ""])
+                 for c, (f, g) in enumerate(zip(*underwear)) if f or g]
+        next_id = max(r[0] for r in cs.rows) + 1
+        for i, (section, variation, color, tex) in enumerate(rows):
+            cs.rows.append([next_id + i, race, sex, section] + [cs.add_string(t) if t else 0 for t in tex]
+                           + [NPC_SECTION_FLAGS, variation, color])
+        report.append(f"CharSections race {race} sex {sex}: {len(rows)} rows from retail's choices")
+        return
     changed = collections.Counter()
     for r in cs.rows:
         if r[CS_RACE] != race or r[CS_SEX] != sex:
@@ -523,10 +617,9 @@ def char_sections(cs, race, race_dir, sex, files, report):
     report.append(f"CharSections race {race} sex {sex}: {dict(changed)}")
 
 
-def hair_fallbacks(race, sex, dropped, report):
+def hair_fallbacks(table, race, sex, dropped, report):
     """CharHairGeosets with styles whose geoset was left out pointed at the nearest kept one, so a
     character with such a style gets a similar one rather than none."""
-    table = build.Dbc(Client().read("DBFilesClient\\CharHairGeosets.dbc"))
     kept = sorted({r[4] for r in table.rows if r[1] == race and r[2] == sex} - dropped)
     moved = 0
     for r in table.rows:
@@ -534,7 +627,6 @@ def hair_fallbacks(race, sex, dropped, report):
             r[4] = min(kept, key=lambda g: abs(g - r[4]))
             moved += 1
     report.append(f"CharHairGeosets race {race} sex {sex}: {moved} styles moved to a kept one")
-    return table
 
 
 def safe_for_other_races(cs, converted, files, report):
@@ -681,6 +773,52 @@ def glue_lighting():
                                    f"{old}\trace = STAGE_LIGHTING[race] or race;\r\n").encode("latin1")}
 
 
+# races 3.3.5 has as NPCs only: CharSections, CharHairGeosets and facial styles come from retail's
+# choices, and each NPC look (CreatureDisplayInfoExtra) takes its retail look, by id
+NPC_RACES = {9}
+NPC_SECTION_FLAGS = 8  # as 3.3.5's own goblin skins
+HAIRLINE_TARGET = 11  # retail texture target drawn on the face after it (female goblin hair styles)
+CDX_FACIAL = 7
+
+
+def npc_race_tables(hair_geosets, facial, cdx, retail_of, report):
+    """For NPC_RACES: CharHairGeosets rows in retail's Hair Style order, CDX looks from retail (skin,
+    face, hair style and colour as choice positions), and one CharacterFacialHairStyles row per
+    combination of the GOBLIN_OPTIONS geosets the NPCs use (the CDX facial hair field). retail_of:
+    the retail look of rows npc_looks added; the others are retail's by id."""
+    for race, _, _, models in RACES:
+        if race not in NPC_RACES:
+            continue
+        hair_geosets.rows[:] = [r for r in hair_geosets.rows if r[1] != race]
+        facial.rows[:] = [r for r in facial.rows if r[0] != race]
+        next_id = max(r[0] for r in hair_geosets.rows) + 1
+        for sex, hd_path in models.items():
+            cm = chr_model(hd_path)
+            hairline = {v for v, _ in paired_textures(hd_path, "Hair Style", "Hair Color", HAIRLINE_TARGET)}
+            for v, ids in enumerate(choice_geosets(hd_path, "Hair Style")):
+                hair = [i for i in ids if i < 100]  # show scalp: bald, or a hairline in the scalp slot
+                hair_geosets.rows.append([next_id, race, sex, v, hair[0] if hair else 0, int(not hair or v in hairline)])
+                next_id += 1
+            options = {name: [[g for g in ids if g // 100 == group] for ids in choice_geosets(hd_path, name)]
+                       for name, group in GOBLIN_OPTIONS}
+            styles, missing = {}, 0
+            for r in cdx.rows:
+                if r[1] != race or r[2] != sex:
+                    continue
+                look = retail_looks().get(str(retail_of.get(r[0], r[0])))
+                if not look:
+                    missing += 1
+                    continue
+                r[CDX_LOOKS:CDX_LOOKS + 4] = [look.get((n, cm), 0) for n in LOOK_OPTIONS[:4]]
+                combo = tuple(tuple(options[n][look.get((n, cm), 0)]) for n, _ in GOBLIN_OPTIONS)
+                if combo not in styles:
+                    styles[combo] = len(styles)
+                    facial.rows.append([race, sex, styles[combo]] + [g[0] % 100 if g else 0 for g in combo])
+                r[CDX_FACIAL] = styles[combo]
+            report.append(f"race {race} sex {sex}: NPC looks from retail, {len(styles)} facial styles"
+                          + (f", {missing} looks retail lacks kept" if missing else ""))
+
+
 def unbaked_npcs(table, report):
     """CreatureDisplayInfoExtra without the baked texture (its last field) for the HD races: those are
     256x256 in 3.3.5's layout; without one the client composites the NPC like a player (retail
@@ -697,7 +835,7 @@ def unbaked_npcs(table, report):
 # 3.3.5 creature display -> the retail display that creature uses now, where retail moved it from
 # a creature model of its own onto an HD character model with an NPC look and armour (the
 # Ghostlands Guardian: display 15511, BloodElfMale_Guard.mdx, is display 89418 in retail).
-NPC_LOOKS = {15511: 89418}
+NPC_LOOKS = {15511: 89418, 1233: 37716}  # 1233: Bragok and the other goblin flight masters
 # Their weapons: retail sends NPC weapons as server equipment, so no table lists them; the old models
 # had them in the mesh (the Guardian's glaive and shield). 3.3.5 display -> retail ItemDisplayInfo
 # (main hand, off hand, ranged; 0 none). Each becomes an Item.dbc row from NPC_ITEM_BASE (above every
@@ -719,7 +857,7 @@ LOOK_OPTIONS = ("Skin Color", "Face", "Hair Style", "Hair Color", ("Facial Hair"
 IDI_MODEL, IDI_MODEL_TEX, IDI_GEOSETS, IDI_TEX = 1, 3, 7, 15
 OBJECT_FOLDERS = {"head": "Head", "shoulder": "Shoulder", "weapon": "Weapon", "shield": "Shield",
                   "cape": "Cape", "quiver": "Quiver", "ammo": "Ammo"}  # 3.3.5 has no waist models
-RACE_SUFFIX = {1: "Hu", 2: "Or", 3: "Dw", 4: "Ni", 5: "Sc", 6: "Ta", 7: "Gn", 8: "Tr", 10: "Be", 11: "Dr"}
+RACE_SUFFIX = {1: "Hu", 2: "Or", 3: "Dw", 4: "Ni", 5: "Sc", 6: "Ta", 7: "Gn", 8: "Tr", 9: "Go", 10: "Be", 11: "Dr"}
 
 
 def npc_looks(cdx, files, report):
@@ -728,7 +866,7 @@ def npc_looks(cdx, files, report):
     ItemDisplayInfo rows (models converted, texture components re-encoded for the compositor).
     CreatureDisplayInfo starts from build.py's (out/patch-enUS-4.MPQ), which this one overrides."""
     if not NPC_LOOKS:
-        return
+        return {}
     client = Client(chain=[os.path.join(build.OUT, "patch-enUS-4.MPQ")] + mpq.CHAIN)
     cdi = build.Dbc(client.read("DBFilesClient\\CreatureDisplayInfo.dbc"))
     cmd = build.Dbc(client.read("DBFilesClient\\CreatureModelData.dbc"))
@@ -747,7 +885,7 @@ def npc_looks(cdx, files, report):
     for c in table("ChrCustomizationChoice"):
         by_option[c["ChrCustomizationOptionID"]].append(c)
     option_names = {o["ID"]: (o["Name_lang"], o["ChrModelID"]) for o in table("ChrCustomizationOption")}
-    imported = {}
+    imported, retail_of = {}, {}
     next_idi, next_cdx = max(r[0] for r in idi.rows) + 1, max(r[0] for r in cdx.rows) + 1
     for old_id, new_id in NPC_LOOKS.items():
         rd = r_cdi[str(new_id)]
@@ -773,6 +911,7 @@ def npc_looks(cdx, files, report):
                     next_idi += imported[item] is not None
                 row[CDX_ITEMS + slot] = imported[item] or 0
         cdx.rows.append(row)
+        retail_of[next_cdx] = x["ID"]
         old = next(r for r in cdi.rows if r[0] == old_id)
         old[CDI_MODEL_FIELD] = models[f"character\\{old_dir}\\{upper}\\{old_dir}{upper}.mdx".lower()]
         old[CDI_EXTRA_FIELD] = next_cdx
@@ -800,6 +939,7 @@ def npc_looks(cdx, files, report):
     files["DBFilesClient\\Item.dbc"] = item.bytes()
     files["DBFilesClient\\CreatureDisplayInfo.dbc"] = cdi.bytes()
     files["DBFilesClient\\ItemDisplayInfo.dbc"] = idi.bytes()
+    return retail_of
 
 
 CDI_MODEL_FIELD, CDI_EXTRA_FIELD, CDI_TEX_FIELD = 1, 3, 6
@@ -885,7 +1025,8 @@ def race_archive(race_dir):
 def main(selected):
     client = Client()
     cs = build.Dbc(client.read("DBFilesClient\\CharSections.dbc"))
-    files, report, hair_tables, race_files = {}, [], [], {}
+    files, report, race_files = {}, [], {}
+    hair_geosets = build.Dbc(client.read("DBFilesClient\\CharHairGeosets.dbc"))
     for race, race_dir, old_dir, hd_models in RACES:
         rebuild = not selected or race_dir in selected
         if not rebuild and not os.path.exists(race_archive(race_dir)):
@@ -902,19 +1043,19 @@ def main(selected):
                     report.append(f"{old_path}: {type(e).__name__}: {e}")
                     continue
                 own[face_bones_path(race, sex)] = face_bones(race, sex, hd_path, report)
-            char_sections(cs, race, race_dir, sex, own, report)
+            char_sections(cs, race, race_dir, sex, hd_path, own, report)
             if dropped:
-                hair_tables.append(hair_fallbacks(race, sex, dropped, report))
+                hair_fallbacks(hair_geosets, race, sex, dropped, report)
     safe_for_other_races(cs, {(race, sex) for race, _, _, models in RACES for sex in models}, files, report)
     files["DBFilesClient\\CharSections.dbc"] = cs.bytes()
-    if hair_tables:  # ponytail: one race with dropped styles so far; merge tables when there are more
-        files["DBFilesClient\\CharHairGeosets.dbc"] = hair_tables[-1].bytes()
-    files["DBFilesClient\\CharacterFacialHairStyles.dbc"] = facial_styles(report).bytes()
+    facial = facial_styles(report)
     files.update(creation_backdrops(report))
     files.update(glue_lighting())
     cdx = build.Dbc(Client().read("DBFilesClient\\CreatureDisplayInfoExtra.dbc"))
     unbaked_npcs(cdx, report)
-    npc_looks(cdx, files, report)
+    npc_race_tables(hair_geosets, facial, cdx, npc_looks(cdx, files, report), report)
+    files["DBFilesClient\\CharHairGeosets.dbc"] = hair_geosets.bytes()
+    files["DBFilesClient\\CharacterFacialHairStyles.dbc"] = facial.bytes()
     files["DBFilesClient\\CreatureDisplayInfoExtra.dbc"] = cdx.bytes()
     print("\n".join(report))
     print(build.write_patch(6, files))
