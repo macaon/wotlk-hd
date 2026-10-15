@@ -5,8 +5,10 @@
 
 local ATLAS = WotlkHD_Atlas
 local FONT = "Fonts\\FRIZQT__.TTF"
-local WIDTH, HEIGHT, CAST_HEIGHT = 110, 10, 10
-local MAX_AURAS, AURA_WIDTH, AURA_HEIGHT = 6, 20, 14
+local WIDTH, HEIGHT, CAST_HEIGHT = 100, 10, 9
+-- Retail's distance scaling (nameplateMaxScale/MinScale and their distances, nameplateSelectedScale).
+local NEAR, FAR, NEAR_SCALE, FAR_SCALE, TARGET_SCALE = 10, 40, 1, 0.8, 1.2
+local MAX_AURAS, AURA_SIZE = 6, 14
 local CLASSIFICATION = {
     elite = "nameplates-icon-elite-gold",
     worldboss = "nameplates-icon-elite-gold",
@@ -57,8 +59,8 @@ local function layout(p)
     health:SetPoint("CENTER", p.plate, "CENTER", 0, -2)
     health:SetWidth(WIDTH)
     health:SetHeight(HEIGHT)
-    p.name:ClearAllPoints()
-    p.name:SetPoint("BOTTOM", health, "TOP", 0, 3)
+    p.name:ClearAllPoints() -- off screen: our label, inside the bar, shows its text
+    p.name:SetPoint("TOPRIGHT", WorldFrame, "TOPLEFT", -1000, 0)
     p.raid:ClearAllPoints()
     p.raid:SetPoint("LEFT", health, "RIGHT", 4, 0)
     p.raid:SetWidth(20)
@@ -110,7 +112,7 @@ local function castCheck(p, unit)
 end
 
 local function castBar(p)
-    local c = CreateFrame("Frame", nil, p.plate)
+    local c = CreateFrame("Frame", nil, p.body)
     c:SetPoint("TOPLEFT", p.health, "BOTTOMLEFT", 0, -2)
     c:SetPoint("TOPRIGHT", p.health, "BOTTOMRIGHT", 0, -2)
     c:SetHeight(CAST_HEIGHT)
@@ -143,18 +145,19 @@ local function castBar(p)
 end
 
 -- [[ Auras ]] --
--- Your debuffs on the unit, as retail shows them: a row above the name.
+-- Your debuffs on the unit, as retail shows them: square icons in a row above the bar's left end, each
+-- with its time left.
 
 local function auraIcon(p, i)
     local a = p.auras[i]
     if a then
         return a
     end
-    a = CreateFrame("Frame", nil, p.plate)
-    a:SetWidth(AURA_WIDTH)
-    a:SetHeight(AURA_HEIGHT)
+    a = CreateFrame("Frame", nil, p.body)
+    a:SetWidth(AURA_SIZE)
+    a:SetHeight(AURA_SIZE)
     if i == 1 then
-        a:SetPoint("BOTTOMLEFT", p.health, "TOPLEFT", 0, 16)
+        a:SetPoint("BOTTOMLEFT", p.health, "TOPLEFT", 0, 4)
     else
         a:SetPoint("LEFT", p.auras[i - 1], "RIGHT", 4, 0)
     end
@@ -164,13 +167,16 @@ local function auraIcon(p, i)
     edge:SetTexture(0, 0, 0)
     a.icon = a:CreateTexture(nil, "ARTWORK")
     a.icon:SetAllPoints()
-    a.icon:SetTexCoord(0.05, 0.95, 0.185, 0.815) -- the icon's middle, at the frame's 20:14
+    a.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
     a.cooldown = CreateFrame("Cooldown", nil, a, "CooldownFrameTemplate")
     a.cooldown:SetAllPoints()
     a.cooldown:SetReverse(true)
     a.count = a:CreateFontString(nil, "OVERLAY")
     a.count:SetFont(FONT, 8, "OUTLINE")
     a.count:SetPoint("BOTTOMRIGHT", 2, -1)
+    a.timer = a:CreateFontString(nil, "OVERLAY")
+    a.timer:SetFont(FONT, 8, "OUTLINE")
+    a.timer:SetPoint("CENTER", 0, 1)
     p.auras[i] = a
     return a
 end
@@ -186,6 +192,8 @@ local function auraCheck(p, unit)
         local a = auraIcon(p, n)
         a.icon:SetTexture(icon)
         a.count:SetText(count > 1 and count or "")
+        local left = expires > 0 and expires - GetTime() or 0
+        a.timer:SetText(left <= 0 and "" or left >= 60 and math.ceil(left / 60) .. "m" or math.ceil(left))
         if a.expires ~= expires then
             a.expires = expires
             if duration > 0 then
@@ -206,6 +214,10 @@ end
 local function setup(plate)
     local health, cast = plate:GetChildren()
     local p = {plate = plate, health = health, cast = cast, auras = {}}
+    -- Everything we show hangs off one frame, scaled by distance; the client's frame keeps its size.
+    p.body = CreateFrame("Frame", nil, plate)
+    p.body:SetAllPoints()
+    health:SetParent(p.body)
     for _, r in ipairs({plate:GetRegions()}) do
         if r:GetObjectType() == "FontString" then
             if p.name then
@@ -230,8 +242,6 @@ local function setup(plate)
     end
     p.level:ClearAllPoints() -- off screen, as its colour resets alpha too
     p.level:SetPoint("TOPRIGHT", WorldFrame, "TOPLEFT", -1000, 0)
-    p.name:SetFont(FONT, 10)
-    p.name:SetShadowOffset(1, -1)
     cast:SetAlpha(0)
 
     health:SetStatusBarTexture(ATLAS["nameplates-bar-fill"][1])
@@ -242,9 +252,20 @@ local function setup(plate)
     local bg = health:CreateTexture(nil, "BORDER")
     bg:SetAllPoints()
     bg:SetTexture(0.1, 0.1, 0.1, 0.85)
+    local over = CreateFrame("Frame", nil, health) -- above the bar's fill
+    over:SetAllPoints()
+    over:SetFrameLevel(health:GetFrameLevel() + 2)
+    p.label = over:CreateFontString(nil, "OVERLAY")
+    p.label:SetFont(FONT, 7)
+    p.label:SetTextColor(1, 1, 1)
+    p.label:SetShadowOffset(1, -1)
+    p.label:SetJustifyH("LEFT")
+    p.label:SetPoint("LEFT", 3, 0)
+    p.label:SetPoint("RIGHT", -3, 0)
+    p.label:SetHeight(HEIGHT)
     p.class = health:CreateTexture(nil, "OVERLAY")
-    p.class:SetWidth(16)
-    p.class:SetHeight(16)
+    p.class:SetWidth(14)
+    p.class:SetHeight(14)
     p.class:SetPoint("RIGHT", health, "LEFT", -1, 0)
 
     castBar(p)
@@ -253,17 +274,31 @@ local function setup(plate)
     plates[plate] = p
 end
 
--- Casts, selection (white border), threat (the client's glow colour), classification and auras.
+-- Size by distance, name, casts, border (thicker and white on the target, the client's threat colour,
+-- else near black), classification and auras.
 local function refresh(p, plate)
     local unit = unitOf(p, plate)
     castCheck(p, unit)
-    if unit and UnitIsUnit(unit, "target") then
+    local target = unit and UnitIsUnit(unit, "target")
+    local d = unit and WotlkHD_UnitDistance and WotlkHD_UnitDistance(unit)
+    local scale = target and TARGET_SCALE or not d and NEAR_SCALE
+        or NEAR_SCALE + (FAR_SCALE - NEAR_SCALE) * math.min(math.max((d - NEAR) / (FAR - NEAR), 0), 1)
+    if p.scale ~= scale then
+        p.scale = scale
+        p.body:SetScale(scale)
+        p.body:SetFrameLevel(plate:GetFrameLevel() + (target and 20 or 1)) -- the target's on top, as on retail
+    end
+    local w = target and 2 or 1 -- the target's border is thicker
+    p.edge:SetPoint("TOPLEFT", -w, w)
+    p.edge:SetPoint("BOTTOMRIGHT", w, -w)
+    if target then
         p.edge:SetVertexColor(1, 1, 1)
     elseif p.threat:IsShown() then
         p.edge:SetVertexColor(p.threat:GetVertexColor())
     else
-        p.edge:SetVertexColor(0, 0, 0)
+        p.edge:SetVertexColor(0.12, 0.12, 0.12)
     end
+    p.label:SetText(p.name:GetText())
     local class = unit and UnitClassification(unit)
     if not class then
         class = (p.elite:IsShown() or p.boss:IsShown()) and "elite"

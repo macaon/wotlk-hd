@@ -22,6 +22,7 @@ typedef int(__cdecl *lua_CFunction)(lua_State *);
 #define lua_rawgeti ((void(__cdecl *)(lua_State *, int, int))0x0084E670)
 #define lua_touserdata ((void *(__cdecl *)(lua_State *, int))0x0084E1C0)
 #define lua_tostring(L, i) lua_tolstring(L, i, 0)
+#define LUA_TSTRING 4
 #define LUA_TTABLE 5
 
 /* A global Lua function, (re)registered on every UI load; call from a *_hooks() at startup. */
