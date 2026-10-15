@@ -141,6 +141,17 @@ def retail_textures(r):
     return tuple(int(r[f"TextureVariationFileDataID_{i}"]) for i in range(3))
 
 
+def shown_geosets(geos):
+    """geoset_map keeping what some display shows: in groups 1-8 (one nibble each in the display's
+    geosets) only the picked variants, other groups whole. Retail models carry every outfit
+    (ogredraenor: 178k indices, its displays draw at most 33k)."""
+    picked = collections.defaultdict(set)
+    for geo in geos:
+        for g in range(1, 9):
+            picked[g].add((geo >> (4 * (g - 1))) & 0xF)
+    return lambda sid: sid if not 1 <= sid // 100 <= 8 or sid % 100 in picked[sid // 100] else None
+
+
 def build(names):
     client = Client()
     cdi = Dbc(client.read("DBFilesClient\\CreatureDisplayInfo.dbc"))
@@ -172,10 +183,50 @@ def build(names):
             files[path] = fetch.get(fid)
             return path
 
+        # Displays of the old model: retail's own textures and scale where it moved the same display
+        # to the new model; otherwise the texture other displays with that old skin got.
+        rows = [r for r in cdi.rows if old_model.get(r[CDI_MODEL]) == old and not r[CDI_EXTRA]
+                and (not only or r[0] in only)]
+        paired, learned = {}, collections.defaultdict(collections.Counter)
+        for r in rows:
+            rr = rdisp.get(r[0])
+            if rr and rmodel.get(int(rr["ModelID"])) == new_fid and any(retail_textures(rr)):
+                paired[r[0]] = rr
+                learned[cdi.string(r[CDI_TEX]).lower()][(retail_textures(rr), rgeosets[r[0]])] += 1
+        fallback = collections.Counter(t for c in learned.values() for t in c.elements())
+        unmapped = kept = 0
+        uses_display_textures = any(11 <= t <= 13 for t, _, _ in M2(fetch.get(new_fid)).textures())
+        chosen = {}
+        for r in rows:
+            rr = paired.get(r[0])
+            old_tex = cdi.string(r[CDI_TEX]).lower()
+            if rr:
+                tex, geo = retail_textures(rr), rgeosets[r[0]]
+            elif manual:
+                look = manual.get(old_tex) or collections.Counter(
+                    v for v in manual.values() if v != KEEP).most_common(1)[0][0]
+                if look == KEEP:
+                    kept += 1
+                    continue
+                if isinstance(look, int):
+                    tex, geo = retail_textures(rdisp[look]), rgeosets[look]
+                else:
+                    tex, geo = (fetch.fdid(look), 0, 0), 0
+            elif learned.get(old_tex):
+                tex, geo = learned[old_tex].most_common(1)[0][0]
+            elif fallback:
+                (tex, geo), unmapped = fallback.most_common(1)[0][0], unmapped + 1
+            elif not uses_display_textures:
+                tex, geo = (0, 0, 0), 0
+            else:
+                report.append(f"{name}: display {r[0]} has no texture mapping")
+                continue
+            chosen[r[0]] = tex, geo
         try:
             m2, skins, anims, warnings = convert.convert_model_fitting(
-                fetch.get(new_fid), base.rsplit("\\", 1)[1], texture_name, fetch.get)
-            convert.check(m2, skins)
+                fetch.get(new_fid), base.rsplit("\\", 1)[1], texture_name, fetch.get,
+                geoset_map=shown_geosets(g for _, g in chosen.values()))
+            convert.check(m2, skins, allow_level=True)
         except convert.ConvertError as e:
             report.append(f"{name}: refused: {e}")
             continue
@@ -207,44 +258,12 @@ def build(names):
         for (aid, sub), data in anims.items():
             files[f"{base}{aid:04d}-{sub:02d}.anim"] = data
 
-        # Displays of the old model: retail's own textures and scale where it moved the same display
-        # to the new model; otherwise the texture other displays with that old skin got.
-        rows = [r for r in cdi.rows if old_model.get(r[CDI_MODEL]) == old and not r[CDI_EXTRA]
-                and (not only or r[0] in only)]
-        paired, learned = {}, collections.defaultdict(collections.Counter)
         for r in rows:
-            rr = rdisp.get(r[0])
-            if rr and rmodel.get(int(rr["ModelID"])) == new_fid and any(retail_textures(rr)):
-                paired[r[0]] = rr
-                learned[cdi.string(r[CDI_TEX]).lower()][(retail_textures(rr), rgeosets[r[0]])] += 1
-        fallback = collections.Counter(t for c in learned.values() for t in c.elements())
-        unmapped = kept = 0
-        uses_display_textures = any(11 <= t <= 13 for t, _, _ in M2(m2).textures())
-        for r in rows:
-            rr = paired.get(r[0])
-            old_tex = cdi.string(r[CDI_TEX]).lower()
-            if rr:
-                tex, geo = retail_textures(rr), rgeosets[r[0]]
-                r[CDI_SCALE] = u32(float(rr["CreatureModelScale"]))
-            elif manual:
-                look = manual.get(old_tex) or collections.Counter(
-                    v for v in manual.values() if v != KEEP).most_common(1)[0][0]
-                if look == KEEP:
-                    kept += 1
-                    continue
-                if isinstance(look, int):
-                    tex, geo = retail_textures(rdisp[look]), rgeosets[look]
-                else:
-                    tex, geo = (fetch.fdid(look), 0, 0), 0
-            elif learned.get(old_tex):
-                tex, geo = learned[old_tex].most_common(1)[0][0]
-            elif fallback:
-                (tex, geo), unmapped = fallback.most_common(1)[0][0], unmapped + 1
-            elif not uses_display_textures:
-                tex, geo = (0, 0, 0), 0
-            else:
-                report.append(f"{name}: display {r[0]} has no texture mapping")
+            if r[0] not in chosen:
                 continue
+            tex, geo = chosen[r[0]]
+            if r[0] in paired:
+                r[CDI_SCALE] = u32(float(paired[r[0]]["CreatureModelScale"]))
             for i, fid in enumerate(tex):
                 if fid:
                     # 3.3.5 looks display textures up next to the model, by name without extension

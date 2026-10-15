@@ -839,6 +839,8 @@ def convert_model_fitting(data, model_name, texture_name, get_file, geoset_map=N
         if best is None or len(dropped) < len(best[1]):
             best = (result, dropped)
     if best is None:
+        # not past it either: creatures drew index starts past 65535 as spikes even with
+        # client/dinput8.dll (ogredraenor untrimmed); build.shown_geosets keeps such models small
         raise ConvertError("no skin light enough for 3.3.5")
     result, dropped = best
     result[3].append(f"left out to fit 65535 indices: geosets {sorted(dropped)}")

@@ -680,5 +680,19 @@
   "skins": {
    "rocketmount2blue": 122617
   }
+ },
+ "ogre": {
+  "include": true,
+  "old": "creature/ogre/ogre.m2",
+  "new": "creature/ogredraenor/ogredraenor.m2",
+  "skins": {
+   "ogreskinyellow": 55073,
+   "ogreskinbeige": 57217,
+   "ogreskinblue": 87580,
+   "ogreskinblack": 57216,
+   "ogreskinred": 53406,
+   "ogreskingray": 52462,
+   "ogreskinblue512": 87580
+  }
  }
 }
