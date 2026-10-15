@@ -67,6 +67,30 @@ UI-HUD-UnitFrame-Party-PortraitOn-InCombat UI-HUD-UnitFrame-Party-PortraitOn-Veh
 UI-CastingBar-Frame UI-CastingBar-TextBox UI-CastingBar-Shield UI-CastingBar-Interrupted
 UI-Frame-PortraitMetal-CornerTopLeft bags-item-slot64 common-search-border-left common-search-border-middle
 common-search-border-right common-search-magnifyingglass common-search-clearbutton
+UI-HUD-ActionBar-IconFrame UI-HUD-ActionBar-IconFrame-Down UI-HUD-ActionBar-IconFrame-Mouseover
+ui-hud-actionbar-iconframe-slot UI-HUD-ActionBar-IconFrame-Border UI-HUD-ActionBar-IconFrame-Flash
+UI-HUD-ActionBar-Gryphon-Left UI-HUD-ActionBar-Gryphon-Right UI-HUD-ActionBar-Wyvern-Left UI-HUD-ActionBar-Wyvern-Right
+UI-HUD-ActionBar-PageUpArrow-Up UI-HUD-ActionBar-PageUpArrow-Down UI-HUD-ActionBar-PageUpArrow-Mouseover
+UI-HUD-ActionBar-PageUpArrow-Disabled UI-HUD-ActionBar-PageDownArrow-Up UI-HUD-ActionBar-PageDownArrow-Down
+UI-HUD-ActionBar-PageDownArrow-Mouseover UI-HUD-ActionBar-PageDownArrow-Disabled
+
+
+UI-HUD-MicroMenu-ButtonBG-Up UI-HUD-MicroMenu-ButtonBG-Down UI-HUD-MicroMenu-SpellbookAbilities-Up UI-HUD-MicroMenu-SpellbookAbilities-Down
+UI-HUD-MicroMenu-SpellbookAbilities-Mouseover UI-HUD-MicroMenu-SpellbookAbilities-Disabled
+UI-HUD-MicroMenu-SpecTalents-Up UI-HUD-MicroMenu-SpecTalents-Down
+UI-HUD-MicroMenu-SpecTalents-Mouseover UI-HUD-MicroMenu-SpecTalents-Disabled
+UI-HUD-MicroMenu-Achievements-Up UI-HUD-MicroMenu-Achievements-Down
+UI-HUD-MicroMenu-Achievements-Mouseover UI-HUD-MicroMenu-Achievements-Disabled
+UI-HUD-MicroMenu-Questlog-Up UI-HUD-MicroMenu-Questlog-Down UI-HUD-MicroMenu-Questlog-Mouseover
+UI-HUD-MicroMenu-Questlog-Disabled UI-HUD-MicroMenu-GuildCommunities-Up
+UI-HUD-MicroMenu-GuildCommunities-Down UI-HUD-MicroMenu-GuildCommunities-Mouseover
+UI-HUD-MicroMenu-GuildCommunities-Disabled UI-HUD-MicroMenu-Groupfinder-Up
+UI-HUD-MicroMenu-Groupfinder-Down UI-HUD-MicroMenu-Groupfinder-Mouseover
+UI-HUD-MicroMenu-Groupfinder-Disabled UI-HUD-MicroMenu-GameMenu-Up UI-HUD-MicroMenu-GameMenu-Down
+UI-HUD-MicroMenu-GameMenu-Mouseover UI-HUD-MicroMenu-GameMenu-Disabled bag-main bag-main-highlight
+bag-border bag-border-highlight bag-border-empty
+
+
 """.split()
 
 

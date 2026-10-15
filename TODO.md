@@ -22,7 +22,7 @@ Done: Lua functions from the DLL (`client/lua.c`), retail Options window (`addon
 cast, cursor lock and color filter (`client/controls.c`, `client/effects.cpp`, `Options.lua`),
 nameplates as units and retail nameplates (`client/nameplates.c`, `Nameplates.lua`), retail raid
 frames (`RaidFrames.lua`), Edit Mode (`EditMode.lua`), retail unit frames and cast bars
-(`UnitFrames.lua`), combined bags (`Bags.lua`). Retail settings mapped to 3.3.5:
+(`UnitFrames.lua`), combined bags (`Bags.lua`), action bars (`ActionBars.lua`). Retail settings mapped to 3.3.5:
 [docs/retail-options.md](docs/retail-options.md).
 
 - Mouseover cast covers action bar spells only, not macros or items.
@@ -33,7 +33,9 @@ frames (`RaidFrames.lua`), Edit Mode (`EditMode.lua`), retail unit frames and ca
   docs/retail-options.md.
 - Nameplates: which auras retail shows beside the bar, `NAME_PLATE_UNIT_ADDED`/`REMOVED` and unit
   events for `nameplateN`.
-- Action bars in retail's look. Bags: retail's bank window, quest and new item highlights, Edit Mode
+- Action bars: Edit Mode boxes, retail's 2 pixel button gap, keybindings for bars 6-8, the pet,
+  possess and totem bars in our own bars (they can shift in combat), retail's XP/reputation bar art,
+  rounded icon corners (pre-masked icons in the build). Bags: retail's bank window, quest and new item highlights, Edit Mode
   box, sorting (no 3.3.5 API: would move items itself).
 - Options window: Defaults on the client's Interface pages resets from addon code (taints until
   /reload); the red X and Esc don't save Interface options (only Close does, see Settings.lua).

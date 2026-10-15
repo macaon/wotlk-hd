@@ -100,6 +100,22 @@ local raidStyle = check(InterfaceOptionsUnitFramePanel, "hdRaidStyleParty", "Use
 check(InterfaceOptionsUnitFramePanel, "hdRaidClassColors", "Display Class Colors",
     "Raid frame health bars in class colours instead of green.", raidStyle, 0, -8)
 
+-- [[ Action Bars: bars 6 to 8 (ActionBars.lua; saved in WotlkHD_Saved, not cvars) ]] --
+
+local anchor = InterfaceOptionsActionBarsPanelSecureAbilityToggle
+for _, e in ipairs(WotlkHD_ActionBars.extra) do
+    local c = CreateFrame("CheckButton", "InterfaceOptionsActionBarsPanelBar" .. e[1],
+        InterfaceOptionsActionBarsPanel, "InterfaceOptionsCheckButtonTemplate")
+    c:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -8)
+    _G[c:GetName() .. "Text"]:SetText("Action Bar " .. e[1])
+    c.tooltipText = "Shows action bar " .. e[1] .. " (in the middle of the screen, as retail places it)."
+    c:SetScript("OnShow", function(self)
+        self:SetChecked(WotlkHD_Saved and WotlkHD_Saved.actionBars and WotlkHD_Saved.actionBars[e[1]])
+    end)
+    c:SetScript("OnClick", function(self) WotlkHD_ActionBars.SetShown(e[1], self:GetChecked() and true) end)
+    anchor = c
+end
+
 -- [[ Accessibility: Colors ]] --
 
 local colors = CreateFrame("Frame", "WotlkHDColorsPanel", UIParent)

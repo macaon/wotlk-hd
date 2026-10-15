@@ -35,6 +35,9 @@ It's a personal build: it aims to look and play well, not to stay faithful to 3.
   on by default.
 - Retail unit frames (Dragonflight art and layout): player, target and focus with elite and rare
   dragons, target of target, pet, party and party pets, and retail's cast bars.
+- Retail action bars: retail's button art, the main bar centered with gryphons (wyverns for the
+  Horde) in our own secure bars (no jumping in combat), bars 6 to 8, the micro menu and round bag
+  buttons at the bottom right, and retail's pixel-sized UI with Use UI Scale off.
 - Retail's combined bags: one window with search, retail item slots and quality borders; the bank
   opens your bags, as on retail.
 - Retail raid frames for raids (and parties, with Use Raid-Style Party Frames): green or class

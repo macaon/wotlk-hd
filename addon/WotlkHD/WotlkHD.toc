@@ -8,6 +8,7 @@ Nameplates.lua
 RaidFrames.lua
 UnitFrames.lua
 Bags.lua
+ActionBars.lua
 WotlkHD.lua
 Options.lua
 Settings.lua
