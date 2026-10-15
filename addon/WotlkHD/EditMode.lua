@@ -1,6 +1,7 @@
 -- wotlk-hd: retail's Edit Mode. From the game menu: a grid, a selection box over each movable part of
 -- the UI (drag to move, snapping to the grid and to the other boxes' edges; click for its settings:
--- size, reset), and a panel with the grid and snap options, Revert and Save. Positions are kept
+-- size, reset), and a panel with retail's layouts (Modern and Classic presets, your own), the grid and
+-- snap options, Revert and Save. Positions are kept
 -- account-wide in WotlkHD_Saved.editMode as an anchor on the nearest screen corner (with each frame's
 -- default), and applied at login. Out of combat only, as the client's frames are protected in combat.
 
@@ -36,6 +37,29 @@ local SYSTEMS = {
 }
 
 
+-- Retail's preset layouts (Blizzard_EditMode's EditModePresetLayouts.lua, Modern), in UIParent units; a
+-- system a preset leaves out keeps its default place. Classic is 3.3.5's own places.
+local PRESETS = {
+    Modern = {frames = {
+        player = {point = "BOTTOMRIGHT", rel = "BOTTOM", x = -300, y = 250},
+        target = {point = "BOTTOMLEFT", rel = "BOTTOM", x = 300, y = 250},
+        focus = {point = "BOTTOMLEFT", rel = "BOTTOM", x = 520, y = 265},
+    }},
+    Classic = {frames = {}},
+}
+local PRESET_ORDER = {"Modern", "Classic"}
+
+local function deep(t)
+    if type(t) ~= "table" then
+        return t
+    end
+    local c = {}
+    for k, v in pairs(t) do
+        c[k] = deep(v)
+    end
+    return c
+end
+
 local saved -- WotlkHD_Saved.editMode
 -- Whether a system's box shows: not ticked off in the panel, and for optional ones only while shown.
 local function boxShown(sys)
@@ -68,7 +92,7 @@ local function place(sys, a)
         a.width, a.height = f:GetWidth(), f:GetHeight()
     end
     f:ClearAllPoints()
-    f:SetPoint(a.point, UIParent, a.point, a.x, a.y)
+    f:SetPoint(a.point, UIParent, a.rel or a.point, a.x, a.y)
     if a.height then
         f:SetWidth(a.width)
         f:SetHeight(a.height)
@@ -82,7 +106,7 @@ end
 -- then restores it from its layout cache before we could see the default again.
 local function remember(sys)
     local f = frameOf(sys)
-    if saved.frames[sys.key] then
+    if saved.frames[sys.key] and saved.defaults[sys.key] then
         return
     end
     local d = {scale = f:GetScale(), points = {}}
@@ -136,6 +160,7 @@ local function applySaved()
     for _, sys in ipairs(SYSTEMS) do
         local a = frameOf(sys) and saved.frames[sys.key]
         if a then
+            remember(sys) -- its default, if a layout moves it before any drag did
             if a.scale then
                 frameOf(sys):SetScale(a.scale)
             end
@@ -517,7 +542,7 @@ manager:SetPoint("TOP", 0, -80)
 manager.title:SetText("HUD Edit Mode")
 tinsert(UISpecialFrames, "WotlkHDEditMode")
 closeButton(manager, function() manager:Hide() end)
-checkbox(manager, "Show Grid", 20, -38, function() return saved.grid end, function(on)
+checkbox(manager, "Show Grid", 20, -68, function() return saved.grid end, function(on)
     saved.grid = on
     if on then
         grid:Show()
@@ -525,15 +550,15 @@ checkbox(manager, "Show Grid", 20, -38, function() return saved.grid end, functi
         grid:Hide()
     end
 end)
-slider(manager, nil, 130, -44, 20, 200, 10, function() return saved.spacing end, function(v)
+slider(manager, nil, 130, -74, 20, 200, 10, function() return saved.spacing end, function(v)
     saved.spacing = v
     drawGrid()
 end, nil, 150)
-checkbox(manager, "Snap to Elements", 20, -64, function() return saved.snap end, function(on) saved.snap = on end)
+checkbox(manager, "Snap to Elements", 20, -94, function() return saved.snap end, function(on) saved.snap = on end)
 
 -- Which boxes show: two columns of the systems.
 local list = CreateFrame("Frame", nil, manager)
-list:SetPoint("TOPLEFT", 18, -94)
+list:SetPoint("TOPLEFT", 18, -124)
 list:SetPoint("RIGHT", -18, 0)
 list:SetHeight(math.ceil(#SYSTEMS / 2) * 24 + 10)
 list:SetBackdrop({edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 12})
@@ -551,7 +576,7 @@ for i, sys in ipairs(SYSTEMS) do
             end
         end)
 end
-manager:SetHeight(94 + list:GetHeight() + 50)
+manager:SetHeight(124 + list:GetHeight() + 50)
 
 local snapshot -- saved.frames and the raid frame size at the last save, for Revert
 local dirty, leavingForCombat
@@ -599,13 +624,149 @@ local function revertAll()
     commit()
 end
 revert:SetScript("OnClick", revertAll)
-save:SetScript("OnClick", commit)
+
+-- [[ Layouts ]] --
+-- saved.layout names the active one: a preset, or one of saved.layouts ({frames, raidWidth, raidHeight}).
+-- saved.frames is the active layout as it is on screen. Changes to a preset save as a new layout.
+
+local function storeLayout(name)
+    saved.layouts[name] = {frames = deep(saved.frames), raidWidth = WotlkHD_Saved.raidFrameWidth,
+        raidHeight = WotlkHD_Saved.raidFrameHeight}
+    saved.layout = name
+end
+
+local function newName()
+    local n = 1
+    while saved.layouts["Layout " .. n] do
+        n = n + 1
+    end
+    return "Layout " .. n
+end
+
+local layoutMenu -- the dropdown, below
+
+local function saveLayout()
+    if PRESETS[saved.layout] then
+        StaticPopup_Show("WOTLKHD_EDITMODE_NEW_LAYOUT")
+        return
+    end
+    storeLayout(saved.layout)
+    commit()
+end
+save:SetScript("OnClick", saveLayout)
+
+-- A layout on screen: every frame back to its default, then the layout's.
+local function applyLayout(name)
+    local layout = PRESETS[name] or saved.layouts[name]
+    for _, sys in ipairs(SYSTEMS) do
+        if frameOf(sys) and saved.frames[sys.key] then
+            reset(sys)
+        end
+    end
+    saved.frames = deep(layout.frames)
+    WotlkHD_RaidFrames.SetSize(layout.raidWidth or 72, layout.raidHeight or 36)
+    applySaved()
+    saved.layout = name
+    for _, o in pairs(overlays) do
+        fit(o)
+    end
+    settings:Hide()
+    commit()
+    UIDropDownMenu_SetText(layoutMenu, PRESETS[name] and name .. " (Preset)" or name)
+end
+
+StaticPopupDialogs["WOTLKHD_EDITMODE_NEW_LAYOUT"] = {
+    text = "Name the new layout:",
+    button1 = SAVE or "Save",
+    button2 = CANCEL,
+    hasEditBox = 1,
+    maxLetters = 32,
+    OnShow = function(self)
+        _G[self:GetName() .. "EditBox"]:SetText(newName())
+        _G[self:GetName() .. "EditBox"]:HighlightText()
+    end,
+    OnAccept = function(self)
+        local name = strtrim(_G[self:GetName() .. "EditBox"]:GetText())
+        if name == "" or PRESETS[name] then
+            name = newName()
+        end
+        storeLayout(name)
+        commit()
+        UIDropDownMenu_SetText(layoutMenu, name)
+    end,
+    EditBoxOnEnterPressed = function(self)
+        StaticPopupDialogs["WOTLKHD_EDITMODE_NEW_LAYOUT"].OnAccept(self:GetParent())
+        self:GetParent():Hide()
+    end,
+    EditBoxOnEscapePressed = function(self) self:GetParent():Hide() end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+}
+
+StaticPopupDialogs["WOTLKHD_EDITMODE_DELETE_LAYOUT"] = {
+    text = "Delete the layout %s?",
+    button1 = DELETE,
+    button2 = CANCEL,
+    OnAccept = function()
+        saved.layouts[saved.layout] = nil
+        applyLayout("Modern")
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+}
+
+local label = manager:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+label:SetPoint("TOPLEFT", 22, -36)
+label:SetText("Layout:")
+layoutMenu = CreateFrame("Frame", "WotlkHDEditModeLayout", manager, "UIDropDownMenuTemplate")
+layoutMenu:SetPoint("LEFT", label, "RIGHT", -8, -2)
+UIDropDownMenu_SetWidth(layoutMenu, 200)
+UIDropDownMenu_Initialize(layoutMenu, function()
+    if not saved then -- the client fills a menu once on Initialize, before the saved variables load
+        return
+    end
+    local function add(text, func, checked, notCheckable)
+        local info = UIDropDownMenu_CreateInfo()
+        info.text, info.func, info.checked, info.notCheckable = text, func, checked, notCheckable
+        UIDropDownMenu_AddButton(info)
+    end
+    local function pick(name)
+        return function()
+            if dirty then
+                revertAll()
+            end
+            applyLayout(name)
+        end
+    end
+    for _, name in ipairs(PRESET_ORDER) do
+        add(name .. " (Preset)", pick(name), saved.layout == name)
+    end
+    local names = {}
+    for name in pairs(saved.layouts) do
+        tinsert(names, name)
+    end
+    table.sort(names)
+    for _, name in ipairs(names) do
+        add(name, pick(name), saved.layout == name)
+    end
+    add("New Layout", function() StaticPopup_Show("WOTLKHD_EDITMODE_NEW_LAYOUT") end, nil, true)
+    if not PRESETS[saved.layout] then
+        add("Delete Layout", function() StaticPopup_Show("WOTLKHD_EDITMODE_DELETE_LAYOUT", saved.layout) end, nil,
+            true)
+    end
+end)
+Retail.SkinDropDown(layoutMenu)
 
 StaticPopupDialogs["WOTLKHD_EDITMODE_UNSAVED"] = {
     text = "You have unsaved changes.",
     button1 = "Save and Exit",
     button2 = "Exit",
-    OnAccept = commit,
+    OnAccept = function()
+        storeLayout(PRESETS[saved.layout] and newName() or saved.layout)
+        commit()
+    end,
     OnCancel = function(_, _, reason)
         if reason == "clicked" then
             revertAll()
@@ -626,6 +787,7 @@ function WotlkHD_EnterEditMode()
         return
     end
     commit()
+    UIDropDownMenu_SetText(layoutMenu, PRESETS[saved.layout] and saved.layout .. " (Preset)" or saved.layout)
     drawGrid()
     if saved.grid then
         grid:Show()
@@ -691,6 +853,15 @@ events:SetScript("OnEvent", function(_, event)
     saved = WotlkHD_Saved.editMode
     saved.defaults = saved.defaults or {}
     saved.hidden = saved.hidden or {}
+    saved.layouts = saved.layouts or {}
+    if not saved.layout then -- first time with layouts: what was moved becomes a layout, else Modern
+        if next(saved.frames) then
+            storeLayout("Layout 1")
+        else
+            saved.layout = "Modern"
+            saved.frames = deep(PRESETS.Modern.frames)
+        end
+    end
     applySaved()
     if WotlkHD_Saved.raidFrameWidth then
         WotlkHD_RaidFrames.SetSize(WotlkHD_Saved.raidFrameWidth, WotlkHD_Saved.raidFrameHeight)

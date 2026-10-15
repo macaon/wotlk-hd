@@ -130,6 +130,7 @@ WotlkHD_Atlas = {
     ["ui-hud-actionbar-iconframe"] = {"Interface\\AddOns\\WotlkHD\\Art\\uiactionbar2x", 46, 45, 0.701172, 0.880859, 0.316895, 0.36084, false, false},
     ["ui-hud-actionbar-iconframe-down"] = {"Interface\\AddOns\\WotlkHD\\Art\\uiactionbar2x", 46, 45, 0.701172, 0.880859, 0.430176, 0.474121, false, false},
     ["ui-hud-actionbar-iconframe-mouseover"] = {"Interface\\AddOns\\WotlkHD\\Art\\uiactionbar2x", 46, 45, 0.701172, 0.880859, 0.52002, 0.563965, false, false},
+    ["ui-hud-actionbar-frame"] = {"Interface\\AddOns\\WotlkHD\\Art\\uiactionbarframe2x", 55, 55, 0.0078125, 0.867188, 0.0078125, 0.867188, false, false},
     ["ui-hud-actionbar-iconframe-slot"] = {"Interface\\AddOns\\WotlkHD\\Art\\uiactionbar2x", 45, 45, 0.701172, 0.951172, 0.102051, 0.162598, false, false},
     ["ui-hud-actionbar-iconframe-border"] = {"Interface\\AddOns\\WotlkHD\\Art\\uiactionbar2x", 46, 45, 0.701172, 0.880859, 0.361816, 0.405762, false, false},
     ["ui-hud-actionbar-iconframe-flash"] = {"Interface\\AddOns\\WotlkHD\\Art\\uiactionbar2x", 46, 45, 0.701172, 0.880859, 0.475098, 0.519043, false, false},

@@ -180,6 +180,44 @@ function Retail.AtlasBar(bar, atlas)
     FillBar(bar)
 end
 
+-- An atlas drawn as nine slices over a region: corners of margin x margin kept, edges and middle
+-- stretched (retail's slice margins; 3.3.5 has none).
+function Retail.NineSlice(parent, layer, name, margin)
+    local a = ATLAS[strlower(name)]
+    local du, dv = (a[5] - a[4]) / a[2], (a[7] - a[6]) / a[3]
+    local u = {a[4], a[4] + margin * du, a[5] - margin * du, a[5]}
+    local v = {a[6], a[6] + margin * dv, a[7] - margin * dv, a[7]}
+    local parts = {}
+    for row = 1, 3 do
+        for col = 1, 3 do
+            local t = parent:CreateTexture(nil, layer)
+            t:SetTexture(a[1])
+            t:SetTexCoord(u[col], u[col + 1], v[row], v[row + 1])
+            parts[(row - 1) * 3 + col] = t
+        end
+    end
+    function parts.SetPoints(_, region, left, top, right, bottom)
+        local p = parts
+        for i, c in ipairs({"TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT"}) do
+            local t = p[({1, 3, 7, 9})[i]]
+            t:SetWidth(margin)
+            t:SetHeight(margin)
+            t:SetPoint(c, region, c, (c:find("LEFT") and -left or right), (c:find("TOP") and top or -bottom))
+        end
+        p[2]:SetPoint("TOPLEFT", p[1], "TOPRIGHT")
+        p[2]:SetPoint("BOTTOMRIGHT", p[3], "BOTTOMLEFT")
+        p[8]:SetPoint("TOPLEFT", p[7], "TOPRIGHT")
+        p[8]:SetPoint("BOTTOMRIGHT", p[9], "BOTTOMLEFT")
+        p[4]:SetPoint("TOPLEFT", p[1], "BOTTOMLEFT")
+        p[4]:SetPoint("BOTTOMRIGHT", p[7], "TOPRIGHT")
+        p[6]:SetPoint("TOPLEFT", p[3], "BOTTOMLEFT")
+        p[6]:SetPoint("BOTTOMRIGHT", p[9], "TOPRIGHT")
+        p[5]:SetPoint("TOPLEFT", p[1], "BOTTOMRIGHT")
+        p[5]:SetPoint("BOTTOMRIGHT", p[9], "TOPLEFT")
+    end
+    return parts
+end
+
 -- [[ Skins for the Blizzard option controls ]] --
 
 local function atlasTexture(button, setter, getter, atlas)

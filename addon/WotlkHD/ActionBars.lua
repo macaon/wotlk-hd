@@ -6,6 +6,7 @@
 -- frames change, so nothing here is blocked in combat.
 
 local ATLAS = WotlkHD_Atlas
+local Retail = WotlkHD_Retail
 local hidden = CreateFrame("Frame")
 hidden:Hide()
 
@@ -140,20 +141,9 @@ for _, name in ipairs({"MainMenuBarTexture0", "MainMenuBarTexture1", "MainMenuBa
     end
 end
 
--- Gryphons, or wyverns for the Horde, flank the twelve buttons, at retail's place for 45 pixel buttons
--- scaled to the client's 36.
-local SCALE = 36 / 45
-local beast = UnitFactionGroup("player") == "Horde" and "Wyvern" or "Gryphon"
-local left, right = MainMenuBarLeftEndCap, MainMenuBarRightEndCap
-left:SetAtlas("UI-HUD-ActionBar-" .. beast .. "-Left")
-right:SetAtlas("UI-HUD-ActionBar-" .. beast .. "-Right")
-for _, cap in ipairs({left, right}) do
-    cap:SetWidth(104.5 * SCALE)
-    cap:SetHeight(98 * SCALE)
-    cap:ClearAllPoints()
-end
-left:SetPoint("BOTTOMRIGHT", ActionButton1, "BOTTOMLEFT", (9 - 21) * SCALE, -22 * SCALE)
-right:SetPoint("BOTTOMLEFT", ActionButton12, "BOTTOMRIGHT", -8 * SCALE, -22 * SCALE)
+-- The client's gryphons give way to ours on the main bar (Layout, below).
+MainMenuBarLeftEndCap:SetAlpha(0)
+MainMenuBarRightEndCap:SetAlpha(0)
 
 -- Page arrows and number, left of the first button as on retail.
 for button, kind in pairs({[ActionBarUpButton] = "PageUpArrow", [ActionBarDownButton] = "PageDownArrow"}) do
@@ -165,10 +155,10 @@ for button, kind in pairs({[ActionBarUpButton] = "PageUpArrow", [ActionBarDownBu
     atlasOn(button, "SetDisabledTexture", "GetDisabledTexture", "UI-HUD-ActionBar-" .. kind .. "-Disabled")
     button:ClearAllPoints()
 end
-ActionBarUpButton:SetPoint("CENTER", ActionButton1, "LEFT", -12, 10)
-ActionBarDownButton:SetPoint("CENTER", ActionButton1, "LEFT", -12, -10)
+ActionBarUpButton:SetPoint("CENTER", ActionButton1, "LEFT", -14, 10)
+ActionBarDownButton:SetPoint("CENTER", ActionButton1, "LEFT", -14, -10)
 MainMenuBarPageNumber:ClearAllPoints()
-MainMenuBarPageNumber:SetPoint("CENTER", ActionButton1, "LEFT", -12, 0)
+MainMenuBarPageNumber:SetPoint("CENTER", ActionButton1, "LEFT", -14, 0)
 
 -- The experience and reputation bars lose their segmented frames.
 for _, prefix in ipairs({"MainMenuXPBarTexture", "ReputationWatchBarTexture", "ReputationXPBarTexture"}) do
@@ -305,7 +295,10 @@ end)
 -- and possess switch in combat. A bar moved in Edit Mode (WotlkHD_Saved.editMode.frames) stays where it
 -- was put, and the bars that stacked on it stack on what's below it.
 
+-- Bars 1-8 at retail's 45 pixel buttons: the client's 36 pixel buttons, scaled. Offsets on a scaled bar
+-- are in its own units, so the ones to the screen are divided by the scale.
 local BUTTON, SMALL, GAP = 36, 30, 2
+local BAR_SCALE = 45 / 36
 local WIDTH = NUM_ACTIONBAR_BUTTONS * BUTTON + (NUM_ACTIONBAR_BUTTONS - 1) * GAP
 local XP_HEIGHT, REP_HEIGHT, BOTTOM = 10, 8, 4
 local MAIN_Y = BOTTOM + XP_HEIGHT + 2 + REP_HEIGHT + 6
@@ -320,6 +313,9 @@ local function bar(key, name, prefix, count, size, vertical, shown, make)
     f:SetWidth(vertical and size or long)
     f:SetHeight(vertical and long or size)
     f.key, f.prefix, f.count, f.size, f.vertical, f.shown = key, prefix, count, size, vertical, shown
+    if size == BUTTON then
+        f:SetScale(BAR_SCALE)
+    end
     if make then
         for i = 1, count do
             local b = CreateFrame("CheckButton", prefix .. i, f, "ActionBarButtonTemplate")
@@ -361,6 +357,26 @@ local main = bar("bar1", "WotlkHDMainBar", "ActionButton", NUM_ACTIONBAR_BUTTONS
 -- client's own ActionButton_CalculateAction orders them.
 local PAGING = "[bonusbar:5]11;[bar:2]2;[bar:3]3;[bar:4]4;[bar:5]5;[bar:6]6;"
     .. "[bonusbar:1]7;[bonusbar:2]8;[bonusbar:3]9;[bonusbar:4]10;1"
+-- Retail's frame around the main bar and its gryphons (wyverns for the Horde), at MainActionBar.xml's
+-- places in retail units (a 45 pixel button), so times 36/45 in the bar's.
+do
+    local S = 1 / BAR_SCALE
+    local border = Retail.NineSlice(main, "BACKGROUND", "UI-HUD-ActionBar-Frame", 20)
+    border:SetPoints(main, 4 * S, 4 * S, 8 * S, 7 * S)
+    local caps = CreateFrame("Frame", nil, main)
+    caps:SetAllPoints()
+    caps:SetFrameLevel(main:GetFrameLevel() + 20)
+    local beast = UnitFactionGroup("player") == "Horde" and "Wyvern" or "Gryphon"
+    local left, right = caps:CreateTexture(nil, "OVERLAY"), caps:CreateTexture(nil, "OVERLAY")
+    left:SetAtlas("UI-HUD-ActionBar-" .. beast .. "-Left")
+    right:SetAtlas("UI-HUD-ActionBar-" .. beast .. "-Right")
+    for _, cap in ipairs({left, right}) do
+        cap:SetWidth(104.5 * S)
+        cap:SetHeight(98 * S)
+    end
+    left:SetPoint("BOTTOMRIGHT", main, "BOTTOMLEFT", 9 * S, -22 * S)
+    right:SetPoint("BOTTOMLEFT", main, "BOTTOMRIGHT", -8 * S, -22 * S)
+end
 main:SetAttribute("_onstate-page", [[
     for _, button in ipairs(newtable(self:GetChildren())) do
         button:SetAttribute("actionpage", tonumber(newstate))
@@ -437,7 +453,7 @@ local function place()
     for _, f in pairs(bars) do
         RegisterStateDriver(f, "visibility", type(f.shown) == "function" and f.shown() or f.shown)
     end
-    anchor(main, "BOTTOM", UIParent, "BOTTOM", 0, MAIN_Y)
+    anchor(main, "BOTTOM", UIParent, "BOTTOM", 0, MAIN_Y / BAR_SCALE)
     local top = main
     for _, key in ipairs({"bar2", "bar3"}) do
         local f = bars[key]
@@ -451,7 +467,7 @@ local function place()
     anchor(bars.pet, "BOTTOMRIGHT", top, "TOPRIGHT", 0, GAP + 2)
     MultiCastActionBarFrame:ClearAllPoints() -- the shaman's totem bar is still the client's
     MultiCastActionBarFrame:SetPoint("BOTTOMLEFT", top, "TOPLEFT", -8, GAP)
-    anchor(bars.bar4, "RIGHT", UIParent, "RIGHT", -4, 0)
+    anchor(bars.bar4, "RIGHT", UIParent, "RIGHT", -4 / BAR_SCALE, 0)
     anchor(bars.bar5, "TOPRIGHT", bars.bar4, "TOPLEFT", -GAP, 0)
     -- Bars 6-8 stack in the middle of the screen, a little below center, as retail places them.
     local below
@@ -460,7 +476,7 @@ local function place()
         if below then
             anchor(f, "BOTTOMLEFT", below, "TOPLEFT", 0, GAP)
         else
-            anchor(f, "BOTTOM", UIParent, "CENTER", 0, -100)
+            anchor(f, "BOTTOM", UIParent, "CENTER", 0, -100 / BAR_SCALE)
         end
         if f.shown() ~= "hide" and not moved(f) then
             below = f
@@ -492,14 +508,14 @@ end)
 local function statusBars()
     MainMenuExpBar:ClearAllPoints()
     MainMenuExpBar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, BOTTOM)
-    MainMenuExpBar:SetWidth(WIDTH)
+    MainMenuExpBar:SetWidth(WIDTH * BAR_SCALE)
     MainMenuExpBar:SetHeight(XP_HEIGHT)
     if ReputationWatchBar:IsShown() then
         ReputationWatchBar:ClearAllPoints()
         ReputationWatchBar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0,
             MainMenuExpBar:IsShown() and BOTTOM + XP_HEIGHT + 2 or BOTTOM)
-        ReputationWatchBar:SetWidth(WIDTH)
-        ReputationWatchStatusBar:SetWidth(WIDTH)
+        ReputationWatchBar:SetWidth(WIDTH * BAR_SCALE)
+        ReputationWatchStatusBar:SetWidth(WIDTH * BAR_SCALE)
         ReputationWatchBar:SetHeight(REP_HEIGHT)
         ReputationWatchStatusBar:SetHeight(REP_HEIGHT)
     end

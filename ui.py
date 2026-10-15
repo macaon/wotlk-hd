@@ -68,7 +68,7 @@ UI-HUD-UnitFrame-Party-PortraitOn-InCombat UI-HUD-UnitFrame-Party-PortraitOn-Veh
 UI-CastingBar-Frame UI-CastingBar-TextBox UI-CastingBar-Shield UI-CastingBar-Interrupted
 UI-Frame-PortraitMetal-CornerTopLeft bags-item-slot64 common-search-border-left common-search-border-middle
 common-search-border-right common-search-magnifyingglass common-search-clearbutton
-UI-HUD-ActionBar-IconFrame UI-HUD-ActionBar-IconFrame-Down UI-HUD-ActionBar-IconFrame-Mouseover
+UI-HUD-ActionBar-IconFrame UI-HUD-ActionBar-IconFrame-Down UI-HUD-ActionBar-IconFrame-Mouseover UI-HUD-ActionBar-Frame
 ui-hud-actionbar-iconframe-slot UI-HUD-ActionBar-IconFrame-Border UI-HUD-ActionBar-IconFrame-Flash
 UI-HUD-ActionBar-Gryphon-Left UI-HUD-ActionBar-Gryphon-Right UI-HUD-ActionBar-Wyvern-Left UI-HUD-ActionBar-Wyvern-Right
 UI-HUD-ActionBar-PageUpArrow-Up UI-HUD-ActionBar-PageUpArrow-Down UI-HUD-ActionBar-PageUpArrow-Mouseover

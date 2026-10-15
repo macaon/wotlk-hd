@@ -34,12 +34,12 @@ frames (`RaidFrames.lua`), Edit Mode (`EditMode.lua`), retail unit frames and ca
 - Nameplates: which auras retail shows beside the bar, `NAME_PLATE_UNIT_ADDED`/`REMOVED` and unit
   events for `nameplateN`.
 - Action bars: the shaman's totem bar in our own bar (it can shift in combat), retail's
-  XP/reputation bar art, rounded icon corners (pre-masked icons in the build). Edit Mode: retail's
-  Modern and Classic preset layouts. Bags: retail's bank window, quest and new item highlights, Edit Mode
+  XP/reputation bar art, rounded icon corners (pre-masked icons in the build). Check the main bar's
+  border corners and gryphon height against retail. Bags: retail's bank window, quest and new item highlights, Edit Mode
   box, sorting (no 3.3.5 API: would move items itself).
 - Options window: Defaults on the client's Interface pages resets from addon code (taints until
   /reload); the red X and Esc don't save Interface options (only Close does, see Settings.lua).
-- Edit Mode: action bars, named layouts (retail's presets, reset all), chat, more boxes (pet,
+- Edit Mode: chat, more boxes (pet,
   boss, arena, durability, vehicle seats). Raid frames: pets, power bars, health text, heal
   prediction (no 3.3.5 API), retail's raid manager panel.
 - Retail textures under 3.3.5's own UI paths in an MPQ (buttons, panels), restyling the whole UI.
