@@ -440,6 +440,30 @@ local function anchor(f, ...)
     end
 end
 
+-- The cast bar above the bars stacked over the main bar (bars 2 and 3, then stance or pet), as retail's
+-- bottom managed frames, unless moved in Edit Mode. It is not protected: placed again whenever one of
+-- those bars shows or hides, in combat too, and after the client's layout code (which places it for
+-- its own bars).
+local CAST_GAP = 20 -- room for the spell name under it
+local function castBar()
+    if moved({key = "castbar"}) then
+        return
+    end
+    -- the highest top edge, in screen units (the stance and pet bars sit left and right, not centered)
+    local y = 0
+    for _, key in ipairs({"bar1", "bar2", "bar3", "stance", "possess", "pet"}) do
+        local f = bars[key]
+        if f:IsShown() and not moved(f) and f:GetTop() then
+            y = math.max(y, f:GetTop() * f:GetEffectiveScale())
+        end
+    end
+    if y > 0 then
+        CastingBarFrame:ClearAllPoints()
+        CastingBarFrame:SetPoint("BOTTOM", UIParent, "BOTTOM", 0,
+            y / CastingBarFrame:GetEffectiveScale() + CAST_GAP)
+    end
+end
+
 -- Out of combat: the frames are protected.
 local pending
 local function place()
@@ -484,6 +508,12 @@ local function place()
             below = f
         end
     end
+    castBar()
+end
+
+for _, key in ipairs({"bar2", "bar3", "stance", "possess", "pet"}) do
+    bars[key]:HookScript("OnShow", castBar)
+    bars[key]:HookScript("OnHide", castBar)
 end
 
 local function setup()
