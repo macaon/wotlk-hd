@@ -1,16 +1,33 @@
 -- wotlk-hd: retail options that dinput8.dll adds to the client (cvars from client/controls.c and
 -- client/effects.cpp), on the pages where retail has them: Mouseover Cast on Controls, Lock Cursor to
--- Window on Mouse, and Accessibility > Colors for the colorblind filter. The controls are the client's
--- own kind (BlizzardOptionsPanel), so Defaults and Okay treat them like the page's others.
+-- Window on Mouse, and Accessibility > Colors for the colorblind filter.
+--
+-- Our controls stay out of the client's pages' own tables (options, controls): a table that addon code
+-- adds to is rebuilt by that code, which taints everything already in it, and the client then sets its
+-- options up tainted (SHOW_TARGET_OF_TARGET from the Combat page's table: target of target blocked in
+-- combat). So ours apply when changed, as on retail, and read their cvar when shown.
 
--- A checkbox bound to a cvar, set up by its page on PLAYER_ENTERING_WORLD (from page.options).
+-- A checkbox bound to a cvar; dependent is a dropdown it enables.
 local function check(page, cvar, label, tooltip, anchor, x, y)
     local c = CreateFrame("CheckButton", page:GetName() .. cvar, page, "InterfaceOptionsCheckButtonTemplate")
     c:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", x, y)
-    c.type = CONTROLTYPE_CHECKBOX
-    c.cvar = cvar
-    page.options[cvar] = {text = label, tooltip = tooltip}
-    BlizzardOptionsPanel_RegisterControl(c, page)
+    _G[c:GetName() .. "Text"]:SetText(label)
+    c.tooltipText = tooltip
+    local function dependent(self)
+        if self.dependent and self:GetChecked() then
+            UIDropDownMenu_EnableDropDown(self.dependent)
+        elseif self.dependent then
+            UIDropDownMenu_DisableDropDown(self.dependent)
+        end
+    end
+    c:SetScript("OnShow", function(self)
+        self:SetChecked(GetCVar(cvar) == "1")
+        dependent(self)
+    end)
+    c:SetScript("OnClick", function(self)
+        SetCVar(cvar, self:GetChecked() and "1" or "0")
+        dependent(self)
+    end)
     return c
 end
 
@@ -22,8 +39,6 @@ local function dropdown(page, cvar, label, choices, anchor, x, y)
     local text = dd:CreateFontString(dd:GetName() .. "Label", "BACKGROUND", "GameFontHighlight")
     text:SetPoint("BOTTOMLEFT", dd, "TOPLEFT", 16, 3)
     text:SetText(label)
-    dd.type = CONTROLTYPE_DROPDOWN
-    dd.defaultValue = GetCVarDefault(cvar)
     local function textOf(value)
         for _, c in ipairs(choices) do
             if c[1] == value then
@@ -56,12 +71,11 @@ local function dropdown(page, cvar, label, choices, anchor, x, y)
         UIDropDownMenu_SetText(self, textOf(self.value))
     end
     UIDropDownMenu_SetWidth(dd, 140)
-    dd:RefreshValue()
-    BlizzardOptionsPanel_RegisterControl(dd, page)
+    dd:SetScript("OnShow", dd.RefreshValue)
     return dd
 end
 
--- [[ Combat: Mouseover Cast, with its key on the same row as on retail ]] --
+-- [[ Combat: Mouseover Cast and its key, as on retail ]] --
 
 local combat = InterfaceOptionsCombatPanel
 local mouseover = check(combat, "hdMouseoverCast", "Mouseover Cast",
@@ -69,9 +83,9 @@ local mouseover = check(combat, "hdMouseoverCast", "Mouseover Cast",
     InterfaceOptionsCombatPanelFocusCastKeyDropDown, 13, -16)
 local mouseoverKey = dropdown(combat, "hdMouseoverCastKey", "",
     {{"0", NONE_KEY}, {"1", ALT_KEY}, {"2", CTRL_KEY}, {"3", SHIFT_KEY}}, mouseover, 0, 0)
-mouseoverKey:ClearAllPoints()
-mouseoverKey:SetPoint("LEFT", mouseover, "RIGHT", 140, -2)
-BlizzardOptionsPanel_SetupDependentControl(mouseover, mouseoverKey)
+mouseoverKey:ClearAllPoints() -- retail puts it on the same row; the client's page has no room right of it
+mouseoverKey:SetPoint("TOPLEFT", mouseover, "BOTTOMLEFT", -13, -4)
+mouseover.dependent = mouseoverKey
 
 -- [[ Mouse: Lock Cursor to Window ]] --
 

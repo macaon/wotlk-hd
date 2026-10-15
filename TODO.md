@@ -21,8 +21,8 @@
 Done: Lua functions from the DLL (`client/lua.c`), retail Options window (`addon/WotlkHD`), mouseover
 cast, cursor lock and color filter (`client/controls.c`, `client/effects.cpp`, `Options.lua`),
 nameplates as units and retail nameplates (`client/nameplates.c`, `Nameplates.lua`), retail raid
-frames (`RaidFrames.lua`), Edit Mode (`EditMode.lua`), retail player/target/focus frames
-(`UnitFrames.lua`, not yet checked in game). Retail settings mapped to 3.3.5:
+frames (`RaidFrames.lua`), Edit Mode (`EditMode.lua`), retail unit frames and cast bars
+(`UnitFrames.lua`). Retail settings mapped to 3.3.5:
 [docs/retail-options.md](docs/retail-options.md).
 
 - Mouseover cast covers action bar spells only, not macros or items.
@@ -33,8 +33,9 @@ frames (`RaidFrames.lua`), Edit Mode (`EditMode.lua`), retail player/target/focu
   docs/retail-options.md.
 - Nameplates: which auras retail shows beside the bar, `NAME_PLATE_UNIT_ADDED`/`REMOVED` and unit
   events for `nameplateN`.
-- Unit frames: target of target, the target's cast bar, the small focus frame, pet and party
-  frames; then bags and action bars in retail's look.
+- Bags and action bars in retail's look.
+- Options window: Defaults on the client's Interface pages resets from addon code (taints until
+  /reload); the red X and Esc don't save Interface options (only Close does, see Settings.lua).
 - Edit Mode: action bars, named layouts (retail's presets, reset all), chat, more boxes (pet,
   boss, arena, durability, vehicle seats). Raid frames: pets, power bars, health text, heal
   prediction (no 3.3.5 API), retail's raid manager panel.

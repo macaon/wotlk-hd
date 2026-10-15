@@ -25,7 +25,6 @@ local SYSTEMS = {
 }
 
 local saved -- WotlkHD_Saved.editMode
-local managed = {} -- key -> its UIPARENT_MANAGED_FRAME_POSITIONS entry
 
 local function frameOf(sys)
     return _G[sys.frame]
@@ -60,9 +59,6 @@ local function place(sys, a)
     end
     f:SetMovable(true)
     f:SetUserPlaced(true)
-    if sys.managed then
-        UIPARENT_MANAGED_FRAME_POSITIONS[sys.frame] = nil
-    end
 end
 
 -- A frame's default anchor, scale and size: where it is just before its first move, so after whatever
@@ -116,9 +112,6 @@ local function reset(sys)
     end
     if f:IsMovable() then
         f:SetUserPlaced(false)
-    end
-    if sys.managed then
-        UIPARENT_MANAGED_FRAME_POSITIONS[sys.frame] = managed[sys.key]
     end
     UIParent_ManageFramePositions()
 end
@@ -682,11 +675,20 @@ events:SetScript("OnEvent", function(_, event)
     saved = WotlkHD_Saved.editMode
     saved.defaults = saved.defaults or {}
     saved.hidden = saved.hidden or {}
-    for _, sys in ipairs(SYSTEMS) do
-        managed[sys.key] = sys.managed and UIPARENT_MANAGED_FRAME_POSITIONS[sys.frame]
-    end
     applySaved()
     if WotlkHD_Saved.raidFrameWidth then
         WotlkHD_RaidFrames.SetSize(WotlkHD_Saved.raidFrameWidth, WotlkHD_Saved.raidFrameHeight)
+    end
+end)
+
+-- The client's layout code (UIParent_ManageFramePositions) places the cast bar itself, ignoring
+-- user-placed; a moved one goes back after it. (Taking it off UIPARENT_MANAGED_FRAME_POSITIONS would be
+-- addon code writing the client's table, which taints the layout code that also moves protected bars.)
+hooksecurefunc("UIParent_ManageFramePositions", function()
+    for _, sys in ipairs(SYSTEMS) do
+        local a = sys.managed and saved and saved.frames[sys.key]
+        if a then
+            place(sys, a)
+        end
     end
 end)

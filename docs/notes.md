@@ -228,6 +228,17 @@ first `WotlkHD_NamePlateUnit` call on it; the GUID comes from walking the object
 draws cast bars from `UnitCastingInfo`/`UnitChannelInfo` on the token and hides the client's art
 (SetTexture(nil), or off screen for what the client re-sets: level, spell icon).
 
+Taint (the client blocks protected actions, such as showing a secure frame in combat, when the
+running code read anything addon code wrote; `/console taintLog 1` logs it to Logs/taint.log): the
+WotlkHD addon must not write into the client's own tables or option globals. Adding entries to a
+Blizzard options page's `options` or `controls` table tainted what was already in it, and the page
+then set `SHOW_TARGET_OF_TARGET` and the party options tainted at login (target of target and party
+frames blocked in combat). Our option controls set their cvars themselves; the Options window saves
+the client's Interface options through the client's own Okay button; Edit Mode re-places the cast bar
+after `UIParent_ManageFramePositions` rather than editing `UIPARENT_MANAGED_FRAME_POSITIONS`. The
+client's taint switch (0xd413a4: no taint is recorded while it's non-zero) stays untouched, keeping
+Blizzard's protection and Warden's view of the client as they are.
+
 Color filter (`hdColorblind` 0-3, `hdColorblindStrength`; Accessibility > Colors): daltonization
 (`colorblind_ps` in `client/post.hlsl`) on the finished frame, UI included, from a hook on
 IDirect3DDevice9::Present (vtable 17). It uses the world pass's targets, so it starts with the first

@@ -33,7 +33,8 @@ It's a personal build: it aims to look and play well, not to stay faithful to 3.
   icon on every casting enemy (stock 3.3.5 shows the target's only), your debuffs with timers, elite
   and rare icons, retail's scaling by distance, a 60 yard range (41 in 3.3.5), and enemy nameplates
   on by default.
-- Retail player, target and focus frames (Dragonflight art and layout, elite and rare dragons).
+- Retail unit frames (Dragonflight art and layout): player, target and focus with elite and rare
+  dragons, target of target, pet, party and party pets, and retail's cast bars.
 - Retail raid frames for raids (and parties, with Use Raid-Style Party Frames): green or class
   coloured health, roles, target and aggro highlights, buffs, debuffs, dispellable types and range
   fade.

@@ -1,8 +1,13 @@
 -- wotlk-hd: retail's Settings window (Blizzard_SettingsPanel, 920x724) in place of the Interface, Video and
 -- Sound frames. Every option page is the client's own panel, shown in the window as retail shows addon
--- pages ("canvas" categories) with retail skins on its controls; okay runs when the window closes, as
--- retail keeps changes on close. Opening any of the old frames, or a panel by
--- InterfaceOptionsFrame_OpenToCategory, opens this window instead.
+-- pages ("canvas" categories) with retail skins on its controls. Opening any of the old frames, or a panel
+-- by InterfaceOptionsFrame_OpenToCategory, opens this window instead.
+--
+-- Saving: the Interface options set globals (SHOW_TARGET_OF_TARGET and the like) that the client's
+-- secure code reads, so they must be saved by the client's own code: anything addon code writes is
+-- tainted, and the secure code reading it is then blocked (target of target stops showing in combat).
+-- Close is the client's own Interface Okay button, moved here, so a click saves them untainted; the
+-- red X and Esc leave them unsaved. Video and Sound options (cvars only) save whenever the window closes.
 
 local Retail = WotlkHD_Retail
 local size = Retail.size
@@ -63,11 +68,14 @@ local function button(text, w)
     b:SetText(text)
     return b
 end
-local closeButton = button(CLOSE)
+local closeButton = InterfaceOptionsFrameOkay -- its own OnClick saves; it then shows its frame, see below
+closeButton:SetParent(panel)
+closeButton:ClearAllPoints()
 closeButton:SetPoint("BOTTOMRIGHT", -16, 16)
-closeButton:SetScript("OnClick", function() panel:Hide() end)
-local applyButton = button(APPLY)
-applyButton:SetPoint("RIGHT", closeButton, "LEFT", -2, 0)
+size(closeButton, 96, 22)
+closeButton:SetText(CLOSE)
+local closing
+closeButton:SetScript("PreClick", function() closing = true end)
 
 -- [[ Pages ]] --
 
@@ -320,15 +328,13 @@ end
 
 local OPTION_FRAMES = {InterfaceOptionsFrame, VideoOptionsFrame, AudioOptionsFrame}
 
-local function okay()
-    InterfaceOptionsFrameOkay_OnClick(nil, nil, true)
+local function okay() -- Video and Sound; Interface saves through Close (see the top)
     VideoOptionsFrameOkay_OnClick(nil, nil, true)
     OptionsFrameOkay_OnClick(AudioOptionsFrame)
     if AudioOptionsFrame.audioRestart then
         AudioOptionsFrame_AudioRestart()
     end
 end
-applyButton:SetScript("OnClick", okay)
 
 panel:SetScript("OnShow", function()
     PlaySound("igMainMenuOption")
@@ -379,6 +385,12 @@ end
 -- The old frames open this window instead, at the page they would have shown.
 for _, frame in ipairs(OPTION_FRAMES) do
     frame:HookScript("OnShow", function(self)
+        if closing then -- Close's own handler shows InterfaceOptionsFrame after saving: we're done
+            closing = nil
+            self:Hide()
+            panel:Hide()
+            return
+        end
         local page = self.panelContainer and self.panelContainer.displayedPanel
             or self == InterfaceOptionsFrame and InterfaceOptionsFramePanelContainer.displayedPanel
         HideUIPanel(self)

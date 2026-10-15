@@ -57,6 +57,14 @@ UI-HUD-UnitFrame-Target-HighLevelTarget_Icon
 ui-hud-unitframe-target-portraiton-boss-rare-silver UI-HUD-UnitFrame-Target-Rare-PortraitOn
 UI-HUD-UnitFrame-TargetofTarget-PortraitOn UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Health
 UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Mana
+UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Rage UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Energy
+UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Focus UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-RunicPower
+UI-HUD-UnitFrame-TargetofTarget-PortraitOn-InCombat UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Status
+UI-HUD-UnitFrame-Party-PortraitOn UI-HUD-UnitFrame-Party-PortraitOn-Bar-Health UI-HUD-UnitFrame-Party-PortraitOn-Bar-Mana
+UI-HUD-UnitFrame-Party-PortraitOn-Bar-Rage UI-HUD-UnitFrame-Party-PortraitOn-Bar-Energy
+UI-HUD-UnitFrame-Party-PortraitOn-Bar-Focus UI-HUD-UnitFrame-Party-PortraitOn-Bar-RunicPower
+UI-HUD-UnitFrame-Party-PortraitOn-InCombat UI-HUD-UnitFrame-Party-PortraitOn-Vehicle
+UI-CastingBar-Frame UI-CastingBar-TextBox UI-CastingBar-Shield UI-CastingBar-Interrupted
 """.split()
 
 
