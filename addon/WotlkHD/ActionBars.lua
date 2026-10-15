@@ -300,8 +300,10 @@ end)
 local BUTTON, SMALL, GAP = 36, 30, 2
 local BAR_SCALE = 45 / 36
 local WIDTH = NUM_ACTIONBAR_BUTTONS * BUTTON + (NUM_ACTIONBAR_BUTTONS - 1) * GAP
-local XP_HEIGHT, REP_HEIGHT, BOTTOM = 10, 8, 4
-local MAIN_Y = BOTTOM + XP_HEIGHT + 2 + REP_HEIGHT + 6
+-- Status bars at retail's 9 pixels, each in a frame 4 wider all round; the frames touch.
+local XP_HEIGHT, REP_HEIGHT, BOTTOM, BAR_GAP = 9, 9, 4, 8
+-- The main bar 14 over the upper bar's frame (measured from retail), clear of the gryphons' feet.
+local MAIN_Y = BOTTOM + XP_HEIGHT + BAR_GAP + REP_HEIGHT + 4 + 14
 
 local bars = {}
 
@@ -513,20 +515,70 @@ local function statusBars()
     if ReputationWatchBar:IsShown() then
         ReputationWatchBar:ClearAllPoints()
         ReputationWatchBar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0,
-            MainMenuExpBar:IsShown() and BOTTOM + XP_HEIGHT + 2 or BOTTOM)
+            MainMenuExpBar:IsShown() and BOTTOM + XP_HEIGHT + BAR_GAP or BOTTOM)
         ReputationWatchBar:SetWidth(WIDTH * BAR_SCALE)
         ReputationWatchStatusBar:SetWidth(WIDTH * BAR_SCALE)
         ReputationWatchBar:SetHeight(REP_HEIGHT)
         ReputationWatchStatusBar:SetHeight(REP_HEIGHT)
     end
 end
+-- Retail's art: its background, fill and frame (StatusTrackingBar), and its ExpBar: rested experience
+-- in the prediction fill, cut to its width, under the bar's own, with a pip at its end, and the bar in
+-- the rested fill while rested.
 for _, bar in ipairs({MainMenuExpBar, ReputationWatchStatusBar}) do
     local bg = bar:CreateTexture(nil, "BACKGROUND")
-    bg:SetPoint("TOPLEFT", -1, 1)
-    bg:SetPoint("BOTTOMRIGHT", 1, -1)
-    bg:SetTexture(0, 0, 0, 0.7)
+    bg:SetAllPoints()
+    bg:SetAtlas("UI-HUD-ExperienceBar-Background")
+    local border = CreateFrame("Frame", nil, bar)
+    border:SetAllPoints()
+    border:SetFrameLevel(bar:GetFrameLevel() + 1)
+    local frame = border:CreateTexture(nil, "BACKGROUND")
+    frame:SetPoint("TOPLEFT", -4, 4)
+    frame:SetPoint("BOTTOMRIGHT", 4, -4)
+    frame:SetAtlas("UI-HUD-ExperienceBar-Frame")
 end
-hooksecurefunc("ReputationWatchBar_Update", statusBars)
+ExhaustionLevelFillBar:SetDrawLayer("BORDER")
+ExhaustionLevelFillBar:SetHeight(XP_HEIGHT)
+Retail.size(ExhaustionTick, 10, 14)
+ExhaustionTick:SetFrameLevel(MainMenuExpBar:GetFrameLevel() + 2) -- over the frame
+ExhaustionTick:GetNormalTexture():SetAtlas("UI-HUD-ExperienceBar-Frame-Pip")
+ExhaustionTickHighlight:SetAtlas("UI-HUD-ExperienceBar-Frame-Pip-Mouseover")
+ExhaustionTickHighlight:SetBlendMode("ADD")
+local PREDICTION = WotlkHD_Atlas["ui-hud-experiencebar-fill-prediction"]
+ExhaustionLevelFillBar:SetTexture(PREDICTION[1])
+local function rested()
+    Retail.AtlasBar(MainMenuExpBar, GetRestState() == 1 and "UI-HUD-ExperienceBar-Fill-Rested"
+        or "UI-HUD-ExperienceBar-Fill-Experience")
+    ExhaustionLevelFillBar:SetVertexColor(1, 1, 1, 1)
+    ExhaustionTickHighlight:SetVertexColor(1, 1, 1)
+    local exhaustion, max = GetXPExhaustion(), UnitXPMax("player")
+    if exhaustion and max > 0 then
+        local ratio = math.min((UnitXP("player") + exhaustion) / max, 1)
+        ExhaustionLevelFillBar:SetTexCoord(PREDICTION[4], PREDICTION[4] + (PREDICTION[5] - PREDICTION[4]) * ratio,
+            PREDICTION[6], PREDICTION[7])
+        if ratio < 0.01 or ratio > 0.99 then -- retail's: a pip at the bar's ends looks wrong
+            ExhaustionTick:Hide()
+        elseif ExhaustionTick:IsShown() then
+            local point, to, rel, x = ExhaustionTick:GetPoint()
+            ExhaustionTick:SetPoint(point, to, rel, x, 2)
+        end
+    end
+end
+rested()
+hooksecurefunc("ExhaustionTick_OnEvent", rested)
+-- The rested tooltip on the whole bar too, as retail's.
+MainMenuExpBar:HookScript("OnEnter", ExhaustionToolTipText)
+MainMenuExpBar:HookScript("OnLeave", GameTooltip_Hide)
+
+-- Retail's reputation fills by standing: red for hated and hostile, orange, yellow, then green.
+local REACTION = {"Red", "Red", "Orange", "Yellow", "Green", "Green", "Green", "Green"}
+hooksecurefunc("ReputationWatchBar_Update", function()
+    local color = REACTION[select(2, GetWatchedFactionInfo())] -- standing 0 with no faction watched
+    if color then
+        Retail.AtlasBar(ReputationWatchStatusBar, "UI-HUD-ExperienceBar-Fill-Reputation-Faction-" .. color)
+    end
+    statusBars()
+end)
 hooksecurefunc("MainMenuExpBar_Update", statusBars)
 
 hooksecurefunc("UIParent_ManageFramePositions", place)

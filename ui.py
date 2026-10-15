@@ -92,6 +92,11 @@ UI-HUD-MicroMenu-Groupfinder-Down UI-HUD-MicroMenu-Groupfinder-Mouseover
 UI-HUD-MicroMenu-Groupfinder-Disabled UI-HUD-MicroMenu-GameMenu-Up UI-HUD-MicroMenu-GameMenu-Down
 UI-HUD-MicroMenu-GameMenu-Mouseover UI-HUD-MicroMenu-GameMenu-Disabled bag-main bag-main-highlight
 bag-border bag-border-highlight bag-border-empty
+UI-HUD-ExperienceBar-Frame UI-HUD-ExperienceBar-Background UI-HUD-ExperienceBar-Fill-Experience
+UI-HUD-ExperienceBar-Fill-Rested UI-HUD-ExperienceBar-Fill-Prediction UI-HUD-ExperienceBar-Frame-Pip
+UI-HUD-ExperienceBar-Frame-Pip-Mouseover UI-HUD-ExperienceBar-Fill-Reputation-Faction-Red
+UI-HUD-ExperienceBar-Fill-Reputation-Faction-Orange UI-HUD-ExperienceBar-Fill-Reputation-Faction-Yellow
+UI-HUD-ExperienceBar-Fill-Reputation-Faction-Green
 
 
 """.split()

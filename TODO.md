@@ -33,9 +33,8 @@ frames (`RaidFrames.lua`), Edit Mode (`EditMode.lua`), retail unit frames and ca
   docs/retail-options.md.
 - Nameplates: which auras retail shows beside the bar, `NAME_PLATE_UNIT_ADDED`/`REMOVED` and unit
   events for `nameplateN`.
-- Action bars: the shaman's totem bar in our own bar (it can shift in combat), retail's
-  XP/reputation bar art, rounded icon corners (pre-masked icons in the build). Check the main bar's
-  border corners and gryphon height against retail. Bags: retail's bank window, Edit Mode box; sorting, assignments and
+- Action bars: the shaman's totem bar in our own bar (it can shift in combat), rounded icon corners (pre-masked
+  icons in the build). Check the main bar's border corners and gryphon height against retail. Bags: retail's bank window, Edit Mode box; sorting, assignments and
   item markers not yet checked in game.
 - Options window: Defaults on the client's Interface pages resets from addon code (taints until
   /reload); the red X and Esc don't save Interface options (only Close does, see Settings.lua).
