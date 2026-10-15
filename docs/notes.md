@@ -219,6 +219,15 @@ unit the player can assist (0x7293d0), harmful (= 2) on one it can attack (0x729
 thread keeps ClipCursor at the game window's client area while it has focus, leaving smaller clips
 (mouselook) alone.
 
+Nameplates (`client/nameplates.c`, `addon/WotlkHD/Nameplates.lua`): a unit's nameplate frame is at
+CGUnit+0xc38 (null without one); a Lua frame's C object is its table's `[0]`. Token parsing
+(0x60abf0) tries prefixes in turn; a jump at 0x60afaa (before "none") tries "nameplateN" and on a
+match goes on at 0x60ad57, which reads suffixes ("target"). N numbers a nameplate frame from the
+first `WotlkHD_NamePlateUnit` call on it; the GUID comes from walking the object list (0x4d4b30, with
+0x4d4db0 for the unit). The client runs a nameplate's own cast bar for the target only, so the addon
+draws cast bars from `UnitCastingInfo`/`UnitChannelInfo` on the token and hides the client's art
+(SetTexture(nil), or off screen for what the client re-sets: level, spell icon).
+
 Color filter (`hdColorblind` 0-3, `hdColorblindStrength`; Accessibility > Colors): daltonization
 (`colorblind_ps` in `client/post.hlsl`) on the finished frame, UI included, from a hook on
 IDirect3DDevice9::Present (vtable 17). It uses the world pass's targets, so it starts with the first

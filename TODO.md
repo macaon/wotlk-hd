@@ -19,14 +19,16 @@
 ## Retail UI
 
 Done: Lua functions from the DLL (`client/lua.c`), retail Options window (`addon/WotlkHD`), mouseover
-cast, cursor lock and color filter (`client/controls.c`, `client/effects.cpp`, `Options.lua`).
+cast, cursor lock and color filter (`client/controls.c`, `client/effects.cpp`, `Options.lua`),
+nameplates as units and retail nameplates (`client/nameplates.c`, `Nameplates.lua`).
 
 - Mouseover cast covers action bar spells only, not macros or items.
 - The color filter starts with the first world frame (not on the login and character screens).
 
 - Options window: search box, retail dropdown menu lists, retail's single-column page layout,
   scrollbar art, a retail Key Bindings page.
-- Nameplates as units, retail nameplates.
+- Nameplates: auras, `NAME_PLATE_UNIT_ADDED`/`REMOVED` and unit events for `nameplateN`, rare
+  icons, a look checked against retail.
 - Unit and player frames, bags, action bars in retail's look.
 - Edit Mode, raid frames.
 - Retail textures under 3.3.5's own UI paths in an MPQ (buttons, panels), restyling the whole UI.

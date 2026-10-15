@@ -1,8 +1,7 @@
 -- wotlk-hd: retail nameplates. 3.3.5's nameplates are unnamed children of WorldFrame that the client
 -- builds and updates itself (NamePlateFrame.cpp): a health bar and a cast bar (StatusBars) plus loose
 -- regions for the name, level, border and icons. We keep the client's frames, which stay clickable and
--- up to date, give the health bar retail's look, draw our own cast bar from the client's values, and
--- strip the client's own art.
+-- up to date, give the health bar retail's look, add our own cast bar, and strip the client's own art.
 
 local ATLAS = WotlkHD_Atlas
 local FONT = "Fonts\\FRIZQT__.TTF"
@@ -33,9 +32,12 @@ local function isPlate(f)
     return false
 end
 
--- The unit a plate shows, when the client lets us name it (nameplates aren't units in 3.3.5).
+-- The unit a plate shows: its nameplateN token from dinput8.dll, else target or mouseover when we can
+-- tell (stock 3.3.5 nameplates aren't units).
 local function unitOf(p, plate)
-    if UnitExists("target") and plate:GetAlpha() > 0.99 and p.name:GetText() == UnitName("target") then
+    if WotlkHD_NamePlateUnit then
+        return WotlkHD_NamePlateUnit(plate)
+    elseif UnitExists("target") and plate:GetAlpha() > 0.99 and p.name:GetText() == UnitName("target") then
         return "target"
     elseif p.highlight:IsShown() and UnitExists("mouseover") then
         return "mouseover"
@@ -57,49 +59,47 @@ local function layout(p)
 end
 
 -- [[ Cast bar ]] --
+-- From the plate's unit (UnitCastingInfo, UnitChannelInfo): the client runs its own nameplate cast bar
+-- only for the target.
 
-local function castShow(p)
-    local c = p.castBar
-    c.channel, c.started = nil, nil
-    c.text:SetText("")
-    c:Show()
+local function castFill(c)
+    local frac = math.min(math.max((GetTime() * 1000 - c.start) / (c.finish - c.start), 0), 1)
+    if c.channel then
+        frac = 1 - frac
+    end
+    local a = c.atlas
+    c.fill:SetWidth(math.max(c:GetWidth() * frac, 0.01))
+    c.fill:SetTexCoord(a[4], a[4] + (a[5] - a[4]) * frac, a[6], a[7])
 end
 
-local function castValue(p, value)
-    local c, cast = p.castBar, p.cast
-    local lo, hi = cast:GetMinMaxValues()
-    local frac = hi > lo and math.min(math.max((value - lo) / (hi - lo), 0), 1) or 0
-    if not c.started then -- first value of a cast: casts fill from empty, channels drain from full
-        c.started = true
-        c.channel = frac > 0.5
-        local unit = unitOf(p, p.plate)
-        local name = unit and UnitCastingInfo(unit)
-        if unit and not name then
-            name = UnitChannelInfo(unit)
-            c.channel = name and true or c.channel
-        end
-        c.text:SetText(name or "")
-        for _, r in ipairs(p.textures) do -- the client's spell icon, set per cast: moved beside our bar
-            if strlower(r:GetTexture() or ""):find("^interface\\icons\\") then
-                r:ClearAllPoints()
-                r:SetPoint("RIGHT", c, "LEFT", -2, 0)
-                r:SetWidth(CAST_HEIGHT + 2)
-                r:SetHeight(CAST_HEIGHT + 2)
-                r:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-            end
+local function castCheck(p, unit)
+    local c = p.castBar
+    local name, icon, start, finish, locked, _
+    local channel = false
+    if unit then
+        name, _, _, icon, start, finish, _, _, locked = UnitCastingInfo(unit)
+        if not name then
+            name, _, _, icon, start, finish, _, locked = UnitChannelInfo(unit)
+            channel = true
         end
     end
-    local locked = p.shield:IsShown()
-    local a = ATLAS[locked and "ui-castingbar-uninterruptable" or c.channel and "ui-castingbar-filling-channel"
+    if not name then
+        c:Hide()
+        return
+    end
+    c.start, c.finish, c.channel = start, finish, channel
+    c.atlas = ATLAS[locked and "ui-castingbar-uninterruptable" or channel and "ui-castingbar-filling-channel"
         or "ui-castingbar-filling-standard"]
+    c.fill:SetTexture(c.atlas[1])
     if locked then
         c.shield:Show()
     else
         c.shield:Hide()
     end
-    c.fill:SetTexture(a[1])
-    c.fill:SetWidth(math.max(c:GetWidth() * frac, 0.01))
-    c.fill:SetTexCoord(a[4], a[4] + (a[5] - a[4]) * frac, a[6], a[7])
+    c.text:SetText(name)
+    c.icon:SetTexture(icon)
+    castFill(c)
+    c:Show()
 end
 
 local function castBar(p)
@@ -118,25 +118,28 @@ local function castBar(p)
     pip:SetWidth(3)
     pip:SetHeight(CAST_HEIGHT + 4)
     pip:SetPoint("CENTER", c.fill, "RIGHT")
-    c.shield = c:CreateTexture(nil, "OVERLAY", nil)
+    c.icon = c:CreateTexture(nil, "OVERLAY")
+    c.icon:SetWidth(CAST_HEIGHT + 2)
+    c.icon:SetHeight(CAST_HEIGHT + 2)
+    c.icon:SetPoint("RIGHT", c, "LEFT", -2, 0)
+    c.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+    c.shield = c:CreateTexture(nil, "OVERLAY")
     c.shield:SetAtlas("nameplates-InterruptShield", true)
     c.shield:SetPoint("CENTER", c, "LEFT", 0, 0)
     c.text = c:CreateFontString(nil, "OVERLAY")
     c.text:SetFont(FONT, 8)
     c.text:SetShadowOffset(1, -1)
     c.text:SetPoint("CENTER", 0, -1)
+    c:SetScript("OnUpdate", castFill)
     c:Hide()
     p.castBar = c
-    p.cast:HookScript("OnShow", function() castShow(p) end)
-    p.cast:HookScript("OnHide", function() c:Hide() end)
-    p.cast:HookScript("OnValueChanged", function(_, value) castValue(p, value) end)
 end
 
 -- [[ Setup and refresh ]] --
 
 local function setup(plate)
     local health, cast = plate:GetChildren()
-    local p = {plate = plate, health = health, cast = cast, textures = {}}
+    local p = {plate = plate, health = health, cast = cast}
     for _, r in ipairs({plate:GetRegions()}) do
         if r:GetObjectType() == "FontString" then
             if p.name then
@@ -148,8 +151,9 @@ local function setup(plate)
             local role = KNOWN[strlower(r:GetTexture() or "")]
             if role then
                 p[role] = r
-            else
-                tinsert(p.textures, r) -- the cast bar border and spell icon
+            else -- the client's cast bar border and spell icon (which it sets per cast): off screen
+                r:ClearAllPoints()
+                r:SetPoint("TOPRIGHT", WorldFrame, "TOPLEFT", -1000, 0)
             end
             if role ~= "raid" then
                 -- no texture, but still shown, hidden and coloured by the client, which we read (SetAlpha
@@ -184,9 +188,11 @@ local function setup(plate)
     plates[plate] = p
 end
 
--- Selection (white border), threat (the client's glow colour) and elite/boss state.
+-- Casts, selection (white border), threat (the client's glow colour) and elite/boss state.
 local function refresh(p, plate)
-    if unitOf(p, plate) == "target" then
+    local unit = unitOf(p, plate)
+    castCheck(p, unit)
+    if unit and UnitIsUnit(unit, "target") then
         p.edge:SetVertexColor(1, 1, 1)
     elseif p.threat:IsShown() then
         p.edge:SetVertexColor(p.threat:GetVertexColor())

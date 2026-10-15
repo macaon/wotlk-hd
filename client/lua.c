@@ -18,7 +18,7 @@ void wlog(const char *fmt, ...);
 #define GAME_SCRIPT_FUNCTIONS ((void(__cdecl *)(void))0x005120E0)
 #define CFUNC_LOW ((DWORD *)0x00D415B8)
 #define CFUNC_HIGH ((DWORD *)0x00D415BC)
-#define WOTLKHD_LUA_VERSION 1 /* WotlkHD_Version(): bump when the functions change */
+#define WOTLKHD_LUA_VERSION 2 /* WotlkHD_Version(): bump when the functions change */
 
 static struct { const char *name; lua_CFunction fn; } functions[64];
 static unsigned function_count;

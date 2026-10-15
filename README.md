@@ -29,7 +29,10 @@ It's a personal build: it aims to look and play well, not to stay faithful to 3.
 - Retail's Options window, with Game and AddOns tabs, replaces Interface, Video and Sound Options.
   The client's own option pages are hosted in it with retail art for checkboxes, sliders and
   dropdowns. Addon option pages appear there too.
-- A Lua API from the DLL for addons (`WotlkHD_Version()` and more to come).
+- Retail nameplates: retail's bar and cast bar art, cast bars with spell name and icon on every
+  casting enemy (stock 3.3.5 shows the target's only), and enemy nameplates on by default.
+- Nameplates as units: `nameplateN` tokens work in every `Unit*` function, as on retail.
+- A Lua API from the DLL for addons (`WotlkHD_Version()`, `WotlkHD_NamePlateUnit(frame)`).
 - Retail's Mouseover Cast (with an optional modifier key), Lock Cursor to Window, and the
   Accessibility color filter (protanopia, deuteranopia, tritanopia) over the whole screen.
 
