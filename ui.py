@@ -117,6 +117,14 @@ Interface/Common/WhiteIconFrame.blp
 """.split()
 
 
+def write(data, path):
+    """A retail texture for 3.3.5: uncompressed where retail ships it so (its HUD art, whose small
+    details DXT5's 4x4 blocks garble), DXT5 otherwise."""
+    im = blp.decode(data)
+    raw = data[:4] == b"BLP2" and data[8] == 3
+    open(path, "wb").write(blp.encode_raw(im) if raw else blp.encode_dxt5(im))
+
+
 def main():
     elements = {r["Name"].lower(): r["ID"] for r in csv.DictReader(open(fetch.table("UiTextureAtlasElement")))}
     members = {}
@@ -137,8 +145,7 @@ def main():
         h = min(int(r["OverrideHeight"]) or int(r["Height"]) // s for r, s in zip(rows, scale))
         file = os.path.splitext(os.path.basename(fetch.name(int(atlas["FileDataID"]))))[0]
         if file not in written:
-            im = blp.decode(fetch.get(int(atlas["FileDataID"])))
-            open(os.path.join(ADDON, "Art", file + ".blp"), "wb").write(blp.encode_dxt5(im))
+            write(fetch.get(int(atlas["FileDataID"])), os.path.join(ADDON, "Art", file + ".blp"))
             written.add(file)
         aw, ah = int(atlas["AtlasWidth"]), int(atlas["AtlasHeight"])
         coords = (int(m["CommittedLeft"]) / aw, int(m["CommittedRight"]) / aw,
@@ -148,8 +155,7 @@ def main():
                      + ", ".join(f"{c:.6g}" for c in coords) + f", {str(bool(flags & 4)).lower()}, "
                      f"{str(bool(flags & 2)).lower()}}},")
     for path in FILES:
-        im = blp.decode(fetch.get(fetch.fdid(path)))
-        open(os.path.join(ADDON, "Art", os.path.basename(path).lower()), "wb").write(blp.encode_dxt5(im))
+        write(fetch.get(fetch.fdid(path)), os.path.join(ADDON, "Art", os.path.basename(path).lower()))
     # A clear texture, for hiding a StatusBar's own fill (retail's bar fills are atlas parts, which the
     # addon draws itself).
     from PIL import Image

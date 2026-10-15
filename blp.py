@@ -1,4 +1,4 @@
-"""BLP2 writing in the paletted form 3.3.5's character compositor reads, and DXT5 for UI art.
+"""BLP2 writing in the paletted form 3.3.5's character compositor reads, and DXT5 or raw BGRA for UI art.
 
 usage: blp.py <in.blp|png> <out.blp>    re-encodes one texture (self-test without arguments)
 
@@ -67,6 +67,21 @@ def encode_dxt5(im):
     return header + struct.pack("<16I", *offsets) + struct.pack("<16I", *sizes) + bytes(1024) + b"".join(data)
 
 
+def encode_raw(im):
+    """BLP2 bytes for a PIL image: uncompressed BGRA (compression 3, as retail's HUD art and 3.3.5's
+    UI-PAIDCHARACTERCUSTOMIZATION-BUTTON), all mips; for art DXT5's 4x4 blocks garble."""
+    data = [level.tobytes("raw", "BGRA") for level in mips(im.convert("RGBA"))]
+    header = struct.pack("<4sIBBBBII", b"BLP2", 1, 3, 8, 2, 1, im.width, im.height)
+    offsets, sizes, pos = [], [], len(header) + 16 * 4 * 2 + 256 * 4
+    for d in data:
+        offsets.append(pos)
+        sizes.append(len(d))
+        pos += len(d)
+    offsets += [0] * (16 - len(offsets))
+    sizes += [0] * (16 - len(sizes))
+    return header + struct.pack("<16I", *offsets) + struct.pack("<16I", *sizes) + bytes(1024) + b"".join(data)
+
+
 def decode(blp_bytes):
     """Mip 0 of a BLP2 as an RGBA image, including retail's uncompressed BGRA (compression 3)."""
     if blp_bytes[8] == 3:
@@ -103,4 +118,5 @@ if __name__ == "__main__":
         raw = struct.pack("<4sIBBBBII", b"BLP2", 1, 3, 8, 8, 0, 2, 1) + struct.pack("<16I", 1172, *[0] * 15) + \
             bytes(64 + 1024) + bytes([1, 2, 3, 4, 5, 6, 7, 8])
         assert decode(raw).getpixel((1, 0)) == (7, 6, 5, 8)
+        assert decode(encode_raw(src)).getpixel((3, 3)) == (10, 20, 30, 128)
         print("ok", len(out), len(dxt), "bytes")
