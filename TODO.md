@@ -27,8 +27,8 @@ nameplates as units and retail nameplates (`client/nameplates.c`, `Nameplates.lu
 
 - Options window: search box, retail dropdown menu lists, retail's single-column page layout,
   scrollbar art, a retail Key Bindings page.
-- Nameplates: auras, `NAME_PLATE_UNIT_ADDED`/`REMOVED` and unit events for `nameplateN`, rare
-  icons, a look checked against retail.
+- Nameplates: `NAME_PLATE_UNIT_ADDED`/`REMOVED` and unit events for `nameplateN`, a look checked
+  against retail.
 - Unit and player frames, bags, action bars in retail's look.
 - Edit Mode, raid frames.
 - Retail textures under 3.3.5's own UI paths in an MPQ (buttons, panels), restyling the whole UI.

@@ -6,6 +6,13 @@
 local ATLAS = WotlkHD_Atlas
 local FONT = "Fonts\\FRIZQT__.TTF"
 local WIDTH, HEIGHT, CAST_HEIGHT = 110, 10, 10
+local MAX_AURAS, AURA_WIDTH, AURA_HEIGHT = 6, 20, 14
+local CLASSIFICATION = {
+    elite = "nameplates-icon-elite-gold",
+    worldboss = "nameplates-icon-elite-gold",
+    rareelite = "nameplates-icon-elite-silver",
+    rare = "nameplates-icon-elite-silver",
+}
 
 -- The client's textures, by path (strings in Wow.exe next to NamePlateFrame.cpp).
 local KNOWN = {
@@ -135,11 +142,70 @@ local function castBar(p)
     p.castBar = c
 end
 
+-- [[ Auras ]] --
+-- Your debuffs on the unit, as retail shows them: a row above the name.
+
+local function auraIcon(p, i)
+    local a = p.auras[i]
+    if a then
+        return a
+    end
+    a = CreateFrame("Frame", nil, p.plate)
+    a:SetWidth(AURA_WIDTH)
+    a:SetHeight(AURA_HEIGHT)
+    if i == 1 then
+        a:SetPoint("BOTTOMLEFT", p.health, "TOPLEFT", 0, 16)
+    else
+        a:SetPoint("LEFT", p.auras[i - 1], "RIGHT", 4, 0)
+    end
+    local edge = a:CreateTexture(nil, "BACKGROUND")
+    edge:SetPoint("TOPLEFT", -1, 1)
+    edge:SetPoint("BOTTOMRIGHT", 1, -1)
+    edge:SetTexture(0, 0, 0)
+    a.icon = a:CreateTexture(nil, "ARTWORK")
+    a.icon:SetAllPoints()
+    a.icon:SetTexCoord(0.05, 0.95, 0.185, 0.815) -- the icon's middle, at the frame's 20:14
+    a.cooldown = CreateFrame("Cooldown", nil, a, "CooldownFrameTemplate")
+    a.cooldown:SetAllPoints()
+    a.cooldown:SetReverse(true)
+    a.count = a:CreateFontString(nil, "OVERLAY")
+    a.count:SetFont(FONT, 8, "OUTLINE")
+    a.count:SetPoint("BOTTOMRIGHT", 2, -1)
+    p.auras[i] = a
+    return a
+end
+
+local function auraCheck(p, unit)
+    local n = 0
+    for i = 1, unit and 40 or 0 do
+        local name, _, icon, count, _, duration, expires = UnitAura(unit, i, "HARMFUL|PLAYER")
+        if not name or n == MAX_AURAS then
+            break
+        end
+        n = n + 1
+        local a = auraIcon(p, n)
+        a.icon:SetTexture(icon)
+        a.count:SetText(count > 1 and count or "")
+        if a.expires ~= expires then
+            a.expires = expires
+            if duration > 0 then
+                a.cooldown:SetCooldown(expires - duration, duration)
+            else
+                a.cooldown:Hide()
+            end
+        end
+        a:Show()
+    end
+    for i = n + 1, #p.auras do
+        p.auras[i]:Hide()
+    end
+end
+
 -- [[ Setup and refresh ]] --
 
 local function setup(plate)
     local health, cast = plate:GetChildren()
-    local p = {plate = plate, health = health, cast = cast}
+    local p = {plate = plate, health = health, cast = cast, auras = {}}
     for _, r in ipairs({plate:GetRegions()}) do
         if r:GetObjectType() == "FontString" then
             if p.name then
@@ -177,7 +243,6 @@ local function setup(plate)
     bg:SetAllPoints()
     bg:SetTexture(0.1, 0.1, 0.1, 0.85)
     p.class = health:CreateTexture(nil, "OVERLAY")
-    p.class:SetAtlas("nameplates-icon-elite-gold")
     p.class:SetWidth(16)
     p.class:SetHeight(16)
     p.class:SetPoint("RIGHT", health, "LEFT", -1, 0)
@@ -188,7 +253,7 @@ local function setup(plate)
     plates[plate] = p
 end
 
--- Casts, selection (white border), threat (the client's glow colour) and elite/boss state.
+-- Casts, selection (white border), threat (the client's glow colour), classification and auras.
 local function refresh(p, plate)
     local unit = unitOf(p, plate)
     castCheck(p, unit)
@@ -199,11 +264,17 @@ local function refresh(p, plate)
     else
         p.edge:SetVertexColor(0, 0, 0)
     end
-    if p.elite:IsShown() or p.boss:IsShown() then
+    local class = unit and UnitClassification(unit)
+    if not class then
+        class = (p.elite:IsShown() or p.boss:IsShown()) and "elite"
+    end
+    if CLASSIFICATION[class] then
+        p.class:SetAtlas(CLASSIFICATION[class])
         p.class:Show()
     else
         p.class:Hide()
     end
+    auraCheck(p, unit)
 end
 
 local seen, elapsed = 0, 0

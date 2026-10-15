@@ -32,7 +32,7 @@ checkbox-minimal checkmark-minimal checkmark-minimal-disabled
 Minimal_SliderBar_Left _Minimal_SliderBar_Middle Minimal_SliderBar_Right Minimal_SliderBar_Button
 common-dropdown-b-button common-dropdown-b-button-hover common-dropdown-b-button-pressed
 common-dropdown-b-button-open common-dropdown-bg
-nameplates-bar-fill nameplates-icon-elite-gold nameplates-InterruptShield
+nameplates-bar-fill nameplates-icon-elite-gold nameplates-icon-elite-silver nameplates-InterruptShield
 UI-CastingBar-Background UI-CastingBar-Filling-Standard UI-CastingBar-Filling-Channel UI-CastingBar-Uninterruptable UI-CastingBar-Pip
 """.split()
 

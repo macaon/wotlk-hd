@@ -40,6 +40,7 @@ WotlkHD_Atlas = {
     ["common-dropdown-bg"] = {"Interface\\AddOns\\WotlkHD\\Art\\commondropdown2x", 68, 68, 0.000976562, 0.133789, 0.357422, 0.623047, false, false},
     ["nameplates-bar-fill"] = {"Interface\\AddOns\\WotlkHD\\Art\\nameplatefill", 256, 32, 0, 1, 0, 1, true, true},
     ["nameplates-icon-elite-gold"] = {"Interface\\AddOns\\WotlkHD\\Art\\nameplates", 40, 40, 0.00390625, 0.316406, 0.00390625, 0.316406, false, false},
+    ["nameplates-icon-elite-silver"] = {"Interface\\AddOns\\WotlkHD\\Art\\nameplates", 40, 40, 0.324219, 0.636719, 0.00390625, 0.316406, false, false},
     ["nameplates-interruptshield"] = {"Interface\\AddOns\\WotlkHD\\Art\\nameplates", 14, 16, 0.246094, 0.300781, 0.757812, 0.820312, false, false},
     ["ui-castingbar-background"] = {"Interface\\AddOns\\WotlkHD\\Art\\uicastingbar2x", 209, 11, 0.000976562, 0.413086, 0.367188, 0.417969, false, false},
     ["ui-castingbar-filling-standard"] = {"Interface\\AddOns\\WotlkHD\\Art\\uicastingbar2x", 209, 11, 0.411133, 0.819336, 0.515625, 0.558594, false, false},
