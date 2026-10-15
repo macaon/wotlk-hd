@@ -1,6 +1,7 @@
 """Copy built patches into the game: out/patch-<name>.MPQ to <WoW>/Data/, out/patch-enUS-<name>.MPQ
 to Data/enUS/ (numbered patches, and chars.py's one per race, loaded by name through dinput8.dll),
-and the addon (addon/WotlkHD, the Video Options page for the client's effects) to Interface/AddOns/.
+and the addon (addon/WotlkHD: retail's Options window, the page for the client's effects) to
+Interface/AddOns/.
 
 usage: install.py [name ...]    patch names: 6, dwarf, ...; default: the archives already installed
                                 and chars.py's per-race ones (a new numbered patch needs its name:

@@ -1,4 +1,4 @@
-"""BLP2 writing in the paletted form 3.3.5's character compositor reads.
+"""BLP2 writing in the paletted form 3.3.5's character compositor reads, and DXT5 for UI art.
 
 usage: blp.py <in.blp|png> <out.blp>    re-encodes one texture (self-test without arguments)
 
@@ -45,6 +45,39 @@ def encode(im):
     return header + struct.pack("<16I", *offsets) + struct.pack("<16I", *sizes) + pal + b"".join(data)
 
 
+def encode_dxt5(im):
+    """BLP2 bytes for a PIL image: DXT5 (alpha type 7, as 3.3.5's own UI art), all mips."""
+    data = []
+    for level in mips(im.convert("RGBA")):
+        if level.width < 4 or level.height < 4:  # DXT blocks are 4x4; the small mips are padded
+            padded = Image.new("RGBA", (max(4, level.width), max(4, level.height)))
+            padded.paste(level)
+            level = padded
+        buf = io.BytesIO()
+        level.save(buf, "DDS", pixel_format="DXT5")
+        data.append(buf.getvalue()[128:])
+    header = struct.pack("<4sIBBBBII", b"BLP2", 1, 2, 8, 7, 1, im.width, im.height)
+    offsets, sizes, pos = [], [], len(header) + 16 * 4 * 2 + 256 * 4
+    for d in data:
+        offsets.append(pos)
+        sizes.append(len(d))
+        pos += len(d)
+    offsets += [0] * (16 - len(offsets))
+    sizes += [0] * (16 - len(sizes))
+    return header + struct.pack("<16I", *offsets) + struct.pack("<16I", *sizes) + bytes(1024) + b"".join(data)
+
+
+def decode(blp_bytes):
+    """Mip 0 of a BLP2 as an RGBA image, including retail's uncompressed BGRA (compression 3)."""
+    if blp_bytes[8] == 3:
+        w, h = struct.unpack_from("<2I", blp_bytes, 12)
+        off = struct.unpack_from("<I", blp_bytes, 20)[0]
+        return Image.frombytes("RGBA", (w, h), blp_bytes[off:off + w * h * 4], "raw", "BGRA")
+    im = Image.open(io.BytesIO(blp_bytes))
+    im.load()
+    return im.convert("RGBA")
+
+
 def reencode(blp_bytes):
     im = Image.open(io.BytesIO(blp_bytes))
     im.load()
@@ -65,4 +98,9 @@ if __name__ == "__main__":
         # so check the layout: mip 0 is the indices and then one alpha byte per pixel.
         offset, size = struct.unpack_from("<I", out, 20)[0], struct.unpack_from("<I", out, 84)[0]
         assert size == 64 * 32 * 2 and out[offset + 64 * 32 + 3 * 64 + 3] == 128
-        print("ok", len(out), "bytes")
+        dxt = encode_dxt5(src)
+        assert all(abs(a - b) < 8 for a, b in zip(decode(dxt).getpixel((0, 0)), (200, 100, 50, 255)))
+        raw = struct.pack("<4sIBBBBII", b"BLP2", 1, 3, 8, 8, 0, 2, 1) + struct.pack("<16I", 1172, *[0] * 15) + \
+            bytes(64 + 1024) + bytes([1, 2, 3, 4, 5, 6, 7, 8])
+        assert decode(raw).getpixel((1, 0)) == (7, 6, 5, 8)
+        print("ok", len(out), len(dxt), "bytes")

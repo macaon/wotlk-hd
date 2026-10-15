@@ -1,4 +1,7 @@
 ## Interface: 30300
 ## Title: wotlk-hd
-## Notes: Video Options page for wotlk-hd's effects (dinput8.dll); a wider view distance.
+## Notes: Retail's Options window and art (ui.py); Video Options page for wotlk-hd's effects (dinput8.dll); a wider view distance.
+Atlas.lua
+Retail.lua
 WotlkHD.lua
+Settings.lua
