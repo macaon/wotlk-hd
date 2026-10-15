@@ -68,6 +68,8 @@ UI-HUD-UnitFrame-Party-PortraitOn-InCombat UI-HUD-UnitFrame-Party-PortraitOn-Veh
 UI-CastingBar-Frame UI-CastingBar-TextBox UI-CastingBar-Shield UI-CastingBar-Interrupted
 UI-Frame-PortraitMetal-CornerTopLeft bags-item-slot64 common-search-border-left common-search-border-middle
 common-search-border-right common-search-magnifyingglass common-search-clearbutton
+bags-button-autosort-up bags-button-autosort-down bags-junkcoin bags-newitem bags-glow-white bags-glow-green
+bags-glow-blue bags-glow-purple bags-glow-orange bags-icon-equipment bags-icon-consumables bags-icon-tradegoods bags-icon-junk
 UI-HUD-ActionBar-IconFrame UI-HUD-ActionBar-IconFrame-Down UI-HUD-ActionBar-IconFrame-Mouseover UI-HUD-ActionBar-Frame
 ui-hud-actionbar-iconframe-slot UI-HUD-ActionBar-IconFrame-Border UI-HUD-ActionBar-IconFrame-Flash
 UI-HUD-ActionBar-Gryphon-Left UI-HUD-ActionBar-Gryphon-Right UI-HUD-ActionBar-Wyvern-Left UI-HUD-ActionBar-Wyvern-Right

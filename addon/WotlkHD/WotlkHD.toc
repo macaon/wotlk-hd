@@ -2,6 +2,7 @@
 ## Title: wotlk-hd
 ## Notes: Retail's Options window and art (ui.py), with the options dinput8.dll adds (mouseover cast, cursor lock, colour filter, effects); a wider view distance.
 ## SavedVariables: WotlkHD_Saved
+## SavedVariablesPerCharacter: WotlkHD_CharSaved
 Atlas.lua
 Retail.lua
 Nameplates.lua
