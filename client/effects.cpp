@@ -26,11 +26,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "cvar.h"
 #include "shaders.h"
 #include "../cache/smaa/Textures/AreaTex.h"
 #include "../cache/smaa/Textures/SearchTex.h"
 
 extern "C" void wlog(const char *fmt, ...);
+extern "C" void controls_cvars(void); /* controls.c */
 
 #define FFX_APPLY ((void(__cdecl *)(void))0x008C1010)
 #define GX_DEVICE (*(BYTE **)0x00C5DF88)
@@ -61,16 +63,12 @@ static bool use_smaa = true, use_cas = true, use_ao, use_ao_view, use_depth_view
     use_shafts_view, broken, from_env;
 static float cas_sharpness = CAS_SHARPNESS;
 
-/* CVar::Register (0x767fc0, cdecl: name, help, flags, default, callback, category, ...) and Lookup;
- * a cvar's integer value is at +0x30 */
-typedef BYTE *(__cdecl *cvar_register_t)(const char *, const char *, unsigned, const char *, void *, unsigned,
-                                         int, void *, int);
-#define CVAR_REGISTER ((cvar_register_t)0x00767FC0)
-#define CVAR_INT(cv) (*(int *)((cv) + 0x30))
-static BYTE *cv_smaa, *cv_sharpen, *cv_sharpness, *cv_shafts, *cv_shafts_strength, *cv_ao, *cv_haze;
+static BYTE *cv_smaa, *cv_sharpen, *cv_sharpness, *cv_shafts, *cv_shafts_strength, *cv_ao, *cv_haze, *cv_colorblind,
+    *cv_colorblind_strength;
 
 static void __cdecl register_cvars(void) {
     ((void(__cdecl *)(void))0x0078E400)(); /* the client's own world graphics cvars */
+    controls_cvars();
     cv_smaa = CVAR_REGISTER("hdSMAA", "wotlk-hd: SMAA anti-aliasing", 1, "1", nullptr, 1, 0, nullptr, 0);
     cv_sharpen = CVAR_REGISTER("hdSharpen", "wotlk-hd: CAS sharpening", 1, "1", nullptr, 1, 0, nullptr, 0);
     cv_sharpness = CVAR_REGISTER("hdSharpness", "wotlk-hd: sharpening strength (0-100)", 1, "100", nullptr, 1, 0,
@@ -80,6 +78,8 @@ static void __cdecl register_cvars(void) {
                                        nullptr, 1, 0, nullptr, 0);
     cv_ao = CVAR_REGISTER("hdAO", "wotlk-hd: ambient occlusion", 1, "0", nullptr, 1, 0, nullptr, 0);
     cv_haze = CVAR_REGISTER("hdHaze", "wotlk-hd: distance haze", 1, "0", nullptr, 1, 0, nullptr, 0);
+    cv_colorblind = CVAR_SAVED("hdColorblind", "wotlk-hd: colorblind filter (0 off, 1 protanopia, 2 deuteranopia, 3 tritanopia)", "0");
+    cv_colorblind_strength = CVAR_SAVED("hdColorblindStrength", "wotlk-hd: colorblind filter strength (0-100)", "100");
     wlog("effects: settings registered (hdSMAA %d, hdSharpen %d, hdSharpness %d, hdSunshafts %d, hdAO %d, hdHaze %d)",
          cv_smaa ? CVAR_INT(cv_smaa) : -1, cv_sharpen ? CVAR_INT(cv_sharpen) : -1,
          cv_sharpness ? CVAR_INT(cv_sharpness) : -1, cv_shafts ? CVAR_INT(cv_shafts) : -1, cv_ao ? CVAR_INT(cv_ao) : -1,
@@ -103,7 +103,7 @@ static float haze_color[3] = {-1.0f, 0.0f, 0.0f}; /* linear, eased; < 0: none se
 static IDirect3DDevice9 *dev;
 static IDirect3DVertexShader9 *vs_quad, *vs_edges, *vs_weights, *vs_blend;
 static IDirect3DPixelShader9 *ps_edges, *ps_weights, *ps_blend, *ps_cas, *ps_depth, *ps_ao, *ps_ao_blur, *ps_ao_apply, *ps_ao_view, *ps_haze, *ps_shafts_mask, *ps_shafts_blur,
-    *ps_shafts_apply, *ps_shafts_view;
+    *ps_shafts_apply, *ps_shafts_view, *ps_colorblind;
 static IDirect3DTexture9 *area, *search;               /* D3DPOOL_MANAGED: survive Reset */
 static IDirect3DTexture9 *color, *edges, *weights, *temp; /* D3DPOOL_DEFAULT, back buffer size */
 static IDirect3DTexture9 *ao, *ao_temp;   /* D3DPOOL_DEFAULT, half the back buffer */
@@ -165,6 +165,17 @@ static void release_targets(void) {
 typedef HRESULT(STDMETHODCALLTYPE *reset_t)(IDirect3DDevice9 *, D3DPRESENT_PARAMETERS *);
 static reset_t real_reset;
 
+typedef HRESULT(STDMETHODCALLTYPE *present_t)(IDirect3DDevice9 *, const RECT *, const RECT *, HWND, const RGNDATA *);
+static present_t real_present;
+static void colorblind(void);
+
+static HRESULT STDMETHODCALLTYPE present_hook(IDirect3DDevice9 *self, const RECT *src, const RECT *dst, HWND w,
+                                              const RGNDATA *dirty) {
+    if (self == dev && !broken)
+        colorblind();
+    return real_present(self, src, dst, w, dirty);
+}
+
 static HRESULT STDMETHODCALLTYPE reset_hook(IDirect3DDevice9 *self, D3DPRESENT_PARAMETERS *pp) {
     if (self == dev)
         release_targets();
@@ -214,6 +225,13 @@ static bool setup(void) {
     real_reset = (reset_t)vtbl[16];
     vtbl[16] = (void *)reset_hook;
     VirtualProtect(&vtbl[16], sizeof(void *), old, &old);
+    if (VirtualProtect(&vtbl[17], sizeof(void *), PAGE_READWRITE, &old)) {
+        real_present = (present_t)vtbl[17];
+        vtbl[17] = (void *)present_hook;
+        VirtualProtect(&vtbl[17], sizeof(void *), old, &old);
+        wlog("effects: Present hooked (color filter)");
+    } else
+        wlog("effects: cannot hook IDirect3DDevice9::Present (%lu), no color filter", GetLastError());
     if (VirtualProtect(&vtbl[39], 2 * sizeof(void *), PAGE_READWRITE, &old)) {
         real_set_depth = (set_depth_t)vtbl[39];
         real_get_depth = (get_depth_t)vtbl[40];
@@ -239,7 +257,8 @@ static bool setup(void) {
               SUCCEEDED(dev->CreatePixelShader(shafts_mask_ps, &ps_shafts_mask)) &&
               SUCCEEDED(dev->CreatePixelShader(shafts_blur_ps, &ps_shafts_blur)) &&
               SUCCEEDED(dev->CreatePixelShader(shafts_apply_ps, &ps_shafts_apply)) &&
-              SUCCEEDED(dev->CreatePixelShader(shafts_view_ps, &ps_shafts_view));
+              SUCCEEDED(dev->CreatePixelShader(shafts_view_ps, &ps_shafts_view)) &&
+              SUCCEEDED(dev->CreatePixelShader(colorblind_ps, &ps_colorblind));
     area = lookup_texture(AREATEX_WIDTH, AREATEX_HEIGHT, D3DFMT_A8L8, areaTexBytes, AREATEX_PITCH);
     search = lookup_texture(SEARCHTEX_WIDTH, SEARCHTEX_HEIGHT, D3DFMT_L8, searchTexBytes, SEARCHTEX_PITCH);
     if (!ok || !area || !search) {
@@ -327,7 +346,7 @@ static void target(IDirect3DTexture9 *t, IDirect3DSurface9 *back) {
 
 /* Full-screen quad, shifted half a pixel (of a w x h target) for D3D9's pixel centres (as in SMAA's
  * D3D9 demo). */
-static void draw(IDirect3DVertexShader9 *vs, IDirect3DPixelShader9 *ps, UINT w = width, UINT h = height) {
+static HRESULT draw(IDirect3DVertexShader9 *vs, IDirect3DPixelShader9 *ps, UINT w = width, UINT h = height) {
     float px = 1.0f / w, py = 1.0f / h;
     float quad[4][5] = {{-1.0f - px, 1.0f + py, 0.5f, 0.0f, 0.0f},
                         {1.0f - px, 1.0f + py, 0.5f, 1.0f, 0.0f},
@@ -335,7 +354,7 @@ static void draw(IDirect3DVertexShader9 *vs, IDirect3DPixelShader9 *ps, UINT w =
                         {1.0f - px, -1.0f + py, 0.5f, 1.0f, 1.0f}};
     dev->SetVertexShader(vs);
     dev->SetPixelShader(ps);
-    dev->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, quad, sizeof(quad[0]));
+    return dev->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, quad, sizeof(quad[0]));
 }
 
 /* The sun on screen: texcoords, and how visible (0 behind the camera, below the horizon or far off
@@ -569,6 +588,59 @@ no_haze:
         saved_target->Release();
     if (saved_depth)
         saved_depth->Release();
+    back->Release();
+}
+
+/* The colorblind filter, on the finished frame (UI included) just before Present. Uses the world
+ * pass's targets, so it starts with the first world frame (not on the glue screens). */
+static void colorblind(void) {
+    IDirect3DSurface9 *back = nullptr, *saved_target = nullptr, *color_surface = nullptr;
+    D3DSURFACE_DESC desc;
+    if (!cv_colorblind || CVAR_INT(cv_colorblind) < 1 || CVAR_INT(cv_colorblind) > 3 || !state || !color ||
+        FAILED(dev->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &back)))
+        return;
+    back->GetDesc(&desc);
+    if (desc.Width != width || desc.Height != height) {
+        back->Release();
+        return;
+    }
+    state->Capture();
+    dev->GetRenderTarget(0, &saved_target);
+    dev->SetRenderState(D3DRS_ZENABLE, FALSE);
+    dev->SetRenderState(D3DRS_STENCILENABLE, FALSE);
+    dev->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
+    dev->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
+    dev->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+    dev->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
+    dev->SetRenderState(D3DRS_COLORWRITEENABLE, 0xF);
+    dev->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+    dev->SetRenderState(D3DRS_FOGENABLE, FALSE);
+    dev->SetRenderState(D3DRS_CLIPPLANEENABLE, 0);
+    dev->SetRenderState(D3DRS_SRGBWRITEENABLE, FALSE);
+    dev->SetFVF(D3DFVF_XYZ | D3DFVF_TEX1);
+    float metrics[4] = {1.0f / width, 1.0f / height, (float)width, (float)height};
+    float params[4] = {(float)CVAR_INT(cv_colorblind),
+                       fminf(fmaxf(CVAR_INT(cv_colorblind_strength) / 100.0f, 0.0f), 1.0f), 0.0f, 0.0f};
+    dev->SetVertexShaderConstantF(0, metrics, 1);
+    dev->SetPixelShaderConstantF(10, params, 1);
+    color->GetSurfaceLevel(0, &color_surface);
+    HRESULT copied = dev->StretchRect(back, nullptr, color_surface, nullptr, D3DTEXF_NONE);
+    color_surface->Release();
+    target(nullptr, back);
+    sampler(0, color, false, false);
+    HRESULT began = dev->BeginScene();
+    HRESULT drawn = draw(vs_quad, ps_colorblind);
+    dev->EndScene();
+    static bool reported;
+    if (!reported && (FAILED(copied) || FAILED(began) || FAILED(drawn))) {
+        wlog("effects: color filter pass failed: copy %08lx, begin %08lx, draw %08lx", (unsigned long)copied,
+             (unsigned long)began, (unsigned long)drawn);
+        reported = true;
+    }
+    state->Apply();
+    dev->SetRenderTarget(0, saved_target);
+    if (saved_target)
+        saved_target->Release();
     back->Release();
 }
 

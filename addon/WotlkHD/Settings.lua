@@ -211,7 +211,7 @@ local keybindings = {name = KEY_BINDINGS, wotlkhdOpen = function()
 end}
 
 local function gameCategories()
-    local groups = {{name = GAMEPLAY_HEADER or "Gameplay"}, {name = SYSTEM_HEADER or "System"}}
+    local groups = {{name = GAMEPLAY_HEADER or "Gameplay"}, {name = "Accessibility"}, {name = SYSTEM_HEADER or "System"}}
     for _, key in ipairs(GAMEPLAY) do
         local page = _G["InterfaceOptions" .. key .. "Panel"]
         if page then
@@ -219,9 +219,12 @@ local function gameCategories()
         end
     end
     tinsert(groups[1], keybindings)
+    for _, page in ipairs(WotlkHD_AccessibilityPages) do
+        tinsert(groups[2], page)
+    end
     for _, frame in ipairs({VideoOptionsFrame, AudioOptionsFrame}) do
         for _, page in ipairs(frame.categoryList) do
-            tinsert(groups[2], page)
+            tinsert(groups[3], page)
         end
     end
     return groups

@@ -11,7 +11,8 @@
 // c3: tan of half the field of view (x, y), AO radius (yards), AO intensity; c4: AO target metrics
 // (half the screen); c5.xy: AO blur step (texcoords); c6: fog colour (linear) and haze strength;
 // c7.x: haze density per fog end distance (1 / yards); c8: sun position (texcoords), visibility,
-// shaft intensity; c9.x: shaft length of this blur pass, c9.y: sky brightness threshold.
+// shaft intensity; c9.x: shaft length of this blur pass, c9.y: sky brightness threshold;
+// c10: colorblind filter (x: 1 protanopia, 2 deuteranopia, 3 tritanopia; y: strength 0..1).
 
 float4 rt_metrics : register(c0);
 float4 cas_params : register(c1);
@@ -23,6 +24,7 @@ float4 fog_color : register(c6);
 float4 haze_params : register(c7);
 float4 sun_params : register(c8);
 float4 shaft_params : register(c9);
+float4 colorblind_params : register(c10);
 
 #define SMAA_HLSL_3
 #define SMAA_PRESET_HIGH
@@ -236,4 +238,25 @@ float4 shafts_view_ps(float2 texcoord : TEXCOORD0) : COLOR {
     float2 d = (texcoord - sun_params.xy) * float2(rt_metrics.z / rt_metrics.w, 1.0);
     float ring = abs(length(d) - 0.02) < 0.003 ? 1.0 : 0.0;
     return float4(tex2D(shaft_tex, texcoord).rgb * 4.0 + float3(ring, 0.0, 0.0), 1.0);
+}
+
+// Colorblind filter (the whole frame, UI included, as retail's): daltonization. The colour as the
+// chosen deficiency sees it (LMS, Vienot/Brettel; Fidaner et al.'s daltonize), and what is lost
+// moved into channels that it still tells apart.
+float4 colorblind_ps(float2 texcoord : TEXCOORD0) : COLOR {
+    float3 c = tex2D(color_gamma, texcoord).rgb;
+    float3x3 to_lms = float3x3(17.8824, 43.5161, 4.11935, 3.45565, 27.1554, 3.86714, 0.0299566, 0.184309, 1.46709);
+    float3x3 to_rgb = float3x3(0.0809444479, -0.130504409, 0.116721066, -0.0102485335, 0.0540193266, -0.113614708,
+                               -0.000365296938, -0.00412161469, 0.693511405);
+    float3 lms = mul(to_lms, c);
+    float type = colorblind_params.x;
+    if (type < 1.5)
+        lms.x = 2.02344 * lms.y - 2.52581 * lms.z;
+    else if (type < 2.5)
+        lms.y = 0.494207 * lms.x + 1.24827 * lms.z;
+    else
+        lms.z = -0.395913 * lms.x + 0.801109 * lms.y;
+    float3 err = c - mul(to_rgb, lms);
+    float3 shift = float3(0.0, 0.7 * err.r + err.g, 0.7 * err.r + err.b);
+    return float4(saturate(c + shift * colorblind_params.y), 1.0);
 }

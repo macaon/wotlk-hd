@@ -29,6 +29,6 @@ cp ../cache/smaa/SMAA.hlsl "$FXC/"
     cas_ps cas_ps ps_3_0 depth_ps depth_ps ps_3_0 \
     ao_ps ao_ps ps_3_0 ao_blur_ps ao_blur_ps ps_3_0 ao_apply_ps ao_apply_ps ps_3_0 ao_view_ps ao_view_ps ps_3_0 \
     haze_ps haze_ps ps_3_0 shafts_mask_ps shafts_mask_ps ps_3_0 shafts_blur_ps shafts_blur_ps ps_3_0 \
-    shafts_apply_ps shafts_apply_ps ps_3_0 shafts_view_ps shafts_view_ps ps_3_0)
+    shafts_apply_ps shafts_apply_ps ps_3_0 shafts_view_ps shafts_view_ps ps_3_0 colorblind_ps colorblind_ps ps_3_0)
 mv "$FXC/shaders.h" shaders.h
 echo "built $(pwd)/shaders.h"

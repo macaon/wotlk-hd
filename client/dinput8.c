@@ -22,6 +22,7 @@ void effects_hooks(void); /* effects.cpp */
 void portrait_hooks(void); /* portraits.c */
 void npc_item_hooks(void); /* npcitems.c */
 void lua_hooks(void); /* lua.c */
+void controls_hooks(void); /* controls.c */
 
 void wlog(const char *fmt, ...) {
     if (!log_file)
@@ -259,6 +260,7 @@ BOOL WINAPI DllMain(HINSTANCE dll, DWORD reason, LPVOID reserved) {
             portrait_hooks();
             npc_item_hooks();
             lua_hooks();
+            controls_hooks();
         }
         CloseHandle(CreateThread(NULL, 0, memory_census, NULL, 0, NULL));
     } /* no census at exit: the client ends without DLL_PROCESS_DETACH */

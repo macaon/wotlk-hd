@@ -209,6 +209,21 @@ skins for the option controls. `Settings.lua` is retail's Options window (Game a
 category list, Defaults, Apply, Close) hosting the client's own Interface, Video and Sound panels and
 addon panels; the old frames, the game menu and `InterfaceOptionsFrame_OpenToCategory` open it.
 
+Retail control options (`client/controls.c`, cvars `hdMouseoverCast`, `hdMouseoverCastKey`,
+`hdLockCursor`; the WotlkHD addon's `Options.lua` puts them on the Controls and Mouse pages).
+Mouseover cast: Script_UseAction (0x5ac000) resolves its unit argument at 0x5ac043 (0x60abf0; none
+means the target's GUID) and its worker casts spells at 0x5abe54 (0x80da80: spell, item, target
+GUID). The DLL notes whether a unit was given at the first and, if not, swaps in the mouseover GUID
+(0xbd07a0) at the second when the spell fits it: helpful (0x7fe1b0 on the Spell.dbc record = 1) on a
+unit the player can assist (0x7293d0), harmful (= 2) on one it can attack (0x729740). Lock cursor: a
+thread keeps ClipCursor at the game window's client area while it has focus, leaving smaller clips
+(mouselook) alone.
+
+Color filter (`hdColorblind` 0-3, `hdColorblindStrength`; Accessibility > Colors): daltonization
+(`colorblind_ps` in `client/post.hlsl`) on the finished frame, UI included, from a hook on
+IDirect3DDevice9::Present (vtable 17). It uses the world pass's targets, so it starts with the first
+world frame.
+
 NPC weapons (`client/npcitems.c`): NPCs moved onto HD character models (`NPC_LOOKS`) lose the weapons
 their old creature models had in the mesh, and the server sends none. `chars.py` `NPC_WEAPONS` picks
 retail item displays per 3.3.5 display (retail has no table: its servers send NPC weapons), imports

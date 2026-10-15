@@ -1,7 +1,8 @@
 ## Interface: 30300
 ## Title: wotlk-hd
-## Notes: Retail's Options window and art (ui.py); Video Options page for wotlk-hd's effects (dinput8.dll); a wider view distance.
+## Notes: Retail's Options window and art (ui.py), with the options dinput8.dll adds (mouseover cast, cursor lock, colour filter, effects); a wider view distance.
 Atlas.lua
 Retail.lua
 WotlkHD.lua
+Options.lua
 Settings.lua
