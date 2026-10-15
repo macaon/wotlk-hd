@@ -76,6 +76,12 @@ BlizzardOptionsPanel_SetupDependentControl(mouseover, mouseoverKey)
 check(InterfaceOptionsMousePanel, "hdLockCursor", "Lock Cursor to Window",
     "Keeps the cursor inside the game window while it has focus.", InterfaceOptionsMousePanelWoWMouse, 0, -8)
 
+-- [[ Unit Frames: Raid-Style Party Frames ]] --
+
+check(InterfaceOptionsUnitFramePanel, "hdRaidStyleParty", "Use Raid-Style Party Frames",
+    "Shows your party in raid frames instead of the party frames.", InterfaceOptionsUnitFramePanelFullSizeFocusFrame,
+    0, -8)
+
 -- [[ Accessibility: Colors ]] --
 
 local colors = CreateFrame("Frame", "WotlkHDColorsPanel", UIParent)

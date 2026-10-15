@@ -34,6 +34,9 @@ common-dropdown-b-button common-dropdown-b-button-hover common-dropdown-b-button
 common-dropdown-b-button-open common-dropdown-bg
 nameplates-bar-fill nameplates-icon-elite-gold nameplates-icon-elite-silver nameplates-InterruptShield
 UI-CastingBar-Background UI-CastingBar-Filling-Standard UI-CastingBar-Filling-Channel UI-CastingBar-Uninterruptable UI-CastingBar-Pip
+RaidFrame-Hp-Fill RaidFrame-Hp-Bg RaidFrame-TargetFrame RaidFrame-AgroFrame RaidFrame-DispelHighlight
+RaidFrame-Icon-DebuffMagic RaidFrame-Icon-DebuffCurse RaidFrame-Icon-DebuffDisease RaidFrame-Icon-DebuffPoison
+roleicon-tiny-tank roleicon-tiny-healer roleicon-tiny-dps
 """.split()
 
 

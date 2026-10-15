@@ -8,7 +8,9 @@
  * target at the second. Spells only: items and macros keep their own targeting.
  *
  * Lock cursor to window (hdLockCursor): while the game window has focus, the cursor stays inside it
- * (ClipCursor, checked by a thread every 100 ms, since focus changes and window moves reset it). */
+ * (ClipCursor, checked by a thread every 100 ms, since focus changes and window moves reset it).
+ *
+ * Raid-style party frames (hdRaidStyleParty): only saved here; the addon's RaidFrames.lua reads it. */
 #include <windows.h>
 
 #include "cvar.h"
@@ -34,6 +36,7 @@ void controls_cvars(void) {
     cv_mouseover = CVAR_SAVED("hdMouseoverCast", "wotlk-hd: action bar spells go to the unit under the mouse", "0");
     cv_mouseover_key = CVAR_SAVED("hdMouseoverCastKey", "wotlk-hd: mouseover cast modifier (0 none, 1 alt, 2 ctrl, 3 shift)", "0");
     cv_lock_cursor = CVAR_SAVED("hdLockCursor", "wotlk-hd: keep the cursor inside the game window", "0");
+    CVAR_SAVED("hdRaidStyleParty", "wotlk-hd: the WotlkHD addon's raid frames for the party too", "0");
 }
 
 static int modifier_held(void) {

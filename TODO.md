@@ -20,7 +20,8 @@
 
 Done: Lua functions from the DLL (`client/lua.c`), retail Options window (`addon/WotlkHD`), mouseover
 cast, cursor lock and color filter (`client/controls.c`, `client/effects.cpp`, `Options.lua`),
-nameplates as units and retail nameplates (`client/nameplates.c`, `Nameplates.lua`).
+nameplates as units and retail nameplates (`client/nameplates.c`, `Nameplates.lua`), retail raid
+frames (`RaidFrames.lua`).
 
 - Mouseover cast covers action bar spells only, not macros or items.
 - The color filter starts with the first world frame (not on the login and character screens).
@@ -30,7 +31,8 @@ nameplates as units and retail nameplates (`client/nameplates.c`, `Nameplates.lu
 - Nameplates: `NAME_PLATE_UNIT_ADDED`/`REMOVED` and unit events for `nameplateN`, a look checked
   against retail.
 - Unit and player frames, bags, action bars in retail's look.
-- Edit Mode, raid frames.
+- Edit Mode (moving the raid frames among others); raid frames: pets, heal prediction (no 3.3.5
+  API), retail's raid manager panel.
 - Retail textures under 3.3.5's own UI paths in an MPQ (buttons, panels), restyling the whole UI.
 
 ## Client

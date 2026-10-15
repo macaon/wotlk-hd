@@ -32,6 +32,8 @@ It's a personal build: it aims to look and play well, not to stay faithful to 3.
 - Retail nameplates: retail's bar and cast bar art, cast bars with spell name and icon on every
   casting enemy (stock 3.3.5 shows the target's only), your debuffs with timers, elite and rare
   icons, and enemy nameplates on by default.
+- Retail raid frames for raids (and parties, with Use Raid-Style Party Frames): class-coloured health,
+  roles, target and aggro highlights, buffs, debuffs, dispellable types and range fade.
 - Nameplates as units: `nameplateN` tokens work in every `Unit*` function, as on retail.
 - A Lua API from the DLL for addons (`WotlkHD_Version()`, `WotlkHD_NamePlateUnit(frame)`).
 - Retail's Mouseover Cast (with an optional modifier key), Lock Cursor to Window, and the

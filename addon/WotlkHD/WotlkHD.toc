@@ -5,6 +5,7 @@
 Atlas.lua
 Retail.lua
 Nameplates.lua
+RaidFrames.lua
 WotlkHD.lua
 Options.lua
 Settings.lua
