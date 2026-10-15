@@ -17,7 +17,7 @@ import time
 import urllib.error
 import urllib.request
 
-BUILD = os.environ.get("WOW_BUILD", "12.1.0.69933")  # live retail, 2026-10-11
+BUILD = os.environ.get("WOW_BUILD", "12.1.5.70391")  # live retail, 2026-10-15
 CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cache")
 BUILD_CACHE = os.path.join(CACHE, BUILD)
 _names = None
