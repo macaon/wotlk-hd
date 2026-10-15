@@ -295,25 +295,68 @@ hooksecurefunc("PaperDollItemSlotButton_Update", function(b)
 end)
 
 -- [[ Layout ]] --
--- Retail's: the main bar centered at the bottom with the experience and reputation bars under it, the
--- bottom bars stacked above it, stance and pet bars above those, bars 4 and 5 on the right (the client's),
--- bars 6-8 in the middle of the screen.
+-- Retail's: the main bar centered at the bottom with the experience and reputation bars under it, bars 2
+-- and 3 stacked above it, stance and pet bars above those, bars 4 and 5 down the right edge, bars 6-8 in
+-- the middle of the screen; buttons 2 apart, as retail's default padding.
 --
--- The main bar's buttons move into our own secure bar (as Dominos and Bartender did), which pages them
--- with a state driver: secure, so stances, forms, paging and possess switch in combat. The client's
--- bonus bar (its stance overlay) goes under a hidden parent. The other bars stay the client's frames,
--- placed again after its layout code (UIParent_ManageFramePositions) runs, out of combat only: they're
--- protected, so one the client moves in combat (a pet summoned mid-fight) comes back when it ends.
+-- Every bar is our own secure frame holding the client's buttons (as Dominos and Bartender did): the
+-- client's layout code (UIParent_ManageFramePositions) moves its own bars, in combat too where only its
+-- code may, so ours would jump. The main bar pages with a state driver, secure, so stances, forms, paging
+-- and possess switch in combat. A bar moved in Edit Mode (WotlkHD_Saved.editMode.frames) stays where it
+-- was put, and the bars that stacked on it stack on what's below it.
 
-local BUTTON, GAP = 36, 6
+local BUTTON, SMALL, GAP = 36, 30, 2
 local WIDTH = NUM_ACTIONBAR_BUTTONS * BUTTON + (NUM_ACTIONBAR_BUTTONS - 1) * GAP
 local XP_HEIGHT, REP_HEIGHT, BOTTOM = 10, 8, 4
 local MAIN_Y = BOTTOM + XP_HEIGHT + 2 + REP_HEIGHT + 6
 
-local main = CreateFrame("Frame", "WotlkHDMainBar", UIParent, "SecureHandlerStateTemplate")
-main:SetWidth(WIDTH)
-main:SetHeight(BUTTON)
-main:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, MAIN_Y)
+local bars = {}
+
+-- A secure bar for buttons named prefix..1..count (or created when make is set), size each, in a row or a
+-- column. shown: a macro condition for its visibility, or a function giving one.
+local function bar(key, name, prefix, count, size, vertical, shown, make)
+    local f = CreateFrame("Frame", name, UIParent, "SecureHandlerStateTemplate")
+    local long = count * size + (count - 1) * GAP
+    f:SetWidth(vertical and size or long)
+    f:SetHeight(vertical and long or size)
+    f.key, f.prefix, f.count, f.size, f.vertical, f.shown = key, prefix, count, size, vertical, shown
+    if make then
+        for i = 1, count do
+            local b = CreateFrame("CheckButton", prefix .. i, f, "ActionBarButtonTemplate")
+            b:SetID(i)
+            b.buttonType = strupper(prefix) -- bound as CLICK <name>:LeftButton (Bindings.xml)
+            ActionButton_UpdateHotkeys(b, b.buttonType)
+            skin(b)
+        end
+    end
+    bars[key] = f
+    return f
+end
+
+local function fill(f)
+    for i = 1, f.count do
+        local b = _G[f.prefix .. i]
+        b:SetParent(f)
+        b:ClearAllPoints()
+        if f.vertical then
+            b:SetPoint("TOPLEFT", f, "TOPLEFT", 0, -(i - 1) * (f.size + GAP))
+        else
+            b:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", (i - 1) * (f.size + GAP), 0)
+        end
+    end
+end
+
+-- Key Bindings names for bars 6-8 (Bindings.xml binds their buttons as clicks).
+BINDING_HEADER_WOTLKHD = "Action Bars 6-8"
+for n = 6, 8 do
+    for i = 1, NUM_ACTIONBAR_BUTTONS do
+        _G["BINDING_NAME_CLICK WotlkHDBar" .. n .. "Button" .. i .. ":LeftButton"] =
+            "Action Bar " .. n .. " Button " .. i
+    end
+end
+
+local VEHICLE = "[vehicleui] hide; show"
+local main = bar("bar1", "WotlkHDMainBar", "ActionButton", NUM_ACTIONBAR_BUTTONS, BUTTON, false, VEHICLE)
 -- Possess first, then the pages (Shift+number, the page arrows), then the stances and forms, as the
 -- client's own ActionButton_CalculateAction orders them.
 local PAGING = "[bonusbar:5]11;[bar:2]2;[bar:3]3;[bar:4]4;[bar:5]5;[bar:6]6;"
@@ -324,6 +367,17 @@ main:SetAttribute("_onstate-page", [[
     end
 ]])
 
+-- Bars 2-5 hold the client's multibar buttons on the client's pages, shown when the client's option shows
+-- its bar.
+local function client(frame)
+    return function() return frame:IsShown() and VEHICLE or "hide" end
+end
+for _, e in ipairs({{2, MultiBarBottomLeft, "MultiBarBottomLeftButton"}, {3, MultiBarBottomRight, "MultiBarBottomRightButton"},
+    {4, MultiBarRight, "MultiBarRightButton", true}, {5, MultiBarLeft, "MultiBarLeftButton", true}}) do
+    local f = bar("bar" .. e[1], "WotlkHDBar" .. e[1], e[3], NUM_ACTIONBAR_BUTTONS, BUTTON, e[4], client(e[2]))
+    f:SetAttribute("actionpage", e[2]:GetAttribute("actionpage"))
+end
+
 -- Bars 6-8 on slots no bar of the client's uses: page 2 (13-24, the client's Shift+2 page), page 12
 -- (133-144: the server keeps 144 slots, the client uses 132), and page 10 (109-120, a stance page no
 -- class but the druid's moonkin uses).
@@ -331,67 +385,42 @@ local EXTRA = {{6, 2}, {7, 12}}
 if select(2, UnitClass("player")) ~= "DRUID" then
     tinsert(EXTRA, {8, 10})
 end
-local extra = {}
 for _, e in ipairs(EXTRA) do
-    local bar = CreateFrame("Frame", "WotlkHDBar" .. e[1], UIParent, "SecureHandlerStateTemplate")
-    bar:SetWidth(WIDTH)
-    bar:SetHeight(BUTTON)
-    bar:SetAttribute("actionpage", e[2])
-    for i = 1, NUM_ACTIONBAR_BUTTONS do
-        local b = CreateFrame("CheckButton", "WotlkHDBar" .. e[1] .. "Button" .. i, bar, "ActionBarButtonTemplate")
-        b:SetID(i)
-        b.buttonType = "WOTLKHDBAR" .. e[1] .. "BUTTON" -- no bindings yet: no hotkey text
-        ActionButton_UpdateHotkeys(b, b.buttonType)
-        b:SetPoint("BOTTOMLEFT", (i - 1) * (BUTTON + GAP), 0)
-        skin(b)
-    end
-    bar.number = e[1]
-    extra[#extra + 1] = bar
-    RegisterStateDriver(bar, "visibility", "[vehicleui] hide; show")
+    local f = bar("bar" .. e[1], "WotlkHDBar" .. e[1], "WotlkHDBar" .. e[1] .. "Button", NUM_ACTIONBAR_BUTTONS, BUTTON,
+        false, function()
+            return (WotlkHD_Saved and WotlkHD_Saved.actionBars or {})[e[1]] and VEHICLE or "hide"
+        end, true)
+    f:SetAttribute("actionpage", e[2])
 end
 
--- Bars 2 and 3 likewise: the client's layout code anchors them 17 above the first main button, also in
--- combat, so their buttons go into our bars (with the client's pages), shown when the client's bar is.
-local bottom = {}
-for i, e in ipairs({{MultiBarBottomLeft, "MultiBarBottomLeftButton"}, {MultiBarBottomRight, "MultiBarBottomRightButton"}}) do
-    local bar = CreateFrame("Frame", "WotlkHDBar" .. (i + 1), UIParent, "SecureHandlerStateTemplate")
-    bar:SetWidth(WIDTH)
-    bar:SetHeight(BUTTON)
-    bar:SetAttribute("actionpage", e[1]:GetAttribute("actionpage"))
-    bar.client, bar.buttons = e[1], e[2]
-    bottom[i] = bar
-end
+-- The client still shows and hides the stance and pet buttons themselves (forms you have, pet slots).
+bar("stance", "WotlkHDStanceBar", "ShapeshiftButton", NUM_SHAPESHIFT_SLOTS, SMALL, false, "[vehicleui][bonusbar:5] hide; show")
+bar("pet", "WotlkHDPetBar", "PetActionButton", NUM_PET_ACTION_SLOTS, SMALL, false, "[vehicleui] hide; [pet] show; hide")
+bar("possess", "WotlkHDPossessBar", "PossessButton", NUM_POSSESS_SLOTS, SMALL, false, "[bonusbar:5] show; hide")
 
-local function bottomButtons()
-    for _, bar in ipairs(bottom) do
-        for i = 1, NUM_ACTIONBAR_BUTTONS do
-            local b = _G[bar.buttons .. i]
-            b:SetParent(bar)
-            b:ClearAllPoints()
-            b:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", (i - 1) * (BUTTON + GAP), 0)
+-- Bars 1-8 own the empty slots too: shown, as on retail (3.3.5 hid empty buttons outside its main bar art;
+-- dragging adds to showgrid and takes it off again, so 1 stays).
+local function grid()
+    for n = 1, 8 do
+        local f = bars["bar" .. n]
+        for i = 1, f and f.count or 0 do
+            _G[f.prefix .. i]:SetAttribute("showgrid", 1)
+            _G[f.prefix .. i]:Show()
         end
     end
 end
 
--- The stance buttons in our own secure bar too: the client's layout code moves its stance bar, and in
--- combat (forms change it) only its code may, so ours would jump until combat ended.
-local stance = CreateFrame("Frame", "WotlkHDStanceBar", UIParent, "SecureHandlerStateTemplate")
-stance:SetWidth(NUM_SHAPESHIFT_SLOTS * 38)
-stance:SetHeight(30)
+local function moved(f)
+    local edit = WotlkHD_Saved and WotlkHD_Saved.editMode
+    return edit and edit.frames and edit.frames[f.key]
+end
 
-local function stanceButtons()
-    if InCombatLockdown() then
-        return
-    end
-    for i = 1, NUM_SHAPESHIFT_SLOTS do
-        local b = _G["ShapeshiftButton" .. i]
-        b:SetParent(stance)
-        b:ClearAllPoints()
-        b:SetPoint("BOTTOMLEFT", stance, "BOTTOMLEFT", (i - 1) * 38, 0)
+local function anchor(f, ...)
+    if not moved(f) then
+        f:ClearAllPoints()
+        f:SetPoint(...)
     end
 end
--- With one form the client anchors the first button to its own bar again.
-hooksecurefunc("ShapeshiftBar_Update", stanceButtons)
 
 -- Out of combat: the frames are protected.
 local pending
@@ -405,71 +434,59 @@ local function place()
         return
     end
     pending = nil
+    for _, f in pairs(bars) do
+        RegisterStateDriver(f, "visibility", type(f.shown) == "function" and f.shown() or f.shown)
+    end
+    anchor(main, "BOTTOM", UIParent, "BOTTOM", 0, MAIN_Y)
     local top = main
-    for _, bar in ipairs(bottom) do
-        bar:ClearAllPoints()
-        bar:SetPoint("BOTTOMLEFT", top, "TOPLEFT", 0, GAP)
-        if bar.client:IsShown() then -- the client's option for the bar
-            RegisterStateDriver(bar, "visibility", "[vehicleui] hide; show")
-            top = bar
-        else
-            RegisterStateDriver(bar, "visibility", "hide")
+    for _, key in ipairs({"bar2", "bar3"}) do
+        local f = bars[key]
+        anchor(f, "BOTTOMLEFT", top, "TOPLEFT", 0, GAP)
+        if f.shown() ~= "hide" and not moved(f) then
+            top = f
         end
     end
+    anchor(bars.stance, "BOTTOMLEFT", top, "TOPLEFT", 0, GAP + 2)
+    anchor(bars.possess, "BOTTOMLEFT", top, "TOPLEFT", 0, GAP + 2)
+    anchor(bars.pet, "BOTTOMRIGHT", top, "TOPRIGHT", 0, GAP + 2)
+    MultiCastActionBarFrame:ClearAllPoints() -- the shaman's totem bar is still the client's
+    MultiCastActionBarFrame:SetPoint("BOTTOMLEFT", top, "TOPLEFT", -8, GAP)
+    anchor(bars.bar4, "RIGHT", UIParent, "RIGHT", -4, 0)
+    anchor(bars.bar5, "TOPRIGHT", bars.bar4, "TOPLEFT", -GAP, 0)
     -- Bars 6-8 stack in the middle of the screen, a little below center, as retail places them.
     local below
-    for _, bar in ipairs(extra) do
-        bar:ClearAllPoints()
+    for _, e in ipairs(EXTRA) do
+        local f = bars["bar" .. e[1]]
         if below then
-            bar:SetPoint("BOTTOMLEFT", below, "TOPLEFT", 0, GAP)
+            anchor(f, "BOTTOMLEFT", below, "TOPLEFT", 0, GAP)
         else
-            bar:SetPoint("BOTTOM", UIParent, "CENTER", 0, -100)
+            anchor(f, "BOTTOM", UIParent, "CENTER", 0, -100)
         end
-        if (WotlkHD_Saved and WotlkHD_Saved.actionBars or {})[bar.number] then
-            RegisterStateDriver(bar, "visibility", "[vehicleui] hide; show")
-            below = bar
-        else
-            RegisterStateDriver(bar, "visibility", "hide")
+        if f.shown() ~= "hide" and not moved(f) then
+            below = f
         end
     end
-    stance:ClearAllPoints()
-    stance:SetPoint("BOTTOMLEFT", top, "TOPLEFT", 0, GAP)
-    for _, bar in ipairs({PossessBarFrame, MultiCastActionBarFrame}) do
-        bar:ClearAllPoints()
-        bar:SetPoint("BOTTOMLEFT", top, "TOPLEFT", -8, GAP - 2)
-    end
-    PetActionBarFrame:ClearAllPoints()
-    PetActionBarFrame:SetPoint("BOTTOMRIGHT", top, "TOPRIGHT", 0, GAP - 2)
 end
 
 local function setup()
     if InCombatLockdown() then
         return
     end
-    for i = 1, NUM_ACTIONBAR_BUTTONS do
-        local b = _G["ActionButton" .. i]
-        b:SetParent(main)
-        b:ClearAllPoints()
-        b:SetPoint("BOTTOMLEFT", main, "BOTTOMLEFT", (i - 1) * (BUTTON + GAP), 0)
-        -- Empty slots show, as on retail (3.3.5 drew them in the main bar's art and hid the buttons;
-        -- dragging adds to showgrid and takes it off again, so 1 stays).
-        b:SetAttribute("showgrid", 1)
-        b:Show()
+    for _, f in pairs(bars) do
+        fill(f)
     end
-    for _, bar in ipairs(extra) do
-        for i = 1, NUM_ACTIONBAR_BUTTONS do
-            _G[bar:GetName() .. "Button" .. i]:SetAttribute("showgrid", 1)
-            _G[bar:GetName() .. "Button" .. i]:Show()
-        end
-    end
+    grid()
     BonusActionBarFrame:SetParent(hidden)
-    stanceButtons()
-    bottomButtons()
-    RegisterStateDriver(stance, "visibility", "[vehicleui][bonusbar:5] hide; show")
     RegisterStateDriver(main, "page", PAGING)
-    RegisterStateDriver(main, "visibility", "[vehicleui] hide; show")
     place()
 end
+
+-- With one form the client anchors the first stance button to its own bar again.
+hooksecurefunc("ShapeshiftBar_Update", function()
+    if bars.stance:GetNumChildren() > 0 and not InCombatLockdown() then
+        fill(bars.stance)
+    end
+end)
 
 -- Experience and reputation: thin bars under the main bar, as wide as it.
 local function statusBars()
@@ -499,8 +516,9 @@ hooksecurefunc("MainMenuExpBar_Update", statusBars)
 hooksecurefunc("UIParent_ManageFramePositions", place)
 hooksecurefunc("MultiActionBar_Update", place)
 
--- Bars 6-8 on and off (from the Action Bars options); out of combat, as the bars are protected.
-WotlkHD_ActionBars = {extra = EXTRA}
+-- Bars 6-8 on and off (from the Action Bars options); out of combat, as the bars are protected. Place is
+-- for Edit Mode (bars put back after a reset).
+WotlkHD_ActionBars = {extra = EXTRA, Place = place}
 function WotlkHD_ActionBars.SetShown(number, on)
     WotlkHD_Saved.actionBars = WotlkHD_Saved.actionBars or {}
     WotlkHD_Saved.actionBars[number] = on or nil

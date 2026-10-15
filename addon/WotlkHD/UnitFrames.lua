@@ -283,6 +283,15 @@ local function petLayout()
 end
 PetFrame:SetWidth(120)
 PetFrame:SetHeight(49)
+-- Under retail's player frame, as its PlayerBottomManagedFrameContainer (TOP at the player frame's
+-- bottom, 25 up); lower with the death knight's runes, the druid's mana bar, the shaman's totems, as the
+-- client moves it for those.
+do
+    local class = select(2, UnitClass("player"))
+    local extra = (class == "DEATHKNIGHT" or class == "DRUID") and 15 or class == "SHAMAN" and 30 or 0
+    PetFrame:ClearAllPoints()
+    PetFrame:SetPoint("TOPLEFT", PlayerFrame, "TOPLEFT", 74, -78 - extra)
+end
 petLayout()
 hooksecurefunc("PetFrame_Update", petLayout) -- it sets the frame texture (with or without mana)
 
@@ -391,3 +400,21 @@ hooksecurefunc("SetTargetSpellbarAspect", function(self) -- the small focus fram
         castBar(self, 150, 10)
     end
 end)
+
+-- [[ PvP badge ]] --
+-- Retail's faction badges in place of 3.3.5's 64 pixel banners (the client sets those on each update).
+local PVP = {FFA = "UI-HUD-UnitFrame-Player-PVP-FFAIcon", Alliance = "UI-HUD-UnitFrame-Player-PVP-AllianceIcon",
+    Horde = "UI-HUD-UnitFrame-Player-PVP-HordeIcon"}
+local function pvpBadge(tex)
+    local kind = (tex:GetTexture() or ""):match("UI%-PVP%-(%a+)$")
+    if PVP[kind] then
+        tex:SetAtlas(PVP[kind], true)
+    end
+end
+hooksecurefunc("PlayerFrame_UpdatePvPStatus", function() pvpBadge(PlayerPVPIcon) end)
+hooksecurefunc("TargetFrame_CheckFaction", function(self)
+    if self.pvpIcon then
+        pvpBadge(self.pvpIcon)
+    end
+end)
+pvpBadge(PlayerPVPIcon)

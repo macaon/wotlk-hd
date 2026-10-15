@@ -54,6 +54,7 @@ UI-HUD-UnitFrame-Target-PortraitOn-Type UI-HUD-UnitFrame-Target-PortraitOn-InCom
 UI-HUD-UnitFrame-Target-PortraitOn-Boss-Gold UI-HUD-UnitFrame-Target-PortraitOn-Boss-Gold-Winged
 UI-HUD-UnitFrame-Target-PortraitOn-Boss-Rare-Star
 UI-HUD-UnitFrame-Target-HighLevelTarget_Icon
+UI-HUD-UnitFrame-Player-PVP-AllianceIcon UI-HUD-UnitFrame-Player-PVP-HordeIcon UI-HUD-UnitFrame-Player-PVP-FFAIcon
 ui-hud-unitframe-target-portraiton-boss-rare-silver UI-HUD-UnitFrame-Target-Rare-PortraitOn
 UI-HUD-UnitFrame-TargetofTarget-PortraitOn UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Health
 UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Mana

@@ -100,12 +100,13 @@ local raidStyle = check(InterfaceOptionsUnitFramePanel, "hdRaidStyleParty", "Use
 check(InterfaceOptionsUnitFramePanel, "hdRaidClassColors", "Display Class Colors",
     "Raid frame health bars in class colours instead of green.", raidStyle, 0, -8)
 
--- [[ Action Bars: bars 6 to 8 (ActionBars.lua; saved in WotlkHD_Saved, not cvars) ]] --
+-- [[ Action Bars: retail's names and one column; bars 6 to 8 (ActionBars.lua; WotlkHD_Saved, not cvars) ]] --
 
-local anchor = InterfaceOptionsActionBarsPanelSecureAbilityToggle
+local ab = "InterfaceOptionsActionBarsPanel"
+local anchor = _G[ab .. "RightTwo"]
 for _, e in ipairs(WotlkHD_ActionBars.extra) do
-    local c = CreateFrame("CheckButton", "InterfaceOptionsActionBarsPanelBar" .. e[1],
-        InterfaceOptionsActionBarsPanel, "InterfaceOptionsCheckButtonTemplate")
+    local c = CreateFrame("CheckButton", ab .. "Bar" .. e[1], InterfaceOptionsActionBarsPanel,
+        "InterfaceOptionsCheckButtonTemplate")
     c:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -8)
     _G[c:GetName() .. "Text"]:SetText("Action Bar " .. e[1])
     c.tooltipText = "Shows action bar " .. e[1] .. " (in the middle of the screen, as retail places it)."
@@ -115,6 +116,28 @@ for _, e in ipairs(WotlkHD_ActionBars.extra) do
     c:SetScript("OnClick", function(self) WotlkHD_ActionBars.SetShown(e[1], self:GetChecked() and true) end)
     anchor = c
 end
+
+-- The client names its checkboxes on PLAYER_ENTERING_WORLD (from its own strings, which we leave alone:
+-- changing them would taint its option setup); ours rename them after it, and lay the page out as retail's
+-- single column: the bars, then the bar options.
+local function actionBarsPage()
+    for key, n in pairs({BottomLeft = 2, BottomRight = 3, Right = 4, RightTwo = 5}) do
+        _G[ab .. key .. "Text"]:SetText("Action Bar " .. n)
+    end
+    local right2 = _G[ab .. "RightTwo"]
+    right2:ClearAllPoints()
+    right2:SetPoint("TOPLEFT", _G[ab .. "Right"], "BOTTOMLEFT", 0, -8)
+    local lock = _G[ab .. "LockActionBars"]
+    lock:ClearAllPoints()
+    lock:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -24)
+end
+InterfaceOptionsActionBarsPanel:HookScript("OnShow", actionBarsPage)
+local renamer = CreateFrame("Frame")
+renamer:RegisterEvent("PLAYER_ENTERING_WORLD")
+renamer:SetScript("OnEvent", function(self)
+    actionBarsPage()
+    self:UnregisterAllEvents()
+end)
 
 -- [[ Accessibility: Colors ]] --
 

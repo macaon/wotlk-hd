@@ -22,9 +22,25 @@ local SYSTEMS = {
     {key = "buffs", label = "Buffs", frame = "ConsolidatedBuffs", size = {340, 90}, anchor = "TOPRIGHT",
         scale = true},
     {key = "quests", label = "Objective Tracker", frame = "WatchFrame", keepSize = true},
+    -- Action bars (ActionBars.lua, which leaves moved ones where they are); optional: boxed only while shown.
+    {key = "bar1", label = "Action Bar 1", frame = "WotlkHDMainBar", scale = true},
+    {key = "bar2", label = "Action Bar 2", frame = "WotlkHDBar2", scale = true, optional = true},
+    {key = "bar3", label = "Action Bar 3", frame = "WotlkHDBar3", scale = true, optional = true},
+    {key = "bar4", label = "Action Bar 4", frame = "WotlkHDBar4", scale = true, optional = true},
+    {key = "bar5", label = "Action Bar 5", frame = "WotlkHDBar5", scale = true, optional = true},
+    {key = "bar6", label = "Action Bar 6", frame = "WotlkHDBar6", scale = true, optional = true},
+    {key = "bar7", label = "Action Bar 7", frame = "WotlkHDBar7", scale = true, optional = true},
+    {key = "bar8", label = "Action Bar 8", frame = "WotlkHDBar8", scale = true, optional = true},
+    {key = "stance", label = "Stance Bar", frame = "WotlkHDStanceBar", scale = true, optional = true},
+    {key = "pet", label = "Pet Bar", frame = "WotlkHDPetBar", scale = true, optional = true},
 }
 
+
 local saved -- WotlkHD_Saved.editMode
+-- Whether a system's box shows: not ticked off in the panel, and for optional ones only while shown.
+local function boxShown(sys)
+    return not saved.hidden[sys.key] and (not sys.optional or _G[sys.frame]:IsShown())
+end
 
 local function frameOf(sys)
     return _G[sys.frame]
@@ -528,7 +544,7 @@ for i, sys in ipairs(SYSTEMS) do
         function(on)
             saved.hidden[sys.key] = not on or nil
             local o = overlays[sys.key]
-            if o and on then
+            if o and on and boxShown(sys) then
                 o:Show()
             elseif o then
                 o:Hide()
@@ -621,10 +637,10 @@ function WotlkHD_EnterEditMode()
             fit(o)
             o.selection.Hide()
             o.highlight.Show()
-            if saved.hidden[sys.key] then
-                o:Hide()
-            else
+            if boxShown(sys) then
                 o:Show()
+            else
+                o:Hide()
             end
         end
     end
