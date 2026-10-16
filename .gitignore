@@ -3,3 +3,4 @@ client/*.dll
 out/
 out/wow/
 __pycache__/
+addon/WotlkHD/Art/

@@ -3,6 +3,7 @@
 # StormLib (MIT, fetched into cache/ at a pinned commit and compiled once) linked in, and SMAA's
 # lookup tables (MIT, fetched likewise) for effects.cpp. Shaders: shaders.sh, into shaders.h.
 set -e
+export LC_ALL=C # the object files link in glob order, which follows the locale
 cd "$(dirname "$0")"
 ZIG="${ZIG:-../cache/zig-linux-x86_64-0.13.0/zig}"
 STORMLIB=../cache/StormLib STORMLIB_COMMIT=44ebfbf
