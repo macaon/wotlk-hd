@@ -1,8 +1,9 @@
 -- wotlk-hd: retail's Map & Quest Log (Blizzard_WorldMap and QuestMapFrame, mainline) on 3.3.5's windowed
 -- world map: the metal frame with the quest log book, breadcrumbs over a 697x465 map, and the quest
 -- log beside it (zone headers, quests with their objectives, tracking checkboxes, search, the quest's
--- details), collapsible as retail's. The map opens windowed, as retail's does; the maximize button is
--- 3.3.5's own size button, so the client's own code switches to its fullscreen map.
+-- details, a right-click menu), collapsible as retail's; retail's filter button and quest markers (on the
+-- map and the rows). The map opens windowed, as retail's does; maximized it is the same map scaled to
+-- the screen, as retail's, not 3.3.5's fullscreen map (left as it is for its own toggle).
 --
 -- The map itself is 3.3.5's: its tiles, quest areas, quest markers and player arrow all sit on
 -- WorldMapDetailFrame at the client's windowed scale (WORLDMAP_WINDOWED_SIZE), and WorldMapFrame is
@@ -13,8 +14,6 @@ local Retail = WotlkHD_Retail
 local CANVAS_W, CANVAS_H = 697, 465 -- retail's map canvas, windowed with the quest log
 local TOP = 67 -- retail's TITLE_CANVAS_SPACER_FRAME_HEIGHT
 local LOG_W = 333 -- retail's questLogWidth
-local FRAME_H = 534
-local SCALE = CANVAS_W / (1002 * WORLDMAP_WINDOWED_SIZE) -- WorldMapFrame's, so the windowed map is retail's
 local TILE = "Interface\\AddOns\\WotlkHD\\Art\\cs_helptextures_tile"
 local HELP = "Interface\\AddOns\\WotlkHD\\Art\\cs_helptextures"
 
@@ -24,12 +23,11 @@ local function logShown()
 end
 
 -- [[ The frame ]] --
--- Ours at normal scale on the scaled WorldMapFrame (1 / SCALE cancels it out).
+-- Ours at normal scale on the scaled WorldMapFrame (f's scale cancels WorldMapFrame's). Two borders:
+-- retail's PortraitFrameTemplate windowed, ButtonFrameTemplateNoPortrait maximized; the title, buttons,
+-- breadcrumbs and menus on one frame (top) over whichever shows.
 local f = CreateFrame("Frame", "WotlkHDWorldMap", WorldMapFrame)
-f:SetScale(1 / SCALE)
 f:SetPoint("TOPLEFT")
-f:SetHeight(FRAME_H)
-f:SetFrameLevel(WorldMapFrame:GetFrameLevel())
 f:Hide()
 local bg = f:CreateTexture(nil, "BACKGROUND")
 bg:SetTexture(0x1f / 255, 0x1e / 255, 0x21 / 255, 1)
@@ -37,17 +35,14 @@ bg:SetPoint("TOPLEFT", 2, -2)
 bg:SetPoint("BOTTOMRIGHT", -2, 2)
 local border, portrait = Retail.MetalFrame(f, true)
 SetPortraitToTexture(portrait, "Interface\\QuestFrame\\UI-QuestLog-BookIcon")
--- The title on its own frame over the border (whose top edge shares the OVERLAY layer).
-local titleFrame = CreateFrame("Frame", nil, border)
-titleFrame:SetAllPoints()
-local title = titleFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-title:SetPoint("TOP", 17, -5)
-title:SetText("Map & Quest Log")
-local innerTop = border:CreateTexture(nil, "ARTWORK")
+local plainBorder = Retail.MetalFrame(f, false)
+local top = CreateFrame("Frame", nil, f)
+top:SetAllPoints()
+local title = top:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+title:SetPoint("TOP", 0, -5)
+local innerTop = top:CreateTexture(nil, "ARTWORK")
 innerTop:SetAtlas("_UI-Frame-InnerTopTile")
 innerTop:SetHeight(3)
-innerTop:SetPoint("TOPLEFT", f, "TOPLEFT", 2, -63)
-innerTop:SetPoint("TOPRIGHT", f, "TOPLEFT", 2 + CANVAS_W, -63)
 
 local function redButton(parent, normal, pushed, disabled)
     local b = CreateFrame("Button", nil, parent)
@@ -64,34 +59,90 @@ local function redButton(parent, normal, pushed, disabled)
     end
     return b
 end
-local close = redButton(border, "RedButton-Exit", "RedButton-exit-pressed")
+local close = redButton(top, "RedButton-Exit", "RedButton-exit-pressed")
 close:SetPoint("TOPRIGHT", 1, 0)
 close:SetScript("OnClick", function() ToggleFrame(WorldMapFrame) end)
+-- Retail's maximize and minimize (MaximizeMinimizeButtonFrameTemplate): ours, the same windowed map scaled
+-- to the screen (the client's fullscreen map isn't used).
+local maximize = redButton(top, "RedButton-Expand", "RedButton-Expand-Pressed", "RedButton-Expand-Disabled")
+maximize:SetPoint("RIGHT", close, "LEFT", 1, 0)
+local minimize = redButton(top, "RedButton-Condense", "RedButton-Condense-Pressed")
+minimize:SetPoint("RIGHT", close, "LEFT", 1, 0)
 
--- Maximize: 3.3.5's own size button (its click runs the client's code), on ours and in retail's art.
-local maximize = WorldMapFrameSizeUpButton
-local function placeMaximize()
-    maximize:SetParent(border)
-    maximize:SetWidth(24)
-    maximize:SetHeight(24)
-    maximize:ClearAllPoints()
-    maximize:SetPoint("RIGHT", close, "LEFT", 1, 0)
-end
-for _, t in ipairs({{"GetNormalTexture", "RedButton-Expand"}, {"GetPushedTexture", "RedButton-Expand-Pressed"},
-    {"GetHighlightTexture", "RedButton-Highlight"}, {"GetDisabledTexture", "RedButton-Expand-Disabled"}}) do
-    local tex = maximize[t[1]](maximize)
-    if tex then
-        tex:SetAtlas(t[2])
-        tex:SetAllPoints()
+-- [[ Menus ]] --
+-- A plain list for the breadcrumbs, the filter button and quests' right-click menu (UIDropDownMenu would
+-- taint the map's own dropdowns). Items: {text, func, checked}; checked nil for a plain entry.
+local list = CreateFrame("Frame", nil, top)
+list:SetFrameStrata("FULLSCREEN_DIALOG")
+list:EnableMouse(false) -- only a background: the entries (level with it at 3.3.5's level cap) take the clicks
+list:Hide()
+local listBg = list:CreateTexture(nil, "BACKGROUND")
+listBg:SetTexture(0, 0, 0, .9)
+listBg:SetAllPoints()
+local listButtons = {}
+local function showMenu(owner, items, point, relPoint, x, y)
+    if list:IsShown() and list.owner == owner then
+        list:Hide()
+        return
     end
+    local width = 120
+    for i, it in ipairs(items) do
+        local item = listButtons[i]
+        if not item then
+            -- the entry's text, check and highlight on the list itself, over its background whatever
+            -- the frame levels (3.3.5 tops out near the map's)
+            item = CreateFrame("Button", nil, list)
+            item:SetHeight(16)
+            item:SetPoint("TOPLEFT", 6, -4 - (i - 1) * 16)
+            item:SetPoint("RIGHT", -6, 0)
+            item.check = list:CreateTexture(nil, "ARTWORK")
+            item.check:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
+            item.check:SetWidth(14)
+            item.check:SetHeight(14)
+            item.check:SetPoint("LEFT", item)
+            item.text = list:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            item.lit = list:CreateTexture(nil, "BORDER")
+            item.lit:SetTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
+            item.lit:SetBlendMode("ADD")
+            item.lit:SetAllPoints(item)
+            item.lit:Hide()
+            item:SetScript("OnEnter", function(self) self.lit:Show() end)
+            item:SetScript("OnLeave", function(self) self.lit:Hide() end)
+            listButtons[i] = item
+        end
+        item.text:ClearAllPoints()
+        item.text:SetPoint("LEFT", item, "LEFT", it[3] ~= nil and 16 or 0, 0)
+        item.text:SetText(it[1])
+        if it[3] then
+            item.check:Show()
+        else
+            item.check:Hide()
+        end
+        item.text:Show()
+        item:SetScript("OnClick", function()
+            list:Hide()
+            it[2]()
+        end)
+        item:Show()
+        width = math.max(width, item.text:GetStringWidth() + (it[3] ~= nil and 16 or 0) + 12)
+    end
+    for i = #items + 1, #listButtons do
+        listButtons[i]:Hide()
+        listButtons[i].text:Hide()
+        listButtons[i].check:Hide()
+    end
+    list:SetWidth(width)
+    list:SetHeight(#items * 16 + 8)
+    list:ClearAllPoints()
+    list:SetPoint(point or "TOPLEFT", owner, relPoint or "BOTTOMLEFT", x or 10, y or 0)
+    list.owner = owner
+    list:Show()
 end
 
 -- [[ Breadcrumbs ]] --
--- Retail's NavBar: World, then the continent and zone shown, each a button; the last one's arrow
--- lists the maps under the one before it.
-local nav = CreateFrame("Frame", nil, border)
-nav:SetPoint("TOPLEFT", f, "TOPLEFT", 66, -25)
-nav:SetPoint("TOPRIGHT", f, "TOPLEFT", 2 + CANVAS_W - 4, -25)
+-- Retail's NavBar: World, then the continent and zone shown, each a button; the last ones' arrows list
+-- the maps beside them.
+local nav = CreateFrame("Frame", nil, top)
 nav:SetHeight(33)
 local navBg = nav:CreateTexture(nil, "BACKGROUND")
 navBg:SetTexture(TILE)
@@ -103,7 +154,10 @@ navOverlay:SetTexCoord(0, 1, .2578125, .32421875)
 navOverlay:SetAllPoints()
 
 local crumbs = {}
-local menu -- the dropdown list, below
+local SQUARE = "Interface\\AddOns\\WotlkHD\\Art\\"
+-- Retail's NavButtonTemplate: the chevron outside the button's right edge (over the next one, so the
+-- buttons to the left sit above), and for a button with a list, its menu arrow button (a small arrow,
+-- its square shown on hover) inside the right end.
 local function crumb(i)
     local b = crumbs[i]
     if not b then
@@ -115,18 +169,68 @@ local function crumb(i)
         b:GetPushedTexture():SetTexCoord(0, 1, .125, .18359375)
         b.text = b:CreateFontString(nil, "ARTWORK", "GameFontNormal")
         b.text:SetPoint("LEFT", 20, 0)
+        b.chevron = b:CreateTexture(nil, "OVERLAY")
+        b.chevron:SetTexture(HELP)
+        b.chevron:SetTexCoord(.88867188, .9296875, .296875, .53125)
+        b.chevron:SetWidth(21)
+        b.chevron:SetHeight(30)
+        b.chevron:SetPoint("LEFT", b, "RIGHT")
+        b:SetScript("OnMouseDown", function(self)
+            self.chevron:SetTexCoord(.6328125, .67382813, .7578125, .9921875)
+        end)
+        b:SetScript("OnMouseUp", function(self)
+            self.chevron:SetTexCoord(.88867188, .9296875, .296875, .53125)
+        end)
         b.arrow = CreateFrame("Button", nil, b)
-        b.arrow:SetWidth(21)
-        b.arrow:SetHeight(30)
-        b.arrow:SetPoint("RIGHT")
-        local a = b.arrow:CreateTexture(nil, "ARTWORK")
-        a:SetTexture(HELP)
-        a:SetTexCoord(.88867188, .9296875, .296875, .53125)
-        a:SetAllPoints()
-        b.arrow:SetScript("OnClick", function(self) menu(self:GetParent()) end)
+        b.arrow:SetWidth(27)
+        b.arrow:SetHeight(31)
+        b.arrow:SetPoint("RIGHT", b, "TOPRIGHT", -2, -15)
+        local art = b.arrow:CreateTexture(nil, "OVERLAY")
+        art:SetTexture(SQUARE .. "squarebuttontextures")
+        art:SetTexCoord(.453125, .640625, .203125, .015625)
+        art:SetWidth(12)
+        art:SetHeight(12)
+        art:SetPoint("CENTER", 0, -1)
+        b.arrow:SetNormalTexture(SQUARE .. "ui-squarebutton-up")
+        b.arrow:SetPushedTexture(SQUARE .. "ui-squarebutton-down")
+        for _, t in ipairs({b.arrow:GetNormalTexture(), b.arrow:GetPushedTexture()}) do
+            t:ClearAllPoints()
+            t:SetWidth(32)
+            t:SetHeight(32)
+            t:SetPoint("CENTER")
+            t:SetAlpha(0)
+        end
+        b.arrow:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
+        b.arrow:GetHighlightTexture():SetBlendMode("ADD")
+        b.arrow:SetScript("OnEnter", function(self)
+            self:GetNormalTexture():SetAlpha(1)
+            self:GetPushedTexture():SetAlpha(1)
+        end)
+        b.arrow:SetScript("OnLeave", function(self)
+            self:GetNormalTexture():SetAlpha(0)
+            self:GetPushedTexture():SetAlpha(0)
+        end)
+        b.arrow:SetScript("OnMouseDown", function() art:SetPoint("CENTER", -1, -2) end)
+        b.arrow:SetScript("OnMouseUp", function() art:SetPoint("CENTER", 0, -1) end)
+        b.arrow:SetScript("OnClick", function(self)
+            local names, pick = self:GetParent().list()
+            local items = {}
+            for n, name in ipairs(names) do
+                items[n] = {name, function() pick(n) end}
+            end
+            showMenu(self:GetParent(), items)
+        end)
         crumbs[i] = b
     end
     return b
+end
+-- The buttons to the left over the ones to their right, so each chevron covers its neighbour's edge.
+local function crumbLevels()
+    local base = nav:GetFrameLevel()
+    for i, b in ipairs(crumbs) do
+        b:SetFrameLevel(base + 2 * (#crumbs - i) + 1)
+        b.arrow:SetFrameLevel(b:GetFrameLevel() + 1)
+    end
 end
 
 local function navUpdate()
@@ -156,9 +260,16 @@ local function navUpdate()
         end
         b:ClearAllPoints()
         if prev then
-            b:SetPoint("LEFT", prev, "RIGHT", -15, 0)
+            b:SetPoint("LEFT", prev, "RIGHT", i == 2 and -12 or 0, 0) -- the home button's point over the next
         else
             b:SetPoint("LEFT", 2, 0)
+        end
+        if i == 1 then -- retail's home button (NavBar's HomeButton art, its own point: no chevron)
+            b.chevron:Hide()
+            b:GetNormalTexture():SetTexture(HELP)
+            b:GetNormalTexture():SetTexCoord(.453125, .703125, .0078125, .2421875)
+            b:GetPushedTexture():SetTexture(HELP)
+            b:GetPushedTexture():SetTexCoord(.453125, .703125, .2578125, .4921875)
         end
         b:SetScript("OnClick", p.go)
         b:Show()
@@ -167,53 +278,29 @@ local function navUpdate()
     for i = #path + 1, #crumbs do
         crumbs[i]:Hide()
     end
+    crumbLevels()
 end
 
--- A plain list under a breadcrumb (UIDropDownMenu would taint the map's own dropdowns).
-local list = CreateFrame("Frame", nil, border)
-list:SetFrameStrata("FULLSCREEN_DIALOG")
-list:EnableMouse(true)
-list:Hide()
-local listBg = list:CreateTexture(nil, "BACKGROUND")
-listBg:SetTexture(0, 0, 0, .9)
-listBg:SetAllPoints()
-local listButtons = {}
-function menu(b)
-    if list:IsShown() and list.owner == b then
-        list:Hide()
-        return
-    end
-    local names, pick = b.list()
-    for i, name in ipairs(names) do
-        local item = listButtons[i]
-        if not item then
-            item = CreateFrame("Button", nil, list)
-            item:SetHeight(16)
-            item:SetPoint("TOPLEFT", 6, -4 - (i - 1) * 16)
-            item:SetPoint("RIGHT", -6, 0)
-            item.text = item:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-            item.text:SetPoint("LEFT")
-            item:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
-            item:GetHighlightTexture():SetBlendMode("ADD")
-            listButtons[i] = item
-        end
-        item.text:SetText(name)
-        item:SetScript("OnClick", function()
-            list:Hide()
-            pick(i)
-        end)
-        item:Show()
-    end
-    for i = #names + 1, #listButtons do
-        listButtons[i]:Hide()
-    end
-    list:SetWidth(180)
-    list:SetHeight(#names * 16 + 8)
-    list:ClearAllPoints()
-    list:SetPoint("TOPLEFT", b, "BOTTOMLEFT", 10, 0)
-    list.owner = b
-    list:Show()
-end
+-- [[ Filter ]] --
+-- Retail's map filter button on the map's top right; its menu holds what 3.3.5 had as a checkbox
+-- (Show Quest Objectives, clicked so the client's own handler runs).
+local filter = CreateFrame("Button", nil, top)
+filter:SetWidth(32)
+filter:SetHeight(32)
+local filterIcon = filter:CreateTexture(nil, "ARTWORK")
+filterIcon:SetAtlas("Map-Filter-Button")
+filterIcon:SetAllPoints()
+local filterLit = filter:CreateTexture(nil, "HIGHLIGHT")
+filterLit:SetAtlas("Map-Filter-Button")
+filterLit:SetAllPoints()
+filterLit:SetBlendMode("ADD")
+filterLit:SetAlpha(.4)
+filter:SetScript("OnMouseDown", function() filterIcon:SetAtlas("Map-Filter-Button-down") end)
+filter:SetScript("OnMouseUp", function() filterIcon:SetAtlas("Map-Filter-Button") end)
+filter:SetScript("OnClick", function(self)
+    showMenu(self, {{WorldMapQuestShowObjectivesText:GetText(), function() WorldMapQuestShowObjectives:Click() end,
+        WorldMapQuestShowObjectives:GetChecked() and true or false}}, "TOPRIGHT", "BOTTOMRIGHT", 0, 0)
+end)
 
 -- [[ Quest log ]] --
 -- Whether a quest is tracked, as the tracker has it (its watch list; IsQuestWatched disagreed with it).
@@ -290,6 +377,82 @@ end)
 
 -- Rows: zone headers (retail's QuestLogHeaderTemplate, 289x22) and quests (QuestLogTitleTemplate: the
 -- title in the quest's difficulty colour, its unfinished objectives under it, a tracking checkbox).
+local questMenu, focused, mapMarkers, questsPage -- below
+
+-- [[ Markers ]] --
+-- 3.3.5's quest markers on the map (QuestPOI buttons on WorldMapPOIFrame) in retail's art (its map
+-- legend's): its disc and number textures hidden, retail's disc with the in-progress or turn-in glyph,
+-- and retail's gold disc when selected. The client only ever changes those textures' coordinates, so
+-- hiding them holds.
+local GLYPH_DROP = .031 -- the in-progress glyph's art sits this much of its height above centre
+local function skinMarker(b)
+    if not b or b.wotlkhd then
+        return
+    end
+    b.wotlkhd = b:CreateTexture(nil, "BACKGROUND")
+    b.wotlkhd:SetAtlas("ui-questpoi-questnumber")
+    b.wotlkhd:SetPoint("CENTER")
+    b.wotlkhd:SetWidth(28)
+    b.wotlkhd:SetHeight(28)
+    b.normalTexture:SetAlpha(0)
+    b.pushedTexture:SetAlpha(0)
+    b.highlightTexture:SetAlpha(0)
+    local lit = b:CreateTexture(nil, "HIGHLIGHT")
+    lit:SetAtlas("ui-questpoi-innerglow")
+    lit:SetAllPoints(b.wotlkhd)
+    lit:SetBlendMode("ADD")
+    if b.number then -- retail shows no numbers: the in-progress glyph on numbered markers
+        b.number:SetAlpha(0)
+        if b.type == QUEST_POI_NUMERIC then
+            local glyph = b:CreateTexture(nil, "ARTWORK")
+            glyph:SetAtlas("Quest-In-Progress-Icon-yellow")
+            glyph:SetWidth(28)
+            glyph:SetHeight(28)
+            glyph:SetPoint("CENTER", b.wotlkhd, "CENTER", 0, -28 * GLYPH_DROP)
+        end
+    end
+    if b.turnin then
+        b.turnin:SetAtlas("ui-questpoi-questbangturnin")
+    else -- QuestPOICompletedTemplate: its "?" was the normal texture
+        local glyph = b:CreateTexture(nil, "ARTWORK")
+        glyph:SetAtlas("ui-questpoi-questbangturnin")
+        glyph:SetAllPoints(b.wotlkhd)
+    end
+end
+hooksecurefunc("QuestPOI_DisplayButton", function(parentName, buttonType, buttonIndex)
+    if parentName == "WorldMapPOIFrame" then
+        skinMarker(_G["poi" .. parentName .. buttonType .. "_" .. buttonIndex])
+        skinMarker(QUEST_POI_SWAP_BUTTONS[parentName])
+    end
+end)
+hooksecurefunc("QuestPOI_SelectButton", function(b)
+    if b and b.wotlkhd then
+        b.wotlkhd:SetAtlas("ui-questpoi-questnumber-supertracked")
+    end
+end)
+hooksecurefunc("QuestPOI_DeselectButton", function(b)
+    if b and b.wotlkhd then
+        b.wotlkhd:SetAtlas("ui-questpoi-questnumber")
+    end
+end)
+-- {questID: marker button} for the markers on the map shown.
+-- (by name: QuestPOI.lua keeps its button counts local; types 1 to 4, numbered from 1)
+function mapMarkers()
+    local found = {}
+    for t = 1, 4 do
+        local i = 1
+        local b = _G["poiWorldMapPOIFrame" .. t .. "_" .. i]
+        while b do
+            if b:IsShown() and b.questId then
+                found[b.questId] = b
+            end
+            i = i + 1
+            b = _G["poiWorldMapPOIFrame" .. t .. "_" .. i]
+        end
+    end
+    return found
+end
+
 local headerRows, questRows, objectiveLines = {}, {}, {}
 local showDetails -- below
 
@@ -334,6 +497,22 @@ local function questRow(i)
         r.text:SetPoint("TOPLEFT", 31, -8)
         r.text:SetWidth(220)
         r.text:SetJustifyH("LEFT")
+        -- retail's marker on the row (the quest's on the map shown), at retail's TOPLEFT (6, -4)
+        r.poi = CreateFrame("Button", nil, r)
+        r.poi:SetWidth(22)
+        r.poi:SetHeight(22)
+        r.poi:SetPoint("TOPLEFT", 4, -3)
+        r.poi.disc = r.poi:CreateTexture(nil, "BACKGROUND")
+        r.poi.disc:SetAllPoints()
+        r.poi.number = r.poi:CreateTexture(nil, "ARTWORK") -- retail's in-progress glyph
+        r.poi.number:SetAtlas("Quest-In-Progress-Icon-yellow")
+        r.poi.number:SetWidth(22)
+        r.poi.number:SetHeight(22)
+        r.poi.number:SetPoint("CENTER", 0, -22 * GLYPH_DROP)
+        r.poi.turnin = r.poi:CreateTexture(nil, "ARTWORK")
+        r.poi.turnin:SetAtlas("ui-questpoi-questbangturnin")
+        r.poi.turnin:SetAllPoints()
+        r.poi:SetScript("OnClick", function() showDetails(r.index, true) end)
         r.glow = r:CreateTexture(nil, "BACKGROUND")
         r.glow:SetAtlas("questlog-quest-glow-yellow")
         r.glow:SetPoint("TOPLEFT", r.text, "TOPLEFT", -27, 6)
@@ -384,7 +563,9 @@ local function questRow(i)
                 ChatEdit_InsertLink(GetQuestLink(self.index))
             elseif IsShiftKeyDown() then -- retail's: shift-click tracks
                 self.check:Click()
-            elseif button == "LeftButton" then
+            elseif button == "RightButton" then
+                questMenu(self)
+            else
                 showDetails(self.index, true)
             end
         end)
@@ -416,6 +597,7 @@ function logUpdate() -- the local declared with the search box
         return
     end
     local needle = strlower(search:GetText() or "")
+    local markers = mapMarkers()
     -- the watched quests as the tracker has them (GetQuestIndexForWatch)
     local watched = {}
     for w = 1, GetNumQuestWatches() do
@@ -487,6 +669,21 @@ function logUpdate() -- the local declared with the search box
                     r.tick:Show()
                 else
                     r.tick:Hide()
+                end
+                local m = q.questID and markers[q.questID]
+                if m then
+                    r.poi.disc:SetAtlas(q.questID == focused and "ui-questpoi-questnumber-supertracked"
+                        or "ui-questpoi-questnumber")
+                    if m.type == QUEST_POI_NUMERIC then
+                        r.poi.number:Show()
+                        r.poi.turnin:Hide()
+                    else
+                        r.poi.number:Hide()
+                        r.poi.turnin:Show()
+                    end
+                    r.poi:Show()
+                else
+                    r.poi:Hide()
                 end
                 local h2 = 8 + r.text:GetStringHeight()
                 for j, text in ipairs(q.objectives) do
@@ -564,7 +761,7 @@ track:SetPoint("LEFT", share, "RIGHT")
 
 -- The quest shown: retail's focused quest, its area drawn and its marker selected on the map. Opening
 -- it from the list moves the map to its zone (as WorldMap_OpenToQuest does); Back returns the map.
-local shownIndex, focused, returnMap
+local shownIndex, returnMap
 local function focus()
     if not focused or not f:IsVisible() then
         return
@@ -577,6 +774,7 @@ local function focus()
     QuestPOI_SelectButtonByQuestId("WorldMapPOIFrame", focused, true)
 end
 function showDetails(index, moveMap)
+    questsPage() -- off the Map Legend page, if it shows
     shownIndex = index
     local questID = select(9, GetQuestLogTitle(index))
     if focused and focused ~= questID then
@@ -630,8 +828,8 @@ local function hideDetails()
     logUpdate()
 end
 back:SetScript("OnClick", hideDetails)
-abandon:SetScript("OnClick", function()
-    SelectQuestLogEntry(shownIndex)
+local function abandonQuest(index)
+    SelectQuestLogEntry(index)
     SetAbandonQuest()
     local items = GetAbandonQuestItems()
     if items then
@@ -639,11 +837,27 @@ abandon:SetScript("OnClick", function()
     else
         StaticPopup_Show("ABANDON_QUEST", GetAbandonQuestName())
     end
-end)
-share:SetScript("OnClick", function()
-    SelectQuestLogEntry(shownIndex)
+end
+local function shareQuest(index)
+    SelectQuestLogEntry(index)
     QuestLogPushQuest()
-end)
+end
+abandon:SetScript("OnClick", function() abandonQuest(shownIndex) end)
+share:SetScript("OnClick", function() shareQuest(shownIndex) end)
+
+-- Retail's right-click menu on a quest: track, share (in a group, if it can be shared), abandon, open.
+function questMenu(row)
+    local index = row.index
+    SelectQuestLogEntry(index)
+    local items = {{isWatched(index) and UNTRACK or TRACK, function() row.check:Click() end}}
+    if GetQuestLogPushable() and GetNumPartyMembers() > 0 then
+        items[#items + 1] = {SHARE_QUEST, function() shareQuest(index) end}
+    end
+    items[#items + 1] = {ABANDON_QUEST, function() abandonQuest(index) end}
+    items[#items + 1] = {"Open Quest Details", function() showDetails(index, true) end}
+    local x = GetCursorPosition() / row:GetEffectiveScale() - row:GetLeft()
+    showMenu(row, items, "TOPLEFT", "TOPLEFT", x, -14)
+end
 track:SetScript("OnClick", function() -- labelled from the action: the watch list lags (see the rows)
     if isWatched(shownIndex) then
         RemoveQuestWatch(shownIndex)
@@ -655,12 +869,122 @@ track:SetScript("OnClick", function() -- labelled from the action: the watch lis
     WatchFrame_Update()
 end)
 
+-- [[ Side tabs ]] --
+-- Retail's tabs outside the quest log's right edge: Quests and Map Legend (3.3.5 has no events). The
+-- legend lists what 3.3.5's map shows: quests in progress and to turn in, in retail's art.
+local legend = CreateFrame("Frame", nil, log)
+legend:SetAllPoints(scroll)
+legend:Hide()
+local legendTitle = log:CreateFontString(nil, "ARTWORK", "GameFontHighlightLarge")
+legendTitle:SetPoint("BOTTOM", scroll, "TOP", 0, 9)
+legendTitle:SetText("Map Legend")
+legendTitle:Hide()
+local legendHeader = legend:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+legendHeader:SetPoint("TOPLEFT", 14, -14)
+legendHeader:SetText(QUESTS_LABEL or "Quests")
+local LEGEND = {{"Quest-In-Progress-Icon-yellow", "In Progress"}, {"ui-questpoi-questbangturnin", "Turn In"}}
+for i, e in ipairs(LEGEND) do
+    local disc = legend:CreateTexture(nil, "ARTWORK")
+    disc:SetAtlas("ui-questpoi-questnumber")
+    disc:SetWidth(24)
+    disc:SetHeight(24)
+    disc:SetPoint("TOPLEFT", 14 + (i - 1) * 150, -34)
+    local glyph = legend:CreateTexture(nil, "OVERLAY")
+    glyph:SetAtlas(e[1])
+    glyph:SetAllPoints(disc)
+    local text = legend:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    text:SetPoint("LEFT", disc, "RIGHT", 6, 0)
+    text:SetText(e[2])
+end
+
+local sideTabs, sidePage = {}, 1
+local function sideTab(i, icon)
+    local t = CreateFrame("Button", nil, top)
+    t:SetWidth(51)
+    t:SetHeight(60)
+    local tabBg = t:CreateTexture(nil, "BACKGROUND")
+    tabBg:SetAtlas("QuestLog-tab-side")
+    tabBg:SetAllPoints()
+    t.icon = t:CreateTexture(nil, "ARTWORK")
+    t.icon:SetWidth(29)
+    t.icon:SetHeight(29)
+    t.icon:SetPoint("CENTER", -2, 0)
+    t.iconName = icon
+    t.selected = t:CreateTexture(nil, "OVERLAY")
+    t.selected:SetAtlas("QuestLog-Tab-side-Glow-Select")
+    t.selected:SetAllPoints()
+    t.selected:SetBlendMode("ADD")
+    local hover = t:CreateTexture(nil, "HIGHLIGHT")
+    hover:SetAtlas("QuestLog-Tab-side-Glow-hover")
+    hover:SetAllPoints()
+    hover:SetBlendMode("ADD")
+    if i == 1 then
+        t:SetPoint("TOPLEFT", log, "TOPRIGHT", 3, -28)
+    else
+        t:SetPoint("TOP", sideTabs[i - 1], "BOTTOM", 0, -3)
+    end
+    sideTabs[i] = t
+    return t
+end
+local function showPage(page)
+    sidePage = page
+    for i, t in ipairs(sideTabs) do
+        t.icon:SetAtlas(t.iconName .. (i == page and "" or "-inactive"))
+        if i == page then
+            t.selected:Show()
+        else
+            t.selected:Hide()
+        end
+    end
+    if page == 2 then
+        if details:IsShown() then
+            hideDetails()
+        end
+        scroll:Hide()
+        bar:Hide()
+        search:Hide()
+        legend:Show()
+        legendTitle:Show()
+    else
+        legend:Hide()
+        legendTitle:Hide()
+        scroll:Show()
+        search:Show()
+        logUpdate()
+    end
+end
+sideTab(1, "QuestLog-tab-icon-quest"):SetScript("OnClick", function() showPage(1) end)
+sideTab(2, "QuestLog-tab-icon-MapLegend"):SetScript("OnClick", function() showPage(2) end)
+function questsPage()
+    if sidePage ~= 1 then
+        showPage(1)
+    end
+end
+showPage(1)
+
+-- [[ Coordinates ]] --
+-- Retail's player position at the map's lower left, with the zone's name.
+local coords = top:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+local coordsTimer = 0
+top:SetScript("OnUpdate", function(_, elapsed)
+    coordsTimer = coordsTimer + elapsed
+    if coordsTimer < .1 then
+        return
+    end
+    coordsTimer = 0
+    local x, y = GetPlayerMapPosition("player")
+    if x == 0 and y == 0 then
+        coords:SetText("")
+    else
+        coords:SetFormattedText("Player: %.1f, %.1f (%s)", x * 100, y * 100, GetZoneText())
+    end
+end)
+
 -- [[ Collapsing the quest log ]] --
 -- Retail's button on the map's lower right: the log folds away and the frame narrows to the map.
-local toggle = CreateFrame("Button", nil, border)
+local toggle = CreateFrame("Button", nil, top)
 toggle:SetWidth(32)
 toggle:SetHeight(32)
-toggle:SetPoint("BOTTOMRIGHT", f, "BOTTOMLEFT", 2 + CANVAS_W - 2, 3)
 toggle:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
 toggle:GetHighlightTexture():SetBlendMode("ADD")
 local corner = toggle:CreateTexture(nil, "BACKGROUND")
@@ -675,14 +999,17 @@ local function toggleArt()
 end
 
 -- [[ Layout ]] --
--- In windowed mode only (not 3.3.5's movable "advanced" one): WorldMapFrame scaled, the map placed on
--- ours, 3.3.5's border, title and quest tracking box hidden. Fullscreen keeps 3.3.5's own.
+-- In 3.3.5's windowed mode only (not its movable "advanced" one, nor its fullscreen map, both left as
+-- they are): WorldMapFrame scaled so the map is retail's 697x465, or, maximized, as large as the screen
+-- allows (retail's maximized map: no portrait, no quest log, "World Map"). 3.3.5's own border, title,
+-- close and size buttons, quest tracking box and objectives checkbox are hidden (the last now in the
+-- filter menu).
 local OLD = {WorldMapFrameMiniBorderLeft, WorldMapFrameMiniBorderRight, WorldMapFrameTitle, WorldMapTrackQuest,
-    WorldMapFrameCloseButton}
+    WorldMapFrameCloseButton, WorldMapFrameSizeUpButton, WorldMapQuestShowObjectives}
 -- Frame levels, set again on every layout: the client sets the map's (WorldMapFrame_ResetFrameLevels,
 -- WORLDMAP_POI_FRAMELEVEL - 13 to + 0) when it changes mode. Ours: the background under the map, the
--- quest log over its layers, the border and its buttons on top. 3.3.5 doesn't move children with
--- their parent, so each frame below gets its level.
+-- quest log over its layers, the borders and controls on top. 3.3.5 doesn't move children with their
+-- parent, so each frame below gets its level.
 local function relevel(frame, level)
     frame:SetFrameLevel(level)
     for _, child in ipairs({frame:GetChildren()}) do
@@ -692,20 +1019,33 @@ end
 local function levels()
     relevel(f, WorldMapFrame:GetFrameLevel())
     relevel(log, WORLDMAP_POI_FRAMELEVEL + 20)
-    relevel(border, WORLDMAP_POI_FRAMELEVEL + 40)
-    list:SetFrameLevel(WORLDMAP_POI_FRAMELEVEL + 60)
+    relevel(border, WORLDMAP_POI_FRAMELEVEL + 30)
+    relevel(plainBorder, WORLDMAP_POI_FRAMELEVEL + 30)
+    relevel(top, WORLDMAP_POI_FRAMELEVEL + 40)
+    crumbLevels()
+    relevel(list, WORLDMAP_POI_FRAMELEVEL + 60) -- its entries above its background
+end
+
+local function maximized()
+    return saved and saved.maximized
+end
+-- The maximized map centered on the screen, wherever the panel layout puts the windowed one.
+local function center()
+    if maximized() and f:IsShown() then
+        WorldMapFrame:ClearAllPoints()
+        WorldMapFrame:SetPoint("CENTER", UIParent, "CENTER")
+    end
 end
 
 local function layout()
     local windowed = WORLDMAP_SETTINGS.size == WORLDMAP_WINDOWED_SIZE and not WORLDMAP_SETTINGS.advanced
     if not windowed then
-        -- fullscreen: 3.3.5's own frame (its scale set by the client on show), and the anchors its
-        -- layout code adds to, put back as it sets them
+        -- fullscreen or movable: 3.3.5's own frame (its scale set by the client on show), and the
+        -- anchors its layout code adds to, put back as it sets them
         f:Hide()
         if WORLDMAP_SETTINGS.size == WORLDMAP_WINDOWED_SIZE then
             WorldMapFrame:SetScale(1) -- the movable windowed mode
         end
-        maximize:SetParent(WorldMapFrame)
         for _, r in ipairs(OLD) do
             r:SetAlpha(1)
             if r.EnableMouse then -- the borders and title are textures
@@ -715,19 +1055,27 @@ local function layout()
         if WORLDMAP_SETTINGS.size ~= WORLDMAP_WINDOWED_SIZE then
             WorldMapLevelDropDown:ClearAllPoints()
             WorldMapLevelDropDown:SetPoint("TOPRIGHT", WorldMapPositioningGuide, "TOPRIGHT", -50, -35)
-            WorldMapQuestShowObjectives:ClearAllPoints()
-            WorldMapQuestShowObjectives:SetPoint("BOTTOMRIGHT", WorldMapPositioningGuide, "BOTTOMRIGHT",
-                -15 - WorldMapQuestShowObjectivesText:GetWidth(), 4)
         end
         return
     end
-    local width = CANVAS_W + 5 + (logShown() and LOG_W or 0)
-    WorldMapFrame:SetScale(SCALE)
-    WorldMapFrame:SetWidth(width / SCALE)
-    WorldMapFrame:SetHeight(FRAME_H / SCALE)
+    local max = maximized()
+    local canvasW = CANVAS_W
+    if max then
+        local h = math.min(UIParent:GetHeight() - 20 - TOP - 2, (UIParent:GetWidth() - 20 - 5) / 1.5)
+        canvasW = math.floor(h * 1.5)
+    end
+    local canvasH = canvasW * 668 / 1002
+    local scale = canvasW / (1002 * WORLDMAP_WINDOWED_SIZE)
+    local withLog = logShown() and not max
+    local width, height = 2 + canvasW + 3 + (withLog and LOG_W or 0), TOP + canvasH + 2
+    WorldMapFrame:SetScale(scale)
+    WorldMapFrame:SetWidth(width / scale)
+    WorldMapFrame:SetHeight(height / scale)
+    f:SetScale(1 / scale)
     f:SetWidth(width)
-    -- the map's offsets are in its own units: WORLDMAP_WINDOWED_SIZE under WorldMapFrame's SCALE
-    local unit = SCALE * WORLDMAP_WINDOWED_SIZE
+    f:SetHeight(height)
+    -- the map's offsets are in its own units: WORLDMAP_WINDOWED_SIZE under WorldMapFrame's scale
+    local unit = scale * WORLDMAP_WINDOWED_SIZE
     WorldMapDetailFrame:ClearAllPoints()
     WorldMapDetailFrame:SetPoint("TOPLEFT", WorldMapFrame, "TOPLEFT", 2 / unit, -TOP / unit)
     WorldMapBlobFrame.xRatio = nil -- the client's hit maths again for the moved map
@@ -737,18 +1085,50 @@ local function layout()
             r:EnableMouse(false)
         end
     end
-    placeMaximize()
-    WorldMapQuestShowObjectives:ClearAllPoints()
-    WorldMapQuestShowObjectives:SetPoint("BOTTOMLEFT", WorldMapDetailFrame, "BOTTOMLEFT", 4, 4)
     WorldMapLevelDropDown:ClearAllPoints()
     WorldMapLevelDropDown:SetPoint("TOPLEFT", WorldMapDetailFrame, "TOPLEFT", -14, -2)
-    if logShown() then
+
+    -- the frame: the portrait border and "Map & Quest Log" windowed, the plain one and "World Map"
+    -- maximized (retail's TitleContainer runs from 58 past the portrait, or from the edge, to -24)
+    if max then
+        border:Hide()
+        plainBorder:Show()
+        title:SetText(WORLD_MAP)
+        title:SetPoint("TOP", -12, -5)
+        maximize:Hide()
+        minimize:Show()
+        toggle:Hide()
+    else
+        border:Show()
+        plainBorder:Hide()
+        title:SetText("Map & Quest Log")
+        title:SetPoint("TOP", 17, -5)
+        maximize:Show()
+        minimize:Hide()
+        toggle:Show()
+    end
+    innerTop:ClearAllPoints()
+    innerTop:SetPoint("TOPLEFT", f, "TOPLEFT", 2, -63)
+    innerTop:SetPoint("TOPRIGHT", f, "TOPLEFT", 2 + canvasW, -63)
+    nav:ClearAllPoints()
+    nav:SetPoint("TOPLEFT", f, "TOPLEFT", 2 + (max and 8 or 64), -25)
+    nav:SetPoint("TOPRIGHT", f, "TOPLEFT", 2 + canvasW - 4, -25)
+    filter:ClearAllPoints()
+    filter:SetPoint("TOPRIGHT", f, "TOPLEFT", 2 + canvasW - 4, -TOP - 2)
+    toggle:ClearAllPoints()
+    toggle:SetPoint("BOTTOMRIGHT", f, "BOTTOMLEFT", 2 + canvasW - 2, 3)
+    if withLog then
         log:Show()
+        for _, t in ipairs(sideTabs) do t:Show() end
     else
         log:Hide()
+        for _, t in ipairs(sideTabs) do t:Hide() end
     end
+    coords:ClearAllPoints()
+    coords:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 2 + 68, 6)
     toggleArt()
     f:Show()
+    center()
     navUpdate()
     logUpdate()
     levels()
@@ -757,11 +1137,94 @@ toggle:SetScript("OnClick", function()
     saved.hideLog = logShown() or nil
     layout()
 end)
-WorldMapFrame:HookScript("OnHide", function() list:Hide() end)
+maximize:SetScript("OnClick", function()
+    saved.maximized = true
+    layout()
+end)
+minimize:SetScript("OnClick", function()
+    saved.maximized = nil
+    if WorldMapFrame:IsShown() then
+        -- back where the panel layout keeps it: close and open, as the client's size toggle does
+        ToggleFrame(WorldMapFrame)
+        ToggleFrame(WorldMapFrame)
+    else
+        layout()
+    end
+end)
+-- after the panel layout moves it (FramePositionDelegate is local to UIParent.lua: its global callers)
+hooksecurefunc("UpdateUIPanelPositions", center)
+hooksecurefunc("ShowUIPanel", center)
+
+-- [[ The quest log key ]] --
+-- Retail's L opens and closes the Map & Quest Log. The keys bound to Toggle Quest Log get an override
+-- binding that clicks our button (set out of combat, at login and when bindings change; it works in
+-- combat too). Anything else opening 3.3.5's quest log window, as a quest clicked in the tracker does
+-- (QuestLog_OpenToQuest), has it close again and the map open with its log instead, at that quest's
+-- details (a frame later, once QuestLog_OpenToQuest has said which quest).
+local function openLog(questIndex)
+    if WORLDMAP_SETTINGS.size ~= WORLDMAP_WINDOWED_SIZE or WORLDMAP_SETTINGS.advanced then
+        return false -- 3.3.5's own map modes keep 3.3.5's quest log
+    end
+    saved.hideLog, saved.maximized = nil, nil
+    if WorldMapFrame:IsShown() then
+        layout()
+    else
+        ShowUIPanel(WorldMapFrame)
+    end
+    if questIndex then
+        showDetails(questIndex, true)
+    elseif details:IsShown() then
+        hideDetails()
+    end
+    return true
+end
+
+local key = CreateFrame("Button", "WotlkHDQuestLogKey", UIParent)
+key:SetScript("OnClick", function()
+    if f:IsVisible() and log:IsShown() then
+        HideUIPanel(WorldMapFrame)
+    elseif not openLog() then
+        ToggleFrame(QuestLogFrame)
+    end
+end)
+local function bindKeys()
+    local keys = {GetBindingKey("TOGGLEQUESTLOG")}
+    local sig = table.concat(keys, " ")
+    -- only when the keys change: setting an override fires UPDATE_BINDINGS again
+    if InCombatLockdown() or sig == key.sig then
+        return
+    end
+    key.sig = sig
+    ClearOverrideBindings(key)
+    for _, k in ipairs(keys) do
+        SetOverrideBindingClick(key, false, k, "WotlkHDQuestLogKey")
+    end
+end
+key:RegisterEvent("PLAYER_LOGIN")
+key:RegisterEvent("UPDATE_BINDINGS")
+key:SetScript("OnEvent", bindKeys)
+
+local openToQuest
+hooksecurefunc("QuestLog_OpenToQuest", function(index) openToQuest = index end)
+local redirect = CreateFrame("Frame")
+redirect:Hide()
+redirect:SetScript("OnUpdate", function(self)
+    self:Hide()
+    if openLog(openToQuest) then
+        HideUIPanel(QuestLogFrame)
+    end
+    openToQuest = nil
+end)
+QuestLogFrame:HookScript("OnShow", function() redirect:Show() end)
 
 -- The client rebuilds the markers and its selection with each map update: our focus again after it.
 -- A marker clicked on the map opens its quest, as retail's pins do.
 hooksecurefunc("WorldMapFrame_UpdateMap", focus)
+hooksecurefunc("WorldMapFrame_UpdateQuests", function() -- the markers rebuilt: the rows' too
+    if not details:IsShown() then
+        logUpdate()
+    end
+end)
 hooksecurefunc("WorldMapQuestPOI_OnClick", function(self)
     if f:IsVisible() and self.quest and self.quest.questLogIndex and not IsShiftKeyDown() then
         showDetails(self.quest.questLogIndex)

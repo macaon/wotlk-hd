@@ -44,9 +44,9 @@ frames (`RaidFrames.lua`), Edit Mode (`EditMode.lua`), retail unit frames and ca
   boss, arena, durability, vehicle seats). Raid frames: pets, power bars, health text, heal
   prediction (no 3.3.5 API), retail's raid manager panel.
 - Retail textures under 3.3.5's own UI paths in an MPQ (buttons, panels), restyling the whole UI.
-- Map & Quest Log (`WorldMap.lua`, first pass done): compare against retail in game; retail's quest
-  marker art and markers on the quest rows; the filter button in place of the Show Quest Objectives
-  checkbox; retail's maximized map instead of 3.3.5's fullscreen one; the right-click menu on quests.
+- Map & Quest Log (`WorldMap.lua`): fine-tune against retail in game; check that retail shows no
+  numbers on quest markers (several quests in one zone); the maximized map's size and title; the
+  filter button's count; menus close when clicking elsewhere.
 - Waypoints: map pins and `/way`, with retail's super-tracking arrow.
 - Adventure Guide (Encounter Journal): dungeons and raids, bosses, abilities and loot, from retail's
   journal tables mapped onto 3.3.5's instances.

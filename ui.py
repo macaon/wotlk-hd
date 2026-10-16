@@ -113,7 +113,12 @@ QuestLog-main-background questlog-frame questlog-frame-filigree questlog-frame-g
 questlog-icon-ticksquare questlog-icon-checkmark-yellow QuestCollapse-Show-Up QuestCollapse-Show-Down
 QuestCollapse-Hide-Up QuestCollapse-Hide-Down MapCornerShadow-Right RedButton-Expand RedButton-Expand-Pressed
 RedButton-Expand-Disabled questlog-icon-expand questlog-icon-shrink questlog-tab questlog-quest-glow-yellow
-questlog-header-glow-yellow questlog-reward-top-frame QuestDetailsBackgrounds _UI-Frame-InnerTopTile uiframe-tab-left uiframe-tab-right _uiframe-tab-center uiframe-activetab-left
+questlog-header-glow-yellow questlog-reward-top-frame QuestDetailsBackgrounds _UI-Frame-InnerTopTile
+ui-questpoi-questnumber ui-questpoi-questnumber-supertracked ui-questpoi-questbangturnin ui-questpoi-innerglow
+Map-Filter-Button Map-Filter-Button-down RedButton-Condense RedButton-Condense-Pressed
+Quest-In-Progress-Icon-yellow QuestLog-tab-side QuestLog-Tab-side-Glow-Select QuestLog-Tab-side-Glow-hover
+QuestLog-tab-icon-quest QuestLog-tab-icon-quest-inactive QuestLog-tab-icon-MapLegend
+QuestLog-tab-icon-MapLegend-inactive uiframe-tab-left uiframe-tab-right _uiframe-tab-center uiframe-activetab-left
 uiframe-activetab-right _uiframe-activetab-center
 
 
@@ -131,6 +136,9 @@ Interface/CharacterFrame/Char-Stat-Middle.blp
 Interface/FriendsFrame/UI-FriendsFrame-HighlightBar-Blue.blp
 Interface/HelpFrame/CS_HelpTextures_Tile.blp
 Interface/HelpFrame/CS_HelpTextures.blp
+Interface/Buttons/SquareButtonTextures.blp
+Interface/Buttons/UI-SquareButton-Up.blp
+Interface/Buttons/UI-SquareButton-Down.blp
 """.split()
 
 
