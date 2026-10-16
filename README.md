@@ -59,6 +59,8 @@ Entertainment are trademarks or registered trademarks of Blizzard Entertainment,
 - Retail's character window: the larger frame with retail's slot columns, model on the race's
   backdrop, the stats pane (item level, attributes, enhancements by role) and sidebar tabs; retail's
   tabs under it.
+- Retail's Map & Quest Log: the map windowed with breadcrumbs and the quest log beside it (zone
+  headers, tracking, search, quest details), the quest's zone and area shown when you pick it.
 - Retail's minimap: the larger map in retail's frame, the zone bar with clock and calendar, tracking
   and mail beside it, zoom buttons on hover and mouse wheel zoom, player coordinates under it.
 - Retail raid frames for raids (and parties, with Use Raid-Style Party Frames): green or class

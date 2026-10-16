@@ -13,6 +13,7 @@ Bags.lua
 ActionBars.lua
 Minimap.lua
 Character.lua
+WorldMap.lua
 WotlkHD.lua
 Options.lua
 Settings.lua

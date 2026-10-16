@@ -22,7 +22,7 @@ Done: Lua functions from the DLL (`client/lua.c`), retail Options window (`addon
 cast, cursor lock and color filter (`client/controls.c`, `client/effects.cpp`, `Options.lua`),
 nameplates as units and retail nameplates (`client/nameplates.c`, `Nameplates.lua`), retail raid
 frames (`RaidFrames.lua`), Edit Mode (`EditMode.lua`), retail unit frames and cast bars
-(`UnitFrames.lua`), combined bags (`Bags.lua`), action bars (`ActionBars.lua`), minimap (`Minimap.lua`), character window (`Character.lua`). Retail settings mapped to 3.3.5:
+(`UnitFrames.lua`), combined bags (`Bags.lua`), action bars (`ActionBars.lua`), minimap (`Minimap.lua`), character window (`Character.lua`), Map & Quest Log (`WorldMap.lua`). Retail settings mapped to 3.3.5:
 [docs/retail-options.md](docs/retail-options.md).
 
 - Mouseover cast covers action bar spells only, not macros or items.
@@ -44,7 +44,9 @@ frames (`RaidFrames.lua`), Edit Mode (`EditMode.lua`), retail unit frames and ca
   boss, arena, durability, vehicle seats). Raid frames: pets, power bars, health text, heal
   prediction (no 3.3.5 API), retail's raid manager panel.
 - Retail textures under 3.3.5's own UI paths in an MPQ (buttons, panels), restyling the whole UI.
-- Retail's Map & Quest Log: one window with the quest list beside the map, quest areas on the map.
+- Map & Quest Log (`WorldMap.lua`, first pass done): compare against retail in game; retail's quest
+  marker art and markers on the quest rows; the filter button in place of the Show Quest Objectives
+  checkbox; retail's maximized map instead of 3.3.5's fullscreen one; the right-click menu on quests.
 - Waypoints: map pins and `/way`, with retail's super-tracking arrow.
 - Adventure Guide (Encounter Journal): dungeons and raids, bosses, abilities and loot, from retail's
   journal tables mapped onto 3.3.5's instances.

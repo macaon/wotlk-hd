@@ -108,7 +108,12 @@ UI-HUD-Minimap-Zoom-In UI-HUD-Minimap-Zoom-In-Down UI-HUD-Minimap-Zoom-In-Mouseo
 UI-HUD-Minimap-Zoom-Out UI-HUD-Minimap-Zoom-Out-Down UI-HUD-Minimap-Zoom-Out-Mouseover
 character-panel-background UI-Character-Info-Title UI-Character-Info-ItemLevel-Bounce
 UI-Character-Info-Line-Bounce minimal-scrollbar-track-top minimal-scrollbar-track-bottom
-!minimal-scrollbar-track-middle minimal-scrollbar-thumb-middle uiframe-tab-left uiframe-tab-right _uiframe-tab-center uiframe-activetab-left
+!minimal-scrollbar-track-middle minimal-scrollbar-thumb-middle
+QuestLog-main-background questlog-frame questlog-frame-filigree questlog-frame-gradient-bottom
+questlog-icon-ticksquare questlog-icon-checkmark-yellow QuestCollapse-Show-Up QuestCollapse-Show-Down
+QuestCollapse-Hide-Up QuestCollapse-Hide-Down MapCornerShadow-Right RedButton-Expand RedButton-Expand-Pressed
+RedButton-Expand-Disabled questlog-icon-expand questlog-icon-shrink questlog-tab questlog-quest-glow-yellow
+questlog-header-glow-yellow questlog-reward-top-frame QuestDetailsBackgrounds _UI-Frame-InnerTopTile uiframe-tab-left uiframe-tab-right _uiframe-tab-center uiframe-activetab-left
 uiframe-activetab-right _uiframe-activetab-center
 
 
@@ -124,6 +129,8 @@ Interface/CharacterFrame/Char-Paperdoll-Parts.blp
 Interface/PaperDollInfoFrame/PaperDollSidebarTabs.blp
 Interface/CharacterFrame/Char-Stat-Middle.blp
 Interface/FriendsFrame/UI-FriendsFrame-HighlightBar-Blue.blp
+Interface/HelpFrame/CS_HelpTextures_Tile.blp
+Interface/HelpFrame/CS_HelpTextures.blp
 """.split()
 
 
