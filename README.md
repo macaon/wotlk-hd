@@ -77,79 +77,53 @@ Everything is client-side. A stock client connects to the same server and sees t
 
 ## Requirements
 
-Built and tested on Linux only (Fedora), with the client running under Proton (GE-Proton). The build
-scripts are Linux shell scripts and shared libraries. What they produce (MPQs, `dinput8.dll`, the
-addon, `Wow-hd.exe`) are Windows files and should work on Windows too, but nobody has tried.
-
-Nothing of Blizzard's is in this repository or shipped with it: you need your own client, and every
-script reads or patches that copy.
-
-- **A stock 3.3.5a (12340) client.** The scripts look for it in `~/Games/wotlk`; set `WOW_DIR` to use
-  another folder. `patch_exe.py` checks that `Wow.exe` is the 12340 build.
+- **Your own stock 3.3.5a (12340) client.** Nothing of Blizzard's is in this repository or shipped
+  with it: the build reads your client and patches your own `Wow.exe` into `Wow-hd.exe`.
 - **A 3.3.5a server.** Developed against AzerothCore, with Warden on.
-- **Python 3 with Pillow.** `charcheck.py match` also needs numpy and scipy.
-- **git, curl, cmake and a C/C++ compiler**, to build StormLib and CascLib below.
-- **StormLib** as a shared library, for reading and writing MPQs. The scripts look for
-  `~/Git/ref/StormLib/build/libstorm.so`; set `STORMLIB` to use another path.
-- **Zig 0.13.0**, for the DLL: `client/build.sh` fetches and compiles its own StormLib and SMAA.
-- **Retail data.** Tables come from wago.tools for the build pinned in `fetch.py` (`BUILD`, or
-  `WOW_BUILD`). Files come from a local retail install of that same build when there is one
-  (`WOW_RETAIL`, read with CascLib), otherwise from wago.tools, which is much slower. A retail install
-  of any other build is ignored.
+- **Docker or Podman.** On Windows, Docker Desktop.
+- **Optionally, a retail install** of the build pinned in `fetch.py`. The build reads retail files
+  from it; without one (or with another build) it downloads them from wago.tools, which makes the
+  first build take much longer.
 
-Setup, once:
+Built and tested on Linux only (Fedora), with the client under Proton (GE-Proton). The build runs in a
+Linux container anywhere, and what it makes are Windows files, but nobody has tried it on Windows.
 
-    git clone https://github.com/ladislav-zezula/StormLib.git ~/Git/ref/StormLib
-    cmake -S ~/Git/ref/StormLib -B ~/Git/ref/StormLib/build -DBUILD_SHARED_LIBS=ON -DSTORM_USE_BUNDLED_LIBRARIES=ON -DCMAKE_BUILD_TYPE=Release
-    cmake --build ~/Git/ref/StormLib/build -j
+## Build
 
-    mkdir -p cache && cd cache
-    curl -sfLo listfile.csv https://github.com/wowdev/wow-listfile/releases/latest/download/community-listfile.csv
-    curl -sfL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar xJ
-    # only with a local retail install of the pinned build:
-    git clone -b 3.0 https://github.com/ladislav-zezula/CascLib.git
-    cmake -S CascLib -B CascLib/build -DCASC_BUILD_SHARED_LIB=ON -DCASC_BUILD_STATIC_LIB=OFF -DCMAKE_BUILD_TYPE=Release
-    cmake --build CascLib/build -j
+Get the source and build the image once:
 
-## Build with Docker
-
-The `Dockerfile` holds every build tool at a pinned version (Python with Pillow, StormLib, CascLib,
-Zig), so the setup above is not needed: only Docker or Podman. On Windows that is Docker Desktop,
-which runs it as a Linux container. Build the image once from this folder:
-
+    git clone https://github.com/macaon/wotlk-hd.git && cd wotlk-hd
     docker build -t wotlk-hd .
 
-Then build everything into your client. Mount this folder, the client and, optionally, a retail
-install of the pinned build (without one, the first run downloads its files from wago.tools, which
-takes a long time):
+Then build everything into your client, mounting this folder, the client and (optionally) the retail
+install:
 
     docker run --rm -v "$PWD:/src" -v ~/Games/wotlk:/wow -v ~/path/to/World\ of\ Warcraft:/retail wotlk-hd
 
-On Windows, in PowerShell: `-v "${PWD}:/src" -v "C:\Games\wotlk:/wow" -v "C:\Program Files
-(x86)\World of Warcraft:/retail"`. With Podman on Fedora (SELinux), add `--userns=keep-id
---security-opt label=disable`. The retail install must be mounted writable: CascLib opens its index
-files for writing, though it changes nothing.
+- **Windows (PowerShell):** `-v "${PWD}:/src" -v "C:\Games\wotlk:/wow" -v "C:\Program Files
+  (x86)\World of Warcraft:/retail"`.
+- **Podman on Fedora (SELinux):** add `--userns=keep-id --security-opt label=disable`.
+- **The retail install must be mounted writable:** CascLib opens its index files for writing, though
+  it changes nothing.
 
-It runs the steps below in order, installs into the client and copies `dinput8.dll` next to
-`Wow.exe`. To run one step instead, name it: `docker run ... wotlk-hd python3 ui.py`.
+It builds the creature and character patches, the addon's retail art and `dinput8.dll`, installs them
+into the client, and patches your `Wow.exe` into `Wow-hd.exe` next to it (large-address-aware, and a
+wider field of view for your monitor, read from `WTF/Config.wtf`).
 
-## Build and install
+Downloads are cached in `cache/`, so later runs are faster; run it again after pulling changes. To run
+one step only, name it: `docker run ... wotlk-hd python3 ui.py`.
 
-    python3 build.py     # creature models -> out/patch-4.MPQ, out/patch-enUS-4.MPQ
-    python3 chars.py     # HD characters (run again after every build.py)
-    python3 ui.py        # retail UI art into addon/WotlkHD
-    client/build.sh      # client/dinput8.dll
-    python3 patch_exe.py # Wow-hd.exe, patched from your own Wow.exe, next to it
-    python3 install.py   # patches into Data/ and Data/enUS/, the addon into Interface/AddOns/
+## Run
 
-The first `build.py` and `chars.py` runs fetch a lot of retail files; they are cached in `cache/`.
-
-Copy `client/dinput8.dll` next to `Wow.exe` and start `Wow-hd.exe`. Under Wine or Proton, set
-`WINEDLLOVERRIDES=dinput8=n,b`. The DLL logs to `wotlk-hd.log` next to the exe.
+Start `Wow-hd.exe`. Under Wine or Proton, set `WINEDLLOVERRIDES=dinput8=n,b` so the client loads
+`dinput8.dll`, which logs to `wotlk-hd.log` next to the exe.
 
 Leave no other `patch-*.MPQ` files in `Data/` (backups, side builds): every one of them loads.
 
 ## Tools
+
+For working on the build; each runs in the container like a build step (`docker run ... wotlk-hd
+python3 pick.py`).
 
 - `survey.py`: compares every WotLK creature display with retail.
 - `plan.py`: picks model upgrades into `upgrades.json`.

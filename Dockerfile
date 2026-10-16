@@ -1,6 +1,6 @@
 # The build tools at pinned versions: Python with Pillow, StormLib and CascLib (shared libraries, for
 # the scripts' ctypes) and Zig (for client/dinput8.dll). The source, the client and the retail
-# install are mounted when it runs (see README, "Build with Docker"); nothing of Blizzard's is in it.
+# install are mounted when it runs (see README, "Build"); nothing of Blizzard's is in it.
 FROM python:3.12-slim-bookworm
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
