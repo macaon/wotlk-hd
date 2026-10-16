@@ -34,25 +34,29 @@ local bar = CreateFrame("Frame", nil, MinimapCluster)
 bar:SetWidth(175)
 bar:SetHeight(16)
 bar:SetPoint("TOP", 15, -4)
-local KIT = "UI-HUD-Minimap-Button-NineSlice-"
-local function piece(atlas, ...)
-    local t = bar:CreateTexture(nil, "BACKGROUND")
-    t:SetAtlas(atlas, true)
-    for i = 1, select("#", ...), 3 do
-        local point, rel, relPoint = select(i, ...)
-        t:SetPoint(point, rel, relPoint)
+-- The minimap button's nine slices over a frame (the bar, and BotControl's button below).
+local function buttonFrame(owner)
+    local KIT = "UI-HUD-Minimap-Button-NineSlice-"
+    local function piece(atlas, ...)
+        local t = owner:CreateTexture(nil, "BACKGROUND")
+        t:SetAtlas(atlas, true)
+        for i = 1, select("#", ...), 3 do
+            local point, rel, relPoint = select(i, ...)
+            t:SetPoint(point, rel, relPoint)
+        end
+        return t
     end
-    return t
+    local tl = piece(KIT .. "CornerTopLeft", "TOPLEFT", owner, "TOPLEFT")
+    local tr = piece(KIT .. "CornerTopRight", "TOPRIGHT", owner, "TOPRIGHT")
+    local bl = piece(KIT .. "CornerBottomLeft", "BOTTOMLEFT", owner, "BOTTOMLEFT")
+    local br = piece(KIT .. "CornerBottomRight", "BOTTOMRIGHT", owner, "BOTTOMRIGHT")
+    piece("_" .. KIT .. "EdgeTop", "TOPLEFT", tl, "TOPRIGHT", "TOPRIGHT", tr, "TOPLEFT"):SetWidth(0)
+    piece("_" .. KIT .. "EdgeBottom", "BOTTOMLEFT", bl, "BOTTOMRIGHT", "BOTTOMRIGHT", br, "BOTTOMLEFT"):SetWidth(0)
+    piece("!" .. KIT .. "EdgeLeft", "TOPLEFT", tl, "BOTTOMLEFT", "BOTTOMLEFT", bl, "TOPLEFT"):SetHeight(0)
+    piece("!" .. KIT .. "EdgeRight", "TOPRIGHT", tr, "BOTTOMRIGHT", "BOTTOMRIGHT", br, "TOPRIGHT"):SetHeight(0)
+    piece(KIT .. "Center", "TOPLEFT", tl, "BOTTOMRIGHT", "BOTTOMRIGHT", br, "TOPLEFT")
 end
-local tl = piece(KIT .. "CornerTopLeft", "TOPLEFT", bar, "TOPLEFT")
-local tr = piece(KIT .. "CornerTopRight", "TOPRIGHT", bar, "TOPRIGHT")
-local bl = piece(KIT .. "CornerBottomLeft", "BOTTOMLEFT", bar, "BOTTOMLEFT")
-local br = piece(KIT .. "CornerBottomRight", "BOTTOMRIGHT", bar, "BOTTOMRIGHT")
-piece("_" .. KIT .. "EdgeTop", "TOPLEFT", tl, "TOPRIGHT", "TOPRIGHT", tr, "TOPLEFT"):SetWidth(0)
-piece("_" .. KIT .. "EdgeBottom", "BOTTOMLEFT", bl, "BOTTOMRIGHT", "BOTTOMRIGHT", br, "BOTTOMLEFT"):SetWidth(0)
-piece("!" .. KIT .. "EdgeLeft", "TOPLEFT", tl, "BOTTOMLEFT", "BOTTOMLEFT", bl, "TOPLEFT"):SetHeight(0)
-piece("!" .. KIT .. "EdgeRight", "TOPRIGHT", tr, "BOTTOMRIGHT", "BOTTOMRIGHT", br, "TOPRIGHT"):SetHeight(0)
-piece(KIT .. "Center", "TOPLEFT", tl, "BOTTOMRIGHT", "BOTTOMRIGHT", br, "TOPLEFT")
+buttonFrame(bar)
 
 MinimapZoneTextButton:ClearAllPoints()
 MinimapZoneTextButton:SetPoint("LEFT", bar, "LEFT", 4, 0)
@@ -221,26 +225,24 @@ end)
 
 -- [[ BotControl ]] --
 -- Its button (BotControlMinimapButton, on the map's edge) as retail's minimap buttons: the zone bar's
--- dark tile, pressed and lit as they are, its label kept.
+-- framed tile, lit on hover, its label kept and sized to fit.
 local bc = BotControlMinimapButton
 if bc then
-    bc:SetWidth(20)
+    bc:SetWidth(24)
     bc:SetHeight(18)
     for _, r in ipairs({bc:GetRegions()}) do
         if r:GetObjectType() == "Texture" then
             r:Hide()
+        elseif r:GetObjectType() == "FontString" then
+            r:SetFontObject("GameFontNormalSmall")
+            r:SetFont(r:GetFont(), 9) -- inside the tile
         end
     end
-    local tile = bc:CreateTexture(nil, "BACKGROUND")
-    tile:SetAllPoints()
-    tile:SetAtlas("UI-HUD-Minimap-Button")
-    bc:HookScript("OnMouseDown", function() tile:SetAtlas("UI-HUD-Minimap-Button-Down") end)
-    bc:HookScript("OnMouseUp", function() tile:SetAtlas("UI-HUD-Minimap-Button") end)
+    buttonFrame(bc) -- framed as the zone bar, so it reads on any terrain
     local lit = bc:CreateTexture(nil, "HIGHLIGHT")
-    lit:SetAllPoints()
-    lit:SetAtlas("UI-HUD-Minimap-Button")
-    lit:SetBlendMode("ADD")
-    lit:SetAlpha(0.4)
+    lit:SetPoint("TOPLEFT", 2, -2)
+    lit:SetPoint("BOTTOMRIGHT", -2, 2)
+    lit:SetTexture(1, 1, 1, .15)
 end
 
 local events = CreateFrame("Frame")
