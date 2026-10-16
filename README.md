@@ -1,11 +1,25 @@
 # wotlk-hd
 
 A modernised World of Warcraft 3.3.5a (build 12340) client for private use against an unchanged
-AzerothCore server. Assets come from the current retail client and are converted to 3.3.5's
-formats: creature models, HD player characters and UI art. Nothing is made by hand. A proxy
+AzerothCore server. Assets come from your own copy of the current retail client and are converted to
+3.3.5's formats: creature models, HD player characters and UI art. Nothing is made by hand. A proxy
 `dinput8.dll` adds what the engine itself lacks.
 
 It's a personal build: it aims to look and play well, not to stay faithful to 3.3.5.
+
+## No game assets included
+
+This repository contains only original code and the data it needs to find things: file names, ids,
+texture coordinates and code addresses. It contains no Blizzard game files: no models, textures,
+art, sounds, data tables or executables, converted or otherwise. Nothing of Blizzard's is shipped with
+it, and no built files are published.
+
+Everything the build produces is made on your machine from game clients you own: the models and art
+from your retail client (or downloaded from wago.tools for you), `Wow-hd.exe` from your own
+`Wow.exe`. Keep what it builds to yourself.
+
+wotlk-hd is not affiliated with or endorsed by Blizzard Entertainment. World of Warcraft and Blizzard
+Entertainment are trademarks or registered trademarks of Blizzard Entertainment, Inc.
 
 ## Compared to the stock 3.3.5a client
 
