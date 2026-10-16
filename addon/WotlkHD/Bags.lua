@@ -53,42 +53,14 @@ close:SetScript("OnClick", function() CloseAllBags() end)
 -- [[ Search ]] --
 -- Retail's search box; items that don't match are dimmed.
 
-local search = CreateFrame("EditBox", "WotlkHDBagsSearch", frame)
-search:SetAutoFocus(false)
-search:SetFontObject("ChatFontNormal")
-search:SetHeight(20)
+local layout -- below
+local search = Retail.SearchBox(frame, "WotlkHDBagsSearch", function()
+    if frame:IsShown() then
+        layout()
+    end
+end)
 search:SetPoint("TOPLEFT", 62, -37)
 search:SetPoint("TOPRIGHT", -46, -37)
-search:SetTextInsets(20, 20, 0, 0)
-local parts = Retail.ThreeSlice(search, "BACKGROUND", "common-search-border-middle", 8, 8)
-parts[1]:SetAtlas("common-search-border-left")
-parts[1]:SetPoint("TOPLEFT", -5, 10)
-parts[1]:SetPoint("BOTTOMLEFT", -5, -10)
-parts[3]:SetAtlas("common-search-border-right")
-parts[3]:SetPoint("TOPRIGHT", 5, 10)
-parts[3]:SetPoint("BOTTOMRIGHT", 5, -10)
-parts[2]:SetTexCoord(unpack(WotlkHD_Atlas["common-search-border-middle"], 4, 7))
-local glass = search:CreateTexture(nil, "OVERLAY")
-glass:SetAtlas("common-search-magnifyingglass")
-glass:SetWidth(14)
-glass:SetHeight(14)
-glass:SetPoint("LEFT", 3, -1)
-local hint = search:CreateFontString(nil, "OVERLAY", "GameFontDisable")
-hint:SetPoint("LEFT", 20, 0)
-hint:SetText(SEARCH)
-local clear = CreateFrame("Button", nil, search)
-clear:SetWidth(14)
-clear:SetHeight(14)
-clear:SetPoint("RIGHT", -3, 0)
-clear:SetNormalTexture(WotlkHD_Atlas["common-search-clearbutton"][1])
-clear:GetNormalTexture():SetAtlas("common-search-clearbutton")
-clear:Hide()
-clear:SetScript("OnClick", function()
-    search:SetText("")
-    search:ClearFocus()
-end)
-search:SetScript("OnEscapePressed", search.ClearFocus)
-search:SetScript("OnEnterPressed", search.ClearFocus)
 
 -- [[ Items ]] --
 
@@ -195,7 +167,7 @@ local function updateItem(b, bag, slot, text)
 end
 
 -- Retail lays the slots out from the bottom right: the backpack at the bottom, the last bag on top.
-local function layout()
+function layout() -- the local declared with the search box
     local n, text = 0, strlower(search:GetText())
     for _, bag in ipairs(BAGS) do
         for slot = 1, GetContainerNumSlots(bag) do
@@ -221,18 +193,6 @@ local function layout()
     frame:SetHeight(rows * SIZE + (rows - 1) * SPACING + 75 + 26)
 end
 
-search:SetScript("OnTextChanged", function(self)
-    if self:GetText() == "" then
-        hint:Show()
-        clear:Hide()
-    else
-        hint:Hide()
-        clear:Show()
-    end
-    if frame:IsShown() then
-        layout()
-    end
-end)
 
 local money = CreateFrame("Frame", "WotlkHDBagsMoney", frame, "SmallMoneyFrameTemplate")
 money:SetPoint("BOTTOMRIGHT", -6, 10)

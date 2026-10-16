@@ -180,6 +180,56 @@ function Retail.AtlasBar(bar, atlas)
     FillBar(bar)
 end
 
+-- Retail's SearchBoxTemplate: the box, the magnifying glass, "Search" while empty and a clear button
+-- while not; onChange(text) runs on every change. The caller places and sizes it (height 20).
+function Retail.SearchBox(parent, name, onChange)
+    local search = CreateFrame("EditBox", name, parent)
+    search:SetAutoFocus(false)
+    search:SetFontObject("ChatFontNormal")
+    search:SetHeight(20)
+    search:SetTextInsets(20, 20, 0, 0)
+    local parts = Retail.ThreeSlice(search, "BACKGROUND", "common-search-border-middle", 8, 8)
+    parts[1]:SetAtlas("common-search-border-left")
+    parts[1]:SetPoint("TOPLEFT", -5, 10)
+    parts[1]:SetPoint("BOTTOMLEFT", -5, -10)
+    parts[3]:SetAtlas("common-search-border-right")
+    parts[3]:SetPoint("TOPRIGHT", 5, 10)
+    parts[3]:SetPoint("BOTTOMRIGHT", 5, -10)
+    parts[2]:SetTexCoord(unpack(ATLAS["common-search-border-middle"], 4, 7))
+    local glass = search:CreateTexture(nil, "OVERLAY")
+    glass:SetAtlas("common-search-magnifyingglass")
+    glass:SetWidth(14)
+    glass:SetHeight(14)
+    glass:SetPoint("LEFT", 3, -1)
+    local hint = search:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+    hint:SetPoint("LEFT", 20, 0)
+    hint:SetText(SEARCH)
+    local clear = CreateFrame("Button", nil, search)
+    clear:SetWidth(14)
+    clear:SetHeight(14)
+    clear:SetPoint("RIGHT", -3, 0)
+    clear:SetNormalTexture(ATLAS["common-search-clearbutton"][1])
+    clear:GetNormalTexture():SetAtlas("common-search-clearbutton")
+    clear:Hide()
+    clear:SetScript("OnClick", function()
+        search:SetText("")
+        search:ClearFocus()
+    end)
+    search:SetScript("OnEscapePressed", search.ClearFocus)
+    search:SetScript("OnEnterPressed", search.ClearFocus)
+    search:SetScript("OnTextChanged", function(self)
+        if self:GetText() == "" then
+            hint:Show()
+            clear:Hide()
+        else
+            hint:Hide()
+            clear:Show()
+        end
+        onChange(self:GetText())
+    end)
+    return search
+end
+
 -- An atlas drawn as nine slices over a region: corners of margin x margin kept, edges and middle
 -- stretched (retail's slice margins; 3.3.5 has none).
 function Retail.NineSlice(parent, layer, name, margin)
