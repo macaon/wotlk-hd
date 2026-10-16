@@ -72,23 +72,44 @@ Everything is client-side. A stock client connects to the same server and sees t
 | `out/patch-4.MPQ`, `out/patch-enUS-4.MPQ` | Creature models and textures, plus their DBCs (`build.py`) |
 | `out/patch-<race>.MPQ`, `out/patch-6.MPQ`, `out/patch-enUS-6.MPQ` | HD characters, one archive per race plus the shared DBCs (`chars.py`) |
 | `client/dinput8.dll` | Code inside the client: patches and hooks, effects, Lua functions (`client/build.sh`) |
-| `Wow-hd.exe` | Wow.exe with the large-address-aware flag and a wider FoV (`patch_exe.py`) |
+| `Wow-hd.exe` | Your own Wow.exe, patched locally with the large-address-aware flag and a wider FoV (`patch_exe.py`); never distributed |
 | `addon/WotlkHD` | The Options window, retail art (`ui.py`) and the HD Effects page |
 
 ## Requirements
 
-- Python 3 with Pillow. `charcheck.py match` also needs numpy and scipy.
-- StormLib, built at `~/Git/ref/StormLib/build`, for writing MPQs.
-- Zig 0.13.0 for the DLL, unpacked into `cache/` (ziglang.org `zig-linux-x86_64-0.13.0`).
-- A 3.3.5a (12340) client. On Linux, run it with Proton or Wine.
-- Retail data from wago.tools. Alternatively, use a local retail install of the pinned build
-  (`WOW_RETAIL`), read with CascLib built in `cache/CascLib` (tag 3.0, built as a shared library).
+Built and tested on Linux only (Fedora), with the client running under Proton (GE-Proton). The build
+scripts are Linux shell scripts and shared libraries. What they produce (MPQs, `dinput8.dll`, the
+addon, `Wow-hd.exe`) are Windows files and should work on Windows too, but nobody has tried.
 
-Cache setup:
+Nothing of Blizzard's is in this repository or shipped with it: you need your own client, and every
+script reads or patches that copy.
+
+- **A stock 3.3.5a (12340) client.** The scripts look for it in `~/Games/wotlk`; set `WOW_DIR` to use
+  another folder. `patch_exe.py` checks that `Wow.exe` is the 12340 build.
+- **A 3.3.5a server.** Developed against AzerothCore, with Warden on.
+- **Python 3 with Pillow.** `charcheck.py match` also needs numpy and scipy.
+- **git, curl, cmake and a C/C++ compiler**, to build StormLib and CascLib below.
+- **StormLib** as a shared library, for reading and writing MPQs. The scripts look for
+  `~/Git/ref/StormLib/build/libstorm.so`; set `STORMLIB` to use another path.
+- **Zig 0.13.0**, for the DLL: `client/build.sh` fetches and compiles its own StormLib and SMAA.
+- **Retail data.** Tables come from wago.tools for the build pinned in `fetch.py` (`BUILD`, or
+  `WOW_BUILD`). Files come from a local retail install of that same build when there is one
+  (`WOW_RETAIL`, read with CascLib), otherwise from wago.tools, which is much slower. A retail install
+  of any other build is ignored.
+
+Setup, once:
+
+    git clone https://github.com/ladislav-zezula/StormLib.git ~/Git/ref/StormLib
+    cmake -S ~/Git/ref/StormLib -B ~/Git/ref/StormLib/build -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release
+    cmake --build ~/Git/ref/StormLib/build -j
 
     mkdir -p cache && cd cache
-    for t in CreatureDisplayInfo CreatureModelData CreatureDisplayInfoGeosetData; do curl -sfo $t.csv https://wago.tools/db2/$t/csv; done
     curl -sfLo listfile.csv https://github.com/wowdev/wow-listfile/releases/latest/download/community-listfile.csv
+    curl -sfL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar xJ
+    # only with a local retail install of the pinned build:
+    git clone -b 3.0 https://github.com/ladislav-zezula/CascLib.git
+    cmake -S CascLib -B CascLib/build -DCASC_BUILD_SHARED_LIB=ON -DCASC_BUILD_STATIC_LIB=OFF -DCMAKE_BUILD_TYPE=Release
+    cmake --build CascLib/build -j
 
 ## Build and install
 
@@ -96,8 +117,10 @@ Cache setup:
     python3 chars.py     # HD characters (run again after every build.py)
     python3 ui.py        # retail UI art into addon/WotlkHD
     client/build.sh      # client/dinput8.dll
-    python3 patch_exe.py # Wow-hd.exe next to Wow.exe
+    python3 patch_exe.py # Wow-hd.exe, patched from your own Wow.exe, next to it
     python3 install.py   # patches into Data/ and Data/enUS/, the addon into Interface/AddOns/
+
+The first `build.py` and `chars.py` runs fetch a lot of retail files; they are cached in `cache/`.
 
 Copy `client/dinput8.dll` next to `Wow.exe` and start `Wow-hd.exe`. Under Wine or Proton, set
 `WINEDLLOVERRIDES=dinput8=n,b`. The DLL logs to `wotlk-hd.log` next to the exe.
@@ -116,7 +139,7 @@ Leave no other `patch-*.MPQ` files in `Data/` (backups, side builds): every one 
 - `charcheck.py`: per-race checks of options, geosets and built models (see
   [docs/notes.md](docs/notes.md#adding-a-race-hd-character-models)).
 - `convert.py`, `m2.py`, `blp.py`, `mpq.py`, `fetch.py`: the converter, the model summary, BLP
-  encoding, MPQ access and retail file fetching (cached in `cache/files/`), which the tools above
+  encoding, MPQ access and retail file fetching (cached in `cache/<build>/`), which the tools above
   use.
 
 ## More
