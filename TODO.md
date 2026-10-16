@@ -44,6 +44,32 @@ frames (`RaidFrames.lua`), Edit Mode (`EditMode.lua`), retail unit frames and ca
   boss, arena, durability, vehicle seats). Raid frames: pets, power bars, health text, heal
   prediction (no 3.3.5 API), retail's raid manager panel.
 - Retail textures under 3.3.5's own UI paths in an MPQ (buttons, panels), restyling the whole UI.
+- Retail's Map & Quest Log: one window with the quest list beside the map, quest areas on the map.
+- Waypoints: map pins and `/way`, with retail's super-tracking arrow.
+- Adventure Guide (Encounter Journal): dungeons and raids, bosses, abilities and loot, from retail's
+  journal tables mapped onto 3.3.5's instances.
+- Cooldown numbers on action buttons; item level in item tooltips.
+- Retail's loot window and loot toasts.
+- Mount and pet journal over 3.3.5's companion functions.
+- Retail's spellbook, talents and auction house.
+
+## Gameplay
+
+Client-only unless noted; the core client stays plain 3.3.5 and works against any server.
+
+- Spell queue window: the next spell can be pressed shortly before the current cast or global
+  cooldown ends and goes off as soon as it can (DLL; test against Warden like every hook).
+- Soft targeting and an interact key: interact with the nearest thing, a highlight on what would be
+  targeted next (DLL).
+- `[@cursor]` in macros: ground-targeted spells cast where the mouse is (DLL).
+- Maybe: retail's action camera (over-the-shoulder offset, dynamic pitch).
+
+Needing the server, in an optional addon that turns on only when the server says it has the module
+(addon message handshake), so the core client never depends on AzerothCore:
+
+- Later: account-wide mounts and collections.
+- Maybe: transmog (AzerothCore's mod-transmog).
+- Probably not: retail-style flying. Cataclysm reworked the old world for flying; needs examining.
 
 ## Client
 
