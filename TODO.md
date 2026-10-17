@@ -54,6 +54,10 @@ frames (`RaidFrames.lua`), Edit Mode (`EditMode.lua`), retail unit frames and ca
 - Retail's loot window and loot toasts.
 - Mount and pet journal over 3.3.5's companion functions.
 - Retail's spellbook, talents and auction house.
+- Tutorials as retail's help tips: 3.3.5's tips (TUTORIAL_TRIGGER, their text in its strings) as
+  retail's callouts pinned to what they're about (a table of tutorial id -> target frame: action bar,
+  backpack, tracker, talents, ...), in place of the "?" alert button and the tutorial window; 3.3.5
+  still decides when they show and keeps the Tutorials option.
 
 ## Gameplay
 

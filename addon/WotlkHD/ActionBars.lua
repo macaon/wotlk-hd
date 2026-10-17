@@ -612,6 +612,17 @@ end)
 hooksecurefunc("MainMenuExpBar_Update", statusBars)
 
 hooksecurefunc("UIParent_ManageFramePositions", place)
+
+-- 3.3.5's tutorial alert ("?", shown while a tutorial tip waits) sits over the old main bar, now ours:
+-- small, left of the micro menu, where it doesn't cover the buttons (retail has small help tips instead).
+-- The client's layout code places it each time (UIPARENT_MANAGED_FRAME_POSITIONS); ours after.
+TutorialFrameAlertButton:SetScale(0.6)
+local function tutorialAlert()
+    TutorialFrameAlertButton:ClearAllPoints()
+    TutorialFrameAlertButton:SetPoint("BOTTOMRIGHT", CharacterMicroButton, "BOTTOMLEFT", -4 / 0.6, -8 / 0.6)
+end
+hooksecurefunc("UIParent_ManageFramePositions", tutorialAlert)
+TutorialFrameAlertButton:HookScript("OnShow", tutorialAlert)
 hooksecurefunc("MultiActionBar_Update", place)
 
 -- Bars 6-8 on and off (from the Action Bars options); out of combat, as the bars are protected. Place is
