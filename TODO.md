@@ -68,6 +68,9 @@ Client-only unless noted; the core client stays plain 3.3.5 and works against an
 - Soft targeting and an interact key: interact with the nearest thing, a highlight on what would be
   targeted next (DLL).
 - `[@cursor]` in macros: ground-targeted spells cast where the mouse is (DLL).
+- Auto-attack as retail's: a harmful spell cast on an enemy in melee range starts auto-attack, so no
+  attack key or `/startattack` macros are needed (DLL, an option; the same request as the attack key,
+  on the player's own key press; check against Warden). Check in retail which spells do this per class.
 - Maybe: retail's action camera (over-the-shoulder offset, dynamic pitch).
 
 Needing the server, in an optional addon that turns on only when the server says it has the module
