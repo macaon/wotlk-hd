@@ -248,6 +248,16 @@ local function tank()
     return GetCombatRating(CR_DEFENSE_SKILL) > 0 or (shield and select(2, UnitClass("player")) ~= "SHAMAN")
 end
 
+-- A rating's tooltip for those 3.3.5 has no COMBAT_RATING_NAME string for (haste, armour penetration),
+-- which its PaperDollFrame_SetRating needs.
+local function ratingTooltip(index, name)
+    return function(statFrame)
+        statFrame.tooltip = HIGHLIGHT_FONT_COLOR_CODE .. format(PAPERDOLLFRAME_TOOLTIP_FORMAT, name) .. " "
+            .. GetCombatRating(index) .. FONT_COLOR_CODE_CLOSE
+        statFrame.tooltip2 = format("Increases your %s by %.2f%%.", strlower(name), GetCombatRatingBonus(index))
+    end
+end
+
 -- Each stat: {label, value, 3.3.5's PaperDollFrame setter for its tooltip, the setter's argument,
 -- an OnEnter other than PaperDollStatTooltip}.
 local function stats()
@@ -278,20 +288,22 @@ local function stats()
         local base, pos, neg = UnitRangedAttackPower("player")
         e[#e + 1] = {ITEM_MOD_RANGED_ATTACK_POWER_SHORT or "Attack Power", base + pos + neg, PaperDollFrame_SetRangedAttackPower}
         e[#e + 1] = {CRIT_ABBR or "Crit", pct(GetRangedCritChance()), PaperDollFrame_SetRangedCritChance}
-        e[#e + 1] = {SPELL_HASTE_ABBR or "Haste", pct(GetCombatRatingBonus(CR_HASTE_RANGED)), PaperDollFrame_SetRating, CR_HASTE_RANGED}
+        e[#e + 1] = {SPELL_HASTE_ABBR or "Haste", pct(GetCombatRatingBonus(CR_HASTE_RANGED)),
+            ratingTooltip(CR_HASTE_RANGED, "Ranged Haste")}
         e[#e + 1] = {COMBAT_RATING_NAME8 or "Hit", pct(GetCombatRatingBonus(CR_HIT_RANGED)), PaperDollFrame_SetRating, CR_HIT_RANGED}
     else
         local base, pos, neg = UnitAttackPower("player")
         e[#e + 1] = {ITEM_MOD_ATTACK_POWER_SHORT or "Attack Power", base + pos + neg, PaperDollFrame_SetAttackPower}
         e[#e + 1] = {CRIT_ABBR or "Crit", pct(GetCritChance()), PaperDollFrame_SetMeleeCritChance}
-        e[#e + 1] = {SPELL_HASTE_ABBR or "Haste", pct(GetCombatRatingBonus(CR_HASTE_MELEE)), PaperDollFrame_SetRating, CR_HASTE_MELEE}
+        e[#e + 1] = {SPELL_HASTE_ABBR or "Haste", pct(GetCombatRatingBonus(CR_HASTE_MELEE)),
+            ratingTooltip(CR_HASTE_MELEE, "Melee Haste")}
         e[#e + 1] = {COMBAT_RATING_NAME8 or "Hit", pct(GetCombatRatingBonus(CR_HIT_MELEE)), PaperDollFrame_SetRating, CR_HIT_MELEE}
         e[#e + 1] = {STAT_EXPERTISE or "Expertise", (GetExpertise()), PaperDollFrame_SetExpertise}
     end
     local arp = GetCombatRatingBonus(CR_ARMOR_PENETRATION)
     if r ~= "spell" and arp > 0 then
-        e[#e + 1] = {ITEM_MOD_ARMOR_PENETRATION_RATING_SHORT or "Armor Penetration", pct(arp), PaperDollFrame_SetRating,
-            CR_ARMOR_PENETRATION}
+        e[#e + 1] = {ITEM_MOD_ARMOR_PENETRATION_RATING_SHORT or "Armor Penetration", pct(arp),
+            ratingTooltip(CR_ARMOR_PENETRATION, "Armor Penetration")}
     end
     if tank() then
         local base, mod = UnitDefense("player")
